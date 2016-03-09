@@ -9,7 +9,7 @@ This program depends on 3 other software pageages:
 1) root, you can download it from root.cern.ch, any version shoube be fine.
 2) clhep, I used 2.1.0.1 compiled with vc10 in windows xp, and 2.1.3.1 in CentOS_6.5
 3) KalmanFilter libraries originally from KEK, modified by me. You can also get it from
-github:  git clone git@github.com:jixie/KalmanFIlter.git 
+github:  git clone git@github.com:jixie/KalmanFilter.git 
 
 Once you download the source code, 'source setup.csh' to define where you want to 
 install KalmanFilter pages, then type 'make;make install' to install it.
