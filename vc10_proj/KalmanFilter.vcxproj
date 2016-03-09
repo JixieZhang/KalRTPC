@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{65A4F580-EBFA-4B82-A5E4-7DE6DA4D486D}</ProjectGuid>
+    <RootNamespace>KalmanFilter</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>c:\root\include;Z:\work\KalmanFilter\src\geomlib;Z:\work\KalmanFilter\src\kallib;Z:\work\KalmanFilter\src\utils;Z:\work\KalmanFilter\src\kaltracklib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DisableSpecificWarnings>4985;4800;4244;4273;4305;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="..\..\KalmanFilter\src\Makefile" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\S4GoemDict.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TCircle.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TCutCone.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TCylinder.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\THelicalTrack.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\THype.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TPlane.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TStraightTrack.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TTube.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TVCurve.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TVSolid.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TVSurface.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\geomlib\TVTrack.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\S4KalTrackDict.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TKalDetCradle.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TKalFilterCond.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TKalTrack.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TKalTrackSite.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TKalTrackState.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TVKalDetector.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TVMeasLayer.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kaltracklib\TVTrackHit.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\utils\S4UtilsDict.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\utils\TAttDrawable.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\utils\TAttElement.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\utils\TAttLockable.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kallib\S4KalmanDict.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kallib\TKalMatrix.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kallib\TVKalSite.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kallib\TVKalState.cxx" />
+    <ClCompile Include="..\..\KalmanFilter\src\kallib\TVKalSystem.cxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\S4GoemDict.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TCircle.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TCutCone.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TCylinder.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\THelicalTrack.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\THype.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TPlane.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TStraightTrack.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TTube.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TVCurve.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TVSolid.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TVSurface.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\geomlib\TVTrack.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\KalTrackDim.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\S4KalTrackDict.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TKalDetCradle.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TKalFilterCond.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TKalTrack.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TKalTrackSite.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TKalTrackState.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TVKalDetector.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TVMeasLayer.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kaltracklib\TVTrackHit.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\utils\S4UtilsDict.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\utils\TAttDrawable.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\utils\TAttElement.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\utils\TAttLockable.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kallib\S4KalmanDict.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kallib\TKalMatrix.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kallib\TVKalSite.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kallib\TVKalState.h" />
+    <ClInclude Include="..\..\KalmanFilter\src\kallib\TVKalSystem.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
