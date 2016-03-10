@@ -54,6 +54,9 @@
     <ClCompile Include="..\src\ConfigManager.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Debug\draw.C">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\EXEventGen.h">

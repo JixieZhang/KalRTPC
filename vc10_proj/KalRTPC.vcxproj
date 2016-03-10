@@ -130,6 +130,9 @@
     <ClCompile Include="..\src\GlobalDebuger.cc" />
     <ClCompile Include="..\src\NtReader.cxx" />
     <ClCompile Include="..\src\rwfthc.cc" />
+    <ClCompile Include="Debug\draw.C">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\EXEventGen.h" />
