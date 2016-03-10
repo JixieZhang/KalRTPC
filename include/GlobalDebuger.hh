@@ -5,13 +5,12 @@
 #define _GLOBALDEBUGER_H_ 1
 
 #include <iostream>
-#include <string>
-#include <stdio.h>
 
-#define STOP4DEBUG Stop4Debug();
+//#define STOP4DEBUG Stop4Debug();
 
 extern int  Global_Debug_Level;
 extern int  iKeepGoing;
+extern int  iPause;
 extern int  Global_Skip_Counter;
 
 //in gcc 4.4.6, this routine return an error of
@@ -35,7 +34,8 @@ void SetGlobalDebugLevel(const char *caller, T val)
     std::cout<<">>> "<<caller<<" set Global_Debug_Level to "<<Global_Debug_Level<<" <<<"<<std::endl;
 }
 
-extern int Stop4Debug(int iNewEvent=0);
-extern void PrintDebugMenu();
+int Pause4Debug();
+int Stop4Debug(int iNewEvent=0);
+void PrintDebugMenu();
 
 #endif //_GLOBALDEBUGER_H_

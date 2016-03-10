@@ -71,7 +71,7 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   if(_ExEventGenDebug_>=1) {
     cout<<"\n Helix Event:  pt="<<pt<<"  Rho="<<aTrack.GetRho()
       <<", A="<<aTrack.GetXc()<<", B="<<aTrack.GetYc()
-      <<", phi_c="<<phi_c*57.3<<"deg,  fi0="<<fi0*57.3<<"deg "<<endl;
+      <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
       <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg "<<endl;
   }

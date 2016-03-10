@@ -1,12 +1,6 @@
-#include "TKalDetCradle.h"    // from KalTrackLib
-#include "TKalTrackState.h"   // from KalTrackLib
-#include "TKalTrackSite.h"    // from KalTrackLib
-#include "TKalTrack.h"        // from KalTrackLib
 
-#include "EXKalDetector.h"
-#include "EXEventGen.h"
-#include "EXHit.h"
 #include "EXKalRTPC.h"
+#include "GlobalDebuger.hh"
 
 #include <iomanip>
 #include <iostream>
@@ -20,30 +14,50 @@ static const Bool_t kDir = kIterBackward;
 ///////////////////////////////////////////////////////////////////////
 #define _EXKalTestDebug_ 3
 
-TFile *gMyFile=0;    //I can not use gFile since it has been used by root
-TTree *gMyTree=0;
-int _index_=0;
-double p_rec,pt_rec,pz_rec,th_rec,ph_rec,x_rec,y_rec,z_rec;
-double r_rec,a_rec,b_rec;
-int npt;
-double step_x[MaxHit],step_y[MaxHit],step_z[MaxHit];
-double step_px[MaxHit],step_py[MaxHit],step_pz[MaxHit];
-double step_bx[MaxHit],step_by[MaxHit],step_bz[MaxHit];
-int step_status[MaxHit];
-double step_x_exp[MaxHit],step_y_exp[MaxHit],step_z_exp[MaxHit];
-double step_x_fil[MaxHit],step_y_fil[MaxHit],step_z_fil[MaxHit];
-
-//varible from global fitter, come from g4 root tree 
-double p0,pt0,pz0,th0,ph0,_x0_,_y0_,_z0_;
-double p_hel,pt_hel,pz_hel,th_hel,ph_hel,x_hel,y_hel,z_hel;
-double r_hel,a_hel,b_hel;
-
-int ndf;
-double chi2,cl;
-
 ///////////////////////////////////////////////////////////////////////
 
-int GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
+EXKalRTPC::EXKalRTPC()
+{
+#ifdef _EXKalTestDebug_
+  Global_Debug_Level=_EXKalTestDebug_;
+#endif
+  
+  // ===================================================================
+  //  Prepare a fDetector
+  // ===================================================================
+
+  fKalHits = new TObjArray();    // hit buffer
+  fCradle  = new TKalDetCradle();     // detctor system
+  fDetector= new EXKalDetector();   // fDetector
+
+  fCradle->Install(*fDetector); // install fDetector into its fCradle
+
+#ifdef __MS_OFF__
+  fCradle.SwitchOffMS();     // switch off multiple scattering
+#endif
+  
+  // ===================================================================
+  //  Prepare a Event Generator
+  // ===================================================================
+  fEventGen = new EXEventGen(*fCradle, *fKalHits);
+
+  
+  // ===================================================================
+  //  Prepare a Root tree output
+  // ===================================================================
+  Tree_Init();
+}
+
+EXKalRTPC::~EXKalRTPC()
+{
+  delete fEventGen;
+  delete fDetector;
+  delete fCradle;
+  delete fKalHits;
+}
+
+
+int EXKalRTPC::GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
   TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec)
 {
   r_rec = fabs(hel.GetRho());
@@ -63,7 +77,7 @@ int GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm,
 }
 
 
-int GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm, 
+int EXKalRTPC::GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm, 
   TVector3 &xx,  double &dfi, double &r_rec, double &a_rec, double &b_rec)
 {
   TVector3 X0  = hel.GetPivot(); 
@@ -81,7 +95,7 @@ int GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm,
 }
 
 
-void GetVarFromState(TVKalState &state, double &p, double &pt, double &pz, 
+void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz, 
   double &th, double &ph, double &x, double &y, double &z, 
   double &r_rec, double &a_rec, double &b_rec )
 { 
@@ -108,30 +122,34 @@ void GetVarFromState(TVKalState &state, double &p, double &pt, double &pz,
   p  = pt * sqrt(1+tanLambda*tanLambda);   //p = pt / sinTheta 
   th = (tanLambda>0) ? asin(pt/p) : kPi-asin(pt/p);
   double fi0_vx = fi0 + dfi;  //vertex point fi0 angle in helix coordinate system
-  if(cpa>0) fi0_vx += kPi;    //by definition, positive helix fi0 is differ by pi
-  double phi_c_hall= fi0_vx - kPi ;  //phi angle of the helix center at hall coordinate system
+  //phi_vx_hel is the phi angle of vertex point on the circle coordinate system
+  //by definition, positive helix fi0 is differ by pi from circle 
+  double phi_vx_hel=(cpa>0)?fi0_vx+kPi:fi0_vx;  
+  double phi_c_hall= phi_vx_hel - kPi ;  //phi angle of the helix center at hall coordinate system
   ph = (rho>0) ? phi_c_hall+kPi/2. : phi_c_hall-kPi/2.;
   if(ph> kPi) ph-=2*kPi; 
   if(ph<-kPi) ph+=2*kPi; 
   
+#ifdef _EXKalTestDebug_
   //debug the vertex reconstruction
-  TVector3 xl=hel.GetPivot();
-  cout<<"   Last Hit=("<<xl.X()<<", "<<xl.y()<<", "<<xl.Z()<<")"
-    <<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
+  if(Global_Debug_Level>=1) {
+    TVector3 xl=hel.GetPivot();
+    cout<<"   Last Hit=("<<xl.X()<<", "<<xl.y()<<", "<<xl.Z()<<")"
+      <<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
 
-  cout<<"Rec. to Vextex: p="<<p<<" th="<<th*57.3<<", ph="<<ph*57.3
-    <<", rho="<<rho<<", fi0="<<fi0*57.3<<"deg,  fi0_vx="<<fi0_vx*57.3<<"deg"<<endl;
-  
+    cout<<"Rec. to Vextex: p="<<p<<" ph="<<ph*57.3<<", th="<<th*57.3
+      <<", rho="<<rho<<", fi0="<<fi0*57.3<<"deg,  fi0_vx="<<fi0_vx*57.3<<"deg"<<endl;
+  }
+#endif  
 }
 
 
-
-void Tree_Init()
+void EXKalRTPC::Tree_Init()
 {
-  gMyFile = new TFile("h.root","RECREATE","Kalman Filter for RTPC track");
-  gMyTree = new TTree("t", "Kalman Filter for RTPC track");
+  fFile = new TFile("h.root","RECREATE","Kalman Filter for RTPC track");
+  fTree = new TTree("t", "Kalman Filter for RTPC track");
 
-  TTree *t=gMyTree;
+  TTree *t=fTree;
   t->Branch("index",&_index_,"index/I");
 
   t->Branch("p_rec",&p_rec,"p_rec/D");
@@ -150,12 +168,12 @@ void Tree_Init()
   t->Branch("step_x",step_x,"step_x[npt]/D");
   t->Branch("step_y",step_y,"step_y[npt]/D");
   t->Branch("step_z",step_z,"step_z[npt]/D");
-  t->Branch("step_px",step_px,"step_px[npt]/D");
-  t->Branch("step_py",step_py,"step_py[npt]/D");
-  t->Branch("step_pz",step_pz,"step_pz[npt]/D");
-  t->Branch("step_bx",step_bx,"step_bx[npt]/D");
-  t->Branch("step_by",step_by,"step_by[npt]/D");
-  t->Branch("step_bz",step_bz,"step_bz[npt]/D");
+  //t->Branch("step_px",step_px,"step_px[npt]/D");
+  //t->Branch("step_py",step_py,"step_py[npt]/D");
+  //t->Branch("step_pz",step_pz,"step_pz[npt]/D");
+  //t->Branch("step_bx",step_bx,"step_bx[npt]/D");
+  //t->Branch("step_by",step_by,"step_by[npt]/D");
+  //t->Branch("step_bz",step_bz,"step_bz[npt]/D");
   t->Branch("step_status",step_status,"step_status[npt]/I");
 
   t->Branch("step_x_exp",step_x_exp,"step_x_exp[npt]/D");
@@ -193,7 +211,7 @@ void Tree_Init()
 
 }
 
-void Reset()
+void EXKalRTPC::Reset()
 {
   p0=pt0=pz0=th0=ph0=_x0_=_y0_=_z0_=0.0;
   p_rec=pt_rec=pz_rec=th_rec=ph_rec=x_rec=y_rec=z_rec=0.0;
@@ -213,35 +231,45 @@ void Reset()
   chi2=cl=0.0;
 }
 
+void EXKalRTPC::BeginOfRun()
+{
+}
+
+void EXKalRTPC::EndOfRun()
+{
+}
+
+//prepare a track from xyz array, make sure radii are in increasing order  
+bool EXKalRTPC::PrepareATrack(double *x_mm, double *y_mm,double *z_mm, int npt)
+{
+  bool smearing=false;
+  fEventGen->MakeHitsFromTraj(x_mm,y_mm,z_mm,npt,smearing);
+  return true;
+}
+
+//Let the event generator to generate a track
+bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double costh_min, double costh_max)
+{
+    if(job==0) {
+      THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max);
+      fEventGen->Swim(hel,kMpr);
+    }
+    else if(job==1) { 
+      //by Jixie: read from root tree
+      if(fEventGen->LoadOneTrack()<0) return false;
+    }
+    else {
+      fEventGen->GenCircle(pt_min,pt_max);
+    }
+    return true;
+}
 //cerr << "Usage: "<<argv[0] <<" <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1]" << endl;
 //cerr << "\t  job: 0 generate helix, 1 loadtrack from geant4 root file, 2 generate circle\n";
 //cerr << "\t  nevents: number of events to generate \n";
 //cerr << "\t  pt_min_gev and pt_max_gev: specifiy the range of pt in Gev \n";
 //cerr << "\t  Note that if pt is negative then anti-clockwise track will be generated \n";
-int KalRTPC (int job, int nevents, double pt_min, double pt_max)
+int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, double costh_min, double costh_max)
 {
-  Tree_Init();
-
-  double cosmin  = -0.000001; //-0.9;
-  double cosmax  =  0.000001; //+0.9;
-  // ===================================================================
-  //  Prepare a detector
-  // ===================================================================
-
-  TObjArray     kalhits;    // hit buffer
-  TKalDetCradle cradle;     // detctor system
-  EXKalDetector detector;   // detector
-
-  cradle.Install(detector); // install detector into its cradle
-#ifdef __MS_OFF__
-  cradle.SwitchOffMS();     // switch off multiple scattering
-#endif
-
-  // ===================================================================
-  //  Prepare a Event Generator
-  // ===================================================================
-
-  EXEventGen gen(cradle, kalhits);
 
   // ===================================================================
   //  Event loop
@@ -256,24 +284,14 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     //  Reset hit data
     // ---------------------------
 
-    kalhits.Delete();
+    fKalHits->Delete();
     Reset();
 
     // ============================================================
-    //  Generate a partcle and Swim the particle in detector
+    //  Generate a partcle and Swim the particle in fDetector
     // ============================================================
-
-    if(job==0) {
-      THelicalTrack hel = gen.GenerateHelix(pt_min,pt_max,cosmin,cosmax);
-      gen.Swim(hel,kMpr);
-    }
-    else if(job==1) { 
-      //by Jixie: read from root tree
-      if(gen.LoadOneTrack()<0) break;
-    }
-    else {
-      gen.GenCircle(pt_min,pt_max);
-    }
+    bool ret=PrepareATrack(job, pt_min, pt_max, costh_min, costh_max);
+    if(!ret) break;
 
     // ============================================================
     //  Do Kalman Filter
@@ -282,11 +300,11 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     Int_t i1, i2, i3;
     if (kDir == kIterBackward) {
       i3 = 0;
-      i1 = kalhits.GetEntries() - 1;
+      i1 = fKalHits->GetEntries() - 1;
       i2 = i1 / 2;
     } else {
       i1 = 0;
-      i3 = kalhits.GetEntries() - 1;
+      i3 = fKalHits->GetEntries() - 1;
       i2 = i3 / 2;
     }
 
@@ -294,7 +312,7 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     //  Create a dummy site: sited
     // ---------------------------
 
-    EXHit hitd = *dynamic_cast<EXHit *>(kalhits.At(i1));
+    EXHit hitd = *dynamic_cast<EXHit *>(fKalHits->At(i1));
     hitd(0,1) = 1.e6;   // give a huge error to d
     hitd(1,1) = 1.e6;   // give a huge error to z
 
@@ -305,25 +323,27 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     // Create initial helix
     // ---------------------------
 
-    EXHit   &h1 = *dynamic_cast<EXHit *>(kalhits.At(i1));   // first hit
-    EXHit   &h2 = *dynamic_cast<EXHit *>(kalhits.At(i2));   // middle hit
-    EXHit   &h3 = *dynamic_cast<EXHit *>(kalhits.At(i3));   // last hit
+    EXHit   &h1 = *dynamic_cast<EXHit *>(fKalHits->At(i1));   // first hit
+    EXHit   &h2 = *dynamic_cast<EXHit *>(fKalHits->At(i2));   // middle hit
+    EXHit   &h3 = *dynamic_cast<EXHit *>(fKalHits->At(i3));   // last hit
     TVector3 x1 = h1.GetMeasLayer().HitToXv(h1);
     TVector3 x2 = h2.GetMeasLayer().HitToXv(h2);
     TVector3 x3 = h3.GetMeasLayer().HitToXv(h3);
     double bfield = h1.GetBfield();  //in kGauss
     THelicalTrack helstart(x1, x2, x3, bfield, kDir); // initial helix 
 
-
-    THelicalTrack g4hel=gen.DoHelixFit();
-
+    THelicalTrack g4hel=fEventGen->DoHelixFit();
+    
+#ifdef _EXKalTestDebug_
     //just for debug
-    cout<<"Event "<<eventno<<",  Initial Helix Rho="<<helstart.GetRho()
+    cout<<"Event "<<eventno<<", 3-point Helix Rho="<<helstart.GetRho()
       <<" ==>  Pt="<<0.3*bfield/10.*fabs(helstart.GetRho())/100.<<endl;
-    cout<<"Event "<<eventno<<",  g4 Helix Rho="<<g4hel.GetRho()
+    cout<<"Event "<<eventno<<",  global Helix Rho="<<g4hel.GetRho()
       <<" ==>  Pt="<<0.3*bfield/10.*fabs(g4hel.GetRho())/100.<<endl;
+#endif
 
     if(job==1) helstart=g4hel;
+
     // ---------------------------
     //  Set dummy state to sited
     // ---------------------------
@@ -358,7 +378,7 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     //  Prepare hit iterrator
     // ---------------------------
 
-    TIter next(&kalhits, kDir);   // come in to IP
+    TIter next(fKalHits, kDir);   // come in to IP
 
     // ---------------------------
     //  Start Kalman Filter
@@ -376,7 +396,7 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
       step_status[npt]=1;
 
 #ifdef _EXKalTestDebug_
-      if(_EXKalTestDebug_ >= 3) {
+      if(Global_Debug_Level >= 3) {
 	cerr << "Main(): MeasLayer "<<setw(2)<<ml.GetIndex()
 	  <<": R="<<setw(6)<<ml.GetR()<<": ";
 	cerr << "xv=("<<setw(8)<<xv.X()<<",  "<<setw(8)<<xv.Y()
@@ -391,6 +411,7 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
 	cerr << "Fitter: site "<<npt<<" discarded: "
 	  << " xv=("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<")"<< endl;           
 	delete &site;                                  // delete this site, if failed
+	Pause4Debug();
       }
       else {
 	//get filtered state then convert it to THelicalTrack 
@@ -403,7 +424,7 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
 	step_x_fil[npt]=x_fil.X();step_y_fil[npt]=x_fil.Y();step_z_fil[npt]=x_fil.Z();
 
 #ifdef _EXKalTestDebug_
-	if(_EXKalTestDebug_ >= 4) {
+	if(Global_Debug_Level >= 4) {
 	  TVKalState *state_exp = &site.GetState(TVKalSite::kPredicted);
 	  THelicalTrack hel_exp = (dynamic_cast<TKalTrackState *>(state_exp))->GetHelix();
 	  TVector3 x_exp=hel_exp.CalcXAt(0.0);
@@ -427,51 +448,50 @@ int KalRTPC (int job, int nevents, double pt_min, double pt_max)
     //  Monitor Fit Result
     // ============================================================
     //most of these are coming from  EXEventGen::NtReader, which is in mm
-    p0=gen.P0_p;
-    th0=gen.Theta0_p;
-    ph0=gen.Phi0_p; 
+    p0=fEventGen->P0_p;
+    th0=fEventGen->Theta0_p;
+    ph0=fEventGen->Phi0_p; 
     if(ph0> kPi) ph0-=2*kPi;
     if(ph0<-kPi) ph0+=2*kPi;
     pt0=p0*sin(th0);
     pz0=p0*cos(th0);
-    _x0_=gen.X0/10.;
-    _y0_=gen.Y0/10.;
-    _z0_=gen.Z0/10.;
+    _x0_=fEventGen->X0/10.;
+    _y0_=fEventGen->Y0/10.;
+    _z0_=fEventGen->Z0/10.;
 
-    p_hel=gen.P0_rec_p;
-    th_hel=gen.Theta0_rec_p;
-    ph_hel=gen.Phi0_rec_p; 
+    p_hel=fEventGen->P0_rec_p;
+    th_hel=fEventGen->Theta0_rec_p;
+    ph_hel=fEventGen->Phi0_rec_p; 
     pt_hel=p_hel*sin(th_hel);
     pz_hel=p0*cos(th_hel);
-    x_hel=gen.X0_rec_p/10.;
-    y_hel=gen.Y0_rec_p/10.;
-    z_hel=gen.Z0_rec_p/10.;
+    x_hel=fEventGen->X0_rec_p/10.;
+    y_hel=fEventGen->Y0_rec_p/10.;
+    z_hel=fEventGen->Z0_rec_p/10.;
 
-    r_hel=gen.R_rec/10.;
-    a_hel=gen.A_rec/10.;
-    b_hel=gen.B_rec/10.;
+    r_hel=fEventGen->R_rec/10.;
+    a_hel=fEventGen->A_rec/10.;
+    b_hel=fEventGen->B_rec/10.;
 
 
     TVKalState *theLastState = (TVKalState*) &(kaltrack.GetCurSite().GetCurState());
-    GetVarFromState(*theLastState, p_rec, pt_rec, pz_rec, th_rec, ph_rec, 
+    ReconVertex(*theLastState, p_rec, pt_rec, pz_rec, th_rec, ph_rec, 
       x_rec, y_rec, z_rec, r_rec, a_rec, b_rec );
 
-    if(job==1) {
-      //G4 tracks phi angle is differed by PI 
-      //ph_rec+=kPi;
-      if(ph_rec> kPi) ph_rec-=2*kPi; 
-      if(ph_rec<-kPi) ph_rec+=2*kPi; 
-    }
 
     ndf  = kaltrack.GetNDF();
     chi2 = kaltrack.GetChi2();
     cl   = TMath::Prob(chi2, ndf);
 
-    gMyTree->Fill();
+    fTree->Fill();
+
+#ifdef _EXKalTestDebug_
+    Stop4Debug(_index_);
+#endif
+
     _index_++;
   }
-
-  gMyFile->Write();
+  
+  fFile->Write();
 
   return 0;
 }
