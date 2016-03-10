@@ -14,6 +14,10 @@ public:
    THelicalTrack GenerateHelix(double pt_min, double pt_max,
                                double cosmin, double cosmax);
    
+
+   //Create a helix from 3 points to get initial parameter for Kalman Filter
+   //IterDirection=true is farward, otherwise backward
+   THelicalTrack CreateInitialHelix(bool IterDirection=true);
    //DO a global helix fit to get initial parameter for Kalman Filter
    THelicalTrack DoHelixFit();
 

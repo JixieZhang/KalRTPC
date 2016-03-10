@@ -34,19 +34,20 @@ public:
   bool PrepareATrack(int job, double pt_min, double pt_max, 
     double costh_min, double costh_max);
 
+  int DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n);
 
   int KalRTPC(int job, int nevents, double pt_min, double pt_max, 
     double costh_min, double costh_max);
+
   //reconstruct to vertex using helix at last hit
   void ReconVertex(TVKalState &state, double &p, double &pt, double &pz, 
     double &th, double &ph, double &x, double &y, double &z, 
     double &r_rec, double &a_rec, double &b_rec);
 
-
-
 private:
 
   void  Tree_Init();
+  void  Tree_Fill(TKalTrack &kaltrack);
   void  Reset();
 
   //Get vertex by finding TCylinder crossing point

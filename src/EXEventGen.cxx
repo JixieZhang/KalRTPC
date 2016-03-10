@@ -338,6 +338,50 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int npt, bool
   }
 }
 
+
+//Create a helix from 3 points to get initial parameter for Kalman Filter
+//IterDirection=true is farward, otherwise backward
+THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection) 
+{
+  Int_t i1, i2, i3;
+  if (IterDirection == kIterBackward) {
+    i3 = 0;
+    i1 = fHitBufPtr->GetEntries() - 1;
+    i2 = i1 / 2;
+  } else {
+    i1 = 0;
+    i3 = fHitBufPtr->GetEntries() - 1;
+    i2 = i3 / 2;
+  }
+
+  EXHit   &h1 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i1));   // first hit
+  EXHit   &h2 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i2));   // middle hit
+  EXHit   &h3 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i3));   // last hit
+  TVector3 x1 = h1.GetMeasLayer().HitToXv(h1);
+  TVector3 x2 = h2.GetMeasLayer().HitToXv(h2);
+  TVector3 x3 = h3.GetMeasLayer().HitToXv(h3);
+  double bfield = h1.GetBfield();  //in kGauss
+  THelicalTrack aTrack(x1, x2, x3, bfield, IterDirection); // initial helix 
+
+
+#ifdef _ExEventGenDebug_
+  //just for debug
+  double pRho = aTrack.GetRho();
+  double pPt = pRho/aTrack.GetPtoR();
+  double pA = aTrack.GetXc();
+  double pB = aTrack.GetYc();
+  double pPhi_c = atan2(pB,pA);
+  double pFi0 = aTrack.GetPhi0(); 
+  if(_ExEventGenDebug_>=1) {
+    cout<<" 3-point Helix:  pt="<<pPt
+      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
+      <<", phi_c="<<pPhi_c*57.3<<"deg, fi0="<<pFi0*57.3<<"deg "<<endl;   
+  }
+#endif
+
+  return aTrack;
+}
+
 //DO a global helix fit to get initial parameter for Kalman Filter
 THelicalTrack EXEventGen::DoHelixFit() 
 {
@@ -398,6 +442,8 @@ THelicalTrack EXEventGen::DoHelixFit()
   Double_t pt  = (pRho/100.)*kLightVelocity*(b/10.) / kGev;
   Double_t cpa = 1. / pt;
   Double_t fi0 = (pRho>0)?Phi_c:Phi_c-PI;
+  if(fi0> PI) fi0-=2*PI;
+  if(fi0<-PI) fi0+=2*PI;
   Double_t dz  = 0;
   Double_t cs  = cos(Theta_rec);
   Double_t tnl = cs / TMath::Sqrt((1-cs)*(1+cs)); 
@@ -418,7 +464,7 @@ THelicalTrack EXEventGen::DoHelixFit()
 #ifdef _ExEventGenDebug_
   //just for debug
   if(_ExEventGenDebug_>=1) {
-    cout<<"   Helix Fit:  pt="<<pt
+    cout<<"  global Helix:  pt="<<pt
       <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
       <<", phi_c="<<Phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P_hel="<<P0_rec_p<<", Phi_hel="<<Phi0_rec_p*57.3
