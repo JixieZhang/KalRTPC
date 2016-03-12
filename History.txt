@@ -1,0 +1,36 @@
+KalmanFilter application for RTPC12, By Jixie Zhang
+
+2016/03/11
+1. Optimized initial values for the covariant error matrix. Wrote scripts
+   to scan these initial values.  I found that 0.02 or 0.05 is the best value.
+   put 0.05 as a default.  Modified the main() to allow to give the value 
+   through command line argument. The usage is now looks like this:
+   
+  Usage: ./EXKalRTPC <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \
+         [costh_min=-0.00001] [costh_max=0.00001] [error=0.05]
+          job: 0 generate helix, 1 loadtrack from geant4 root file, 2 generate circle
+          nevents: number of events to generate
+          pt_min_gev and pt_max_gev: specifiy the range of pt in Gev
+          Note that if pt is negative then anti-clockwise track will be generated
+          costh_min and costh_max: specifiy the range of costh, only for job==0
+          error is used to initialize the comvariant matrix before fitting.
+
+2. Fixed bug in EXGenEVent::LoadATrack().  The bug is that it does not check the 
+   hit ID from g4 root tree. Sometimes those hit IDs are negative numbers, which means
+   they are not recontructable hits.
+
+3. Added History.txt and macros dir. 
+
+2016/03/10
+1. Separated FitAndFilter from filling root tree. when this code is used
+   by CLAS12 software, filling root tree is not necessary.   
+
+2016/03/09  
+1.  Rewrote KalRTPC into a class 
+2.  Added debug tools
+
+
+2016/03/08  First commit into git hub. Modified from KEK KalmanFilter packages.
+
+
+ 

@@ -22,7 +22,7 @@ ClassImp(EXEventGen)
 
 #define _ExEventGenDebug_ 1
 
-Double_t EXEventGen::fgT0 = 14.; // [nsec]
+  Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
 
 THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
@@ -65,7 +65,7 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   this->Theta0_p=acos(cs);
   this->P0_p=fabs(pt)/TMath::Sqrt((1-cs)*(1+cs));
 
-  
+
 #ifdef _ExEventGenDebug_
   //just for debug
   if(_ExEventGenDebug_>=1) {
@@ -105,7 +105,7 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
     /*  
     //By Jixie:
     Int_t TCylinder::CalcXingPointWith(const TVTrack  &hel,
-      TVector3 &xx, Double_t &phi, Int_t mode, Double_t eps) const
+    TVector3 &xx, Double_t &phi, Int_t mode, Double_t eps) const
     */
     //TCylinder::CalcXingPointWith(), input is hel, output are xx,phi
     //It will calculate if helix hel have any crossing points with current
@@ -168,14 +168,24 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
 
 int  EXEventGen::LoadOneTrack()
 {
-  int nhits = NtReader::LoadATrack();
-  Z0=1000.;  //try to load abs(z0)<2 cm to avoid non-uniform Bfield tracks
-  while (fabs(Z0)>200.) {
-    nhits = NtReader::LoadATrack();
-  }
-  if( nhits == -1 ) {
-    cout<<"Reach the end of input root file \n";
-    return -1;
+  int nhits = 0;
+  double xx[200],yy[200],zz[200];
+  while (nhits<5) {
+    int n = NtReader::LoadATrack();
+    if( n == -1 ) {
+      cout<<"Reach the end of input root file \n";
+      return -1;
+    }
+    nhits=0;
+    for(int i=0;i<HitNum_m;i++) {
+      if(StepID_m[i]>0) {
+	xx[nhits]=StepX_rec_m[i];
+	yy[nhits]=StepY_rec_m[i];
+	zz[nhits]=StepZ_rec_m[i];
+	nhits++;
+	if(nhits>=200) break;
+      }
+    }
   }
 
 #ifdef _ExEventGenDebug_
@@ -195,7 +205,7 @@ int  EXEventGen::LoadOneTrack()
   }
 #endif
 
-  MakeHitsFromTraj(StepX_rec_m,StepY_rec_m,StepZ_rec_m,HitNum_m,false);
+  MakeHitsFromTraj(xx,yy,zz,nhits,false);
   return HitNum_m;
 }
 
@@ -206,7 +216,7 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
   double bfield_tesla = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
     (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield()/10;
-  
+
   // r_m = pt_gev/(0.3*Bz_tesla);
   double pt = gRandom->Uniform(pt_min, pt_max);  //in gev
 
@@ -221,7 +231,7 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
   double phi0_p = (pt>0) ? phi_c+PI/2 : phi_c-PI/2;
   if(phi0_p> PI) phi0_p-=2*PI;
   if(phi0_p<-PI) phi0_p+=2*PI;
-   
+
   //base on phi angle in circle center coordinate to calculate lab x,y,z
   double phi_cir, phi_cir_0 = atan2(-b,-a);
 
@@ -234,7 +244,7 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
     StepZ_rec_m[i]=0;
   }
   HitNum_m=kNDetLayer;
-  
+
   //pass these information to NtReader buffer so KalRTPC can load them 
   //into the output tree
   this->X0=0*10.;
@@ -399,10 +409,10 @@ THelicalTrack EXEventGen::DoHelixFit()
     //fill the global variables for root tree
     //TVector3 xraw = hitp->GetRawXv();
     const EXMeasLayer &ml = dynamic_cast<const EXMeasLayer &>(hitp->GetMeasLayer());
-    TVector3 xraw = ml.HitToXv(*hitp);
-    StepX_rec_m[npt]=xraw.X();StepY_rec_m[npt]=xraw.Y();StepZ_rec_m[npt]=xraw.Z();
-    szPos[npt][0]=xraw.X();szPos[npt][1]=xraw.Y();szPos[npt][2]=xraw.Z();
-    
+    TVector3 xv = ml.HitToXv(*hitp);
+    StepX_rec_m[npt]=xv.X();StepY_rec_m[npt]=xv.Y();StepZ_rec_m[npt]=xv.Z();
+    szPos[npt][0]=xv.X();szPos[npt][1]=xv.Y();szPos[npt][2]=xv.Z();
+
     npt++;
     if(npt>=200) break;
     hitp = dynamic_cast<EXHit *>(next());
@@ -453,13 +463,13 @@ THelicalTrack EXEventGen::DoHelixFit()
 
   THelicalTrack aTrack(dr,fi0,cpa,dz,tnl,x0,y0,z0,b);
 
-  this->P0_rec_p=pt/sin(Theta_rec);
+  this->P0_rec_p=fabs(pt)/sin(Theta_rec);
   this->X0_rec_p=aTrack.GetXc()*10.;
   this->Y0_rec_p=aTrack.GetYc()*10.;
   this->Z0_rec_p=pZ0*10;
   this->Theta0_rec_p=Theta_rec;
   this->Phi0_rec_p=Phi_rec;
-  
+
 
 #ifdef _ExEventGenDebug_
   //just for debug

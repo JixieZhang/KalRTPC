@@ -1,0 +1,50 @@
+
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0 ; mv h.root nt_helix_ptall_thall_err1.0e0.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-1 ; mv h.root nt_helix_ptall_thall_err1.0e-1.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  7.0e-2 ; mv h.root nt_helix_ptall_thall_err7.0e-2.root
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  5.0e-2 ; mv h.root nt_helix_ptall_thall_err5.0e-2.root
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  2.0e-2 ; mv h.root nt_helix_ptall_thall_err2.0e-2.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-2 ; mv h.root nt_helix_ptall_thall_err1.0e-2.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-3 ; mv h.root nt_helix_ptall_thall_err1.0e-3.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-4 ; mv h.root nt_helix_ptall_thall_err1.0e-4.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-6 ; mv h.root nt_helix_ptall_thall_err1.0e-6.root
+
+./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-8 ; mv h.root nt_helix_ptall_thall_err1.0e-8.root
+
+root nt_helix_ptall_thall_err1.0e0.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e0 ; mv *png  err_ptall_thall_1.0e0
+
+root nt_helix_ptall_thall_err1.0e-1.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-1 ; mv *png  err_ptall_thall_1.0e-1
+
+root nt_helix_ptall_thall_err7.0e-2.root draw.C discardevents.C -b -q; 
+mkdir -p err_ptall_thall_7.0e-2 ; mv *png err_ptall_thall_7.0e-2
+
+root nt_helix_ptall_thall_err5.0e-2.root draw.C discardevents.C -b -q; 
+mkdir -p err_ptall_thall_5.0e-2 ; mv *png err_ptall_thall_5.0e-2
+
+root nt_helix_ptall_thall_err2.0e-2.root draw.C discardevents.C -b -q; 
+mkdir -p err_ptall_thall_2.0e-2 ; mv *png err_ptall_thall_2.0e-2
+
+root nt_helix_ptall_thall_err1.0e-2.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-2 ; mv *png  err_ptall_thall_1.0e-2
+
+root nt_helix_ptall_thall_err1.0e-3.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-3 ; mv *png  err_ptall_thall_1.0e-3
+
+root nt_helix_ptall_thall_err1.0e-4.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-4 ; mv *png  err_ptall_thall_1.0e-4
+
+root nt_helix_ptall_thall_err1.0e-6.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-6 ; mv *png  err_ptall_thall_1.0e-6
+
+root nt_helix_ptall_thall_err1.0e-8.root draw.C discardevents.C -b -q;
+mkdir -p err_ptall_thall_1.0e-8 ; mv *png  err_ptall_thall_1.0e-8
+

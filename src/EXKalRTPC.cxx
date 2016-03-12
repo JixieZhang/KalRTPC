@@ -12,7 +12,7 @@ static const Bool_t kDir = kIterBackward;
 //static const Bool_t kDir = kIterForward;
 
 ///////////////////////////////////////////////////////////////////////
-#define _EXKalTestDebug_ 3
+//#define _EXKalTestDebug_ 3
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -26,14 +26,14 @@ EXKalRTPC::EXKalRTPC()
   //  Prepare a fDetector
   // ===================================================================
 
-  fKalHits = new TObjArray();    // hit buffer
-  fCradle  = new TKalDetCradle();     // detctor system
+  fKalHits = new TObjArray();       // hit buffer
+  fCradle  = new TKalDetCradle();   // detctor system
   fDetector= new EXKalDetector();   // fDetector
 
-  fCradle->Install(*fDetector); // install fDetector into its fCradle
+  fCradle->Install(*fDetector);     // install fDetector into its fCradle
 
 #ifdef __MS_OFF__
-  fCradle.SwitchOffMS();     // switch off multiple scattering
+  fCradle.SwitchOffMS();            // switch off multiple scattering
 #endif
 
   // ===================================================================
@@ -45,6 +45,7 @@ EXKalRTPC::EXKalRTPC()
   // ===================================================================
   //  Prepare a Root tree output
   // ===================================================================
+  fCovMElement=5.0e-2;
   Tree_Init();
   _index_=0;
 }
@@ -73,7 +74,9 @@ int EXKalRTPC::GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm,
   //get the vertex point from here, xx and dfi are outputs
   const TVTrack &trk = dynamic_cast<const TVTrack &>(hel);
   int n=pCylVx.CalcXingPointWith(trk,xx,dfi,0);
+#ifdef _EXKalTestDebug_
   cout<<"GetVextex():  dfi="<<dfi*57.3<<"deg,   xx=("<<xx.X()<<", "<<xx.y()<<", "<<xx.Z()<<")"<<endl;
+#endif
   return n;
 }
 
@@ -91,7 +94,9 @@ int EXKalRTPC::GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm,
     dfi = (dfi>0) ? dfi-2*kPi : dfi+2*kPi;
   } 
   xx = hel.CalcXAt(dfi);
+#ifdef _EXKalTestDebug_
   cout<<"GetVextex2(): dfi="<<dfi*57.3<<"deg,   xx=("<<xx.X()<<", "<<xx.y()<<", "<<xx.Z()<<")"<<endl;
+#endif  
   return 1;
 }
 
@@ -288,7 +293,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 
     fKalHits->Delete();
     Reset();
-
+    
     // ============================================================
     //  Generate a partcle and Swim the particle in fDetector
     // ============================================================
@@ -312,7 +317,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     // ---------------------------
     //  Create a dummy site: sited
     // ---------------------------
-    Int_t i1 = (kDir == kIterBackward) ? fKalHits->GetEntries() - 1 : 0;
+    Int_t i1 = (kDir == kIterBackward) ? fKalHits->GetEntries()-1 : 0;
   
     EXHit hitd = *dynamic_cast<EXHit *>(fKalHits->At(i1));
     hitd(0,1) = 1.e6;   // give a huge error to d
@@ -335,8 +340,8 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 
     static TKalMatrix C(kSdim,kSdim);
     for (Int_t i=0; i<kSdim; i++) {
-      //C(i,i) = 1.e4;   // dummy error matrix
-      C(i,i) = 1.e0;   // dummy error matrix
+      //C(i,i) = 1.e0;         // dummy error matrix
+      C(i,i) = fCovMElement;   // dummy error matrix
     }
 
     sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));
@@ -387,8 +392,11 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 	step_status[npt]=0;
 	cerr << "Fitter: site "<<npt<<" discarded: "
 	  << " xv=("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<")"<< endl;           
-	delete &site;                                  // delete this site, if failed
+	delete &site;                                   // delete this site, if failed      
+
+#ifdef _EXKalTestDebug_                          
 	Pause4Debug();
+#endif
       }
       else {
 #ifdef _EXKalTestDebug_
@@ -428,7 +436,13 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     TVKalState *theLastState = (TVKalState*) &(kaltrack.GetCurSite().GetCurState());
     ReconVertex(*theLastState, p_rec, pt_rec, pz_rec, th_rec, ph_rec, 
       x_rec, y_rec, z_rec, r_rec, a_rec, b_rec );
-
+    
+#ifdef _EXKalTestDebug_
+    if(Global_Debug_Level >= 4) {
+      TKalMatrix pC = theLastState->GetCovMat();
+      pC.Print(); 
+    }
+#endif
 
     ndf  = kaltrack.GetNDF();
     chi2 = kaltrack.GetChi2();
@@ -564,8 +578,7 @@ int EXKalRTPC::DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n)
 
   static TKalMatrix C(kSdim,kSdim);
   for (Int_t i=0; i<kSdim; i++) {
-    //C(i,i) = 1.e4;   // dummy error matrix
-    C(i,i) = 1.e0;   // dummy error matrix
+    C(i,i) = fCovMElement;   // dummy error matrix
   }
 
   sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));

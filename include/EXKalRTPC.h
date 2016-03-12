@@ -43,6 +43,8 @@ public:
   void ReconVertex(TVKalState &state, double &p, double &pt, double &pz, 
     double &th, double &ph, double &x, double &y, double &z, 
     double &r_rec, double &a_rec, double &b_rec);
+  
+  void SetCovMElement(double val) {fCovMElement=val;};
 
 private:
 
@@ -57,6 +59,7 @@ private:
   //get vertex by finding dca to bpm point
   int GetVextex2(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
     TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
+  
 
 public:
 
@@ -65,10 +68,13 @@ public:
   TObjArray     *fKalHits;    // hit buffer
   TKalDetCradle *fCradle;     // detctor system
   EXKalDetector *fDetector;   // detector
-  EXEventGen     *fEventGen;       // enevt generator
+  EXEventGen    *fEventGen;   // enevt generator
+  
+private:
+  double fCovMElement;
 
 private:
-
+  //root variables
   TTree* fTree;
   int _index_;
   double p_rec,pt_rec,pz_rec,th_rec,ph_rec,x_rec,y_rec,z_rec;
