@@ -73,7 +73,7 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
       <<", A="<<aTrack.GetXc()<<", B="<<aTrack.GetYc()
       <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
-      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg "<<endl;
+      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg  Z0="<<z0<<endl;
   }
 #endif
 
@@ -254,14 +254,6 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
   this->Theta0_p=acos(cs);
   this->P0_p=fabs(pt)/sqrt((1-cs)*(1+cs));
 
-  this->R_rec=r*10.;
-  this->A_rec=a*10.;
-  this->B_rec=b*10.;
-  this->Theta_rec=Theta0_p;
-  this->Phi_rec=phi0_p;
-  this->Z_rec=0*10.;
-
-
 #ifdef _ExEventGenDebug_
   //just for debug
   if(_ExEventGenDebug_>=1) {
@@ -269,7 +261,7 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
       <<", A="<<a<<", B="<<b
       <<", phi_c="<<phi_c*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
-      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg "<<endl;  
+      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg  Z0="<<0<<endl;  
   }
   if(_ExEventGenDebug_>=4) {
     for(int i=0;i<HitNum_m;i++) {
@@ -457,18 +449,18 @@ THelicalTrack EXEventGen::DoHelixFit()
   Double_t dz  = 0;
   Double_t cs  = cos(Theta_rec);
   Double_t tnl = cs / TMath::Sqrt((1-cs)*(1+cs)); 
-  Double_t x0  = 0;
-  Double_t y0  = 0;
-  Double_t z0  = Z_rec;
+  Double_t x0  = 0;  // can also use pX0;
+  Double_t y0  = 0;  // can also use pY0;
+  Double_t z0  = pZ0;
 
   THelicalTrack aTrack(dr,fi0,cpa,dz,tnl,x0,y0,z0,b);
 
-  this->P0_rec_p=fabs(pt)/sin(Theta_rec);
-  this->X0_rec_p=aTrack.GetXc()*10.;
-  this->Y0_rec_p=aTrack.GetYc()*10.;
+  this->P0_rec_p=fabs(pt)/sin(pTheta);
+  this->X0_rec_p=pX0*10.;
+  this->Y0_rec_p=pY0*10.;
   this->Z0_rec_p=pZ0*10;
-  this->Theta0_rec_p=Theta_rec;
-  this->Phi0_rec_p=Phi_rec;
+  this->Theta0_rec_p=pTheta;
+  this->Phi0_rec_p=pPhi;
 
 
 #ifdef _ExEventGenDebug_
@@ -478,7 +470,7 @@ THelicalTrack EXEventGen::DoHelixFit()
       <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
       <<", phi_c="<<Phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P_hel="<<P0_rec_p<<", Phi_hel="<<Phi0_rec_p*57.3
-      <<"deg, Theta_hel="<<Theta0_rec_p*57.3<<"deg "<<endl;
+      <<"deg, Theta_hel="<<Theta0_rec_p*57.3<<"deg  Z_hel="<<pZ0<<endl;
   }
 #endif
 

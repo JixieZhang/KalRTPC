@@ -1,10 +1,18 @@
 KalmanFilter application for RTPC12, By Jixie Zhang
 
+2016/03/16
+1. Fixed bug of x0_hel,y0_hel reconstruction
+2. Fixed bug od step_#_fil do not match step_#, where # stands for x,y,x. The bug is 
+   that the first site of "kaltrack" is a dummy site, I should ignore the first site
+   when filling root leaves.
+3. Added some macros.
+
+
 2016/03/11
 1. Optimized initial values for the covariant error matrix. Wrote scripts
    to scan these initial values.  I found that 0.02 or 0.05 is the best value.
    put 0.05 as a default.  Modified the main() to allow to give the value 
-   through command line argument. The usage is now looks like this:
+   through command line argument. The usage now looks like this:
    
   Usage: ./EXKalRTPC <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \
          [costh_min=-0.00001] [costh_max=0.00001] [error=0.05]
@@ -13,7 +21,7 @@ KalmanFilter application for RTPC12, By Jixie Zhang
           pt_min_gev and pt_max_gev: specifiy the range of pt in Gev
           Note that if pt is negative then anti-clockwise track will be generated
           costh_min and costh_max: specifiy the range of costh, only for job==0
-          error is used to initialize the comvariant matrix before fitting.
+          error is used to initialize the co-variant matrix before fitting.
 
 2. Fixed bug in EXGenEVent::LoadATrack().  The bug is that it does not check the 
    hit ID from g4 root tree. Sometimes those hit IDs are negative numbers, which means

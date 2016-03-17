@@ -37,7 +37,7 @@ void FitGauss(TH1F *h1)
   h1->Draw();
 }
 
-void discardevents()
+void discardevents_old()
 {
   TTree *t=(TTree*) gROOT->FindObject("t");
   t->Draw(">>elist1","step_status==0");
@@ -70,7 +70,7 @@ void discardevents()
 
 }
 
-void discardevents_()
+void discardevents_fil()
 {
   TTree *t=(TTree*) gROOT->FindObject("t");
   t->Draw(">>elist1","step_status==0");

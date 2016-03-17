@@ -12,7 +12,7 @@ static const Bool_t kDir = kIterBackward;
 //static const Bool_t kDir = kIterForward;
 
 ///////////////////////////////////////////////////////////////////////
-//#define _EXKalTestDebug_ 3
+#define _EXKalTestDebug_ 4
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -139,8 +139,10 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
 #ifdef _EXKalTestDebug_
   //debug the vertex reconstruction
   if(Global_Debug_Level>=1) {
-    TVector3 xl=hel.GetPivot();
-    cout<<"   Last Hit=("<<xl.X()<<", "<<xl.y()<<", "<<xl.Z()<<")"
+    TVector3 xv=hel.GetPivot();
+    TVector3 x_fil=hel.CalcXAt(0.0);
+    cout<<"   LastHit=("<<xv.X()<<", "<<xv.y()<<", "<<xv.Z()<<")"
+      <<"   LastHit_fil=("<<x_fil.X()<<", "<<x_fil.y()<<", "<<x_fil.Z()<<")"
       <<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
 
     cout<<"Rec. to Vextex: p="<<p<<" ph="<<ph*57.3<<", th="<<th*57.3
@@ -428,7 +430,12 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     }
     //kaltrack.SmoothBackTo(1);                          // smooth back.
 
-
+    
+#ifdef _EXKalTestDebug_
+      if(Global_Debug_Level >= 3) {
+	cout<<"Number of sites in kaltrack = "<<kaltrack.GetEntries()<<endl;
+      }
+#endif
     // ============================================================
     //  Monitor Fit Result
     // ============================================================
@@ -438,7 +445,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
       x_rec, y_rec, z_rec, r_rec, a_rec, b_rec );
     
 #ifdef _EXKalTestDebug_
-    if(Global_Debug_Level >= 4) {
+    if(Global_Debug_Level >= 5) {
       TKalMatrix pC = theLastState->GetCovMat();
       pC.Print(); 
     }
@@ -468,24 +475,34 @@ void EXKalRTPC::Tree_Fill(TKalTrack &kaltrack)
   //most of these are coming from  EXEventGen::NtReader, which is in mm
 
   TIter next(fKalHits, kDir);   
-
-  int npt=0, iSite=0;
-  EXHit *hitp = dynamic_cast<EXHit *>(next());
+  //Note that the first site of kaltrack is a dummy site
+  //do not include it into the output root tree
+  int npt=0, iSite=1;  //site 0 is dummy site, start from 1
+  EXHit *hitp = dynamic_cast<EXHit *>(next());  
   while (hitp) {     // loop over hits    
-    const EXMeasLayer &ml = dynamic_cast<const EXMeasLayer &>(hitp->GetMeasLayer());
     //fill the global variables for root tree
     TVector3 xraw = hitp->GetRawXv();
-    TVector3 xv = ml.HitToXv(*hitp);
     step_x[npt]=xraw.X();step_y[npt]=xraw.Y();step_z[npt]=xraw.Z();
-    step_x_exp[npt]=xv.X();step_y_exp[npt]=xv.Y();step_z_exp[npt]=xv.Z();
 
     //filtered state vector exist only if it is not removed
     if(step_status[npt]) {
       TKalTrackSite *site = (TKalTrackSite *)kaltrack.At(iSite++); // load the site
-      TVKalState *state_fil = (TVKalState*) &(site->GetCurState());
+
+      TVKalState *state_exp = (TVKalState*) &(site->GetState(TVKalSite::kPredicted));
+      THelicalTrack hel_exp = (dynamic_cast<TKalTrackState *>(state_exp))->GetHelix();
+      TVector3 x_exp=hel_exp.CalcXAt(0.0);
+      step_x_exp[npt]=x_exp.X();step_y_exp[npt]=x_exp.Y();step_z_exp[npt]=x_exp.Z();
+
+      //TVKalState *state_fil = (TVKalState*) &(site->GetCurState());
+      TVKalState *state_fil = (TVKalState*) &(site->GetState(TVKalSite::kFiltered));
       THelicalTrack hel_fil = (dynamic_cast<TKalTrackState *>(state_fil))->GetHelix();
       TVector3 x_fil=hel_fil.CalcXAt(0.0);
       step_x_fil[npt]=x_fil.X();step_y_fil[npt]=x_fil.Y();step_z_fil[npt]=x_fil.Z();
+      //cout<<"good hit "<<npt<<endl;
+    }
+    else {
+      step_x_fil[npt]=0;step_y_fil[npt]=0;step_z_fil[npt]=0;
+      //cout<<"*bad* hit "<<npt<<endl;
     }
     hitp = dynamic_cast<EXHit *>(next());
     npt++;
