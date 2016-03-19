@@ -12,7 +12,7 @@ static const Bool_t kDir = kIterBackward;
 //static const Bool_t kDir = kIterForward;
 
 ///////////////////////////////////////////////////////////////////////
-#define _EXKalTestDebug_ 4
+//#define _EXKalTestDebug_ 2
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -258,16 +258,32 @@ bool EXKalRTPC::PrepareATrack(double *x_mm, double *y_mm,double *z_mm, int npt)
 //Let the event generator to generate a track
 bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double costh_min, double costh_max)
 {
+  //sometimes the use will provide too small pt_min, which will cause some
+  //events have no hits, I have to avoid this situation
+  //Here I set a maximum number of throw as 100, if it fail then quit 
+  int pCounter=0,pMaxThrow=100;
   if(job==0) {
-    THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max);
-    fEventGen->Swim(hel,kMpr);
+    while(pCounter<pMaxThrow) {
+      THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max);
+      fEventGen->Swim(hel,kMpr);
+      if(fKalHits->GetEntries()>=3) break;
+      else fKalHits->Delete();
+      pCounter++;
+    }
+    if(pCounter>=pMaxThrow) return false;
   }
   else if(job==1) { 
     //by Jixie: read from root tree
     if(fEventGen->LoadOneTrack()<0) return false;
   }
   else {
-    fEventGen->GenCircle(pt_min,pt_max);
+    while(pCounter<pMaxThrow) {
+      fEventGen->GenCircle(pt_min,pt_max);
+      if(fKalHits->GetEntries()>=3) break;
+      else fKalHits->Delete();
+      pCounter++;
+    }
+    if(pCounter>=pMaxThrow) return false;
   }
   return true;
 }

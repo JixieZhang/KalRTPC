@@ -1,4 +1,40 @@
 KalmanFilter application for RTPC12, By Jixie Zhang
+TODO:
+1) Change Bz field of each measure layer according to field map
+2) Add Bx By into the framework
+3) Try to apply Kalman Filter twice, the first iteration is fitting from
+inside to outside, to achieve the state vector for the site at the end of the track.
+Then use this state vector as initial value for the 2nd iteration fit, which is fitting
+from outside to inside. 
+4) Optimze global helix fitter. Find out in which situation it can be not used, or has
+bad performance.
+
+
+
+2016/03/18
+1. Optimized the nitialize helix for Kanman Filter. I found that if a track curve
+   back too much, global hilix fitter will return a wrong sign of curvature and the phi 
+   angle. I could not solve the bug of helix fitter right now. However, I determine the
+   sign of a track using the phi-deflection between the vertex point and the first hit 
+   near the cathode. Then I compare it to the output of the helix fitter. If there signs
+   are different, I will change the sign for Rho and change Phi angle by Pi.
+
+2. Fix a bug for the initial helix state vector.  I passed the state vector at the 
+   vertex point to it in the past. Now  I shift it to the last site.  With this bug fixed,  
+   The Kalman Filter is as good as global helix fitter, sometimes a litter better.
+   I scan the initial errer matrix element value again and found that it is not as sensitive
+   as before.
+
+3. I also test the global helix fitter without force it fit to the beam line. The result
+   is much worse.
+
+4. Updated circle event generator. In the past it only generate hits from inside to outside,
+   then stop. It does not create large curve back tracks. Now I allow it to swim back from
+   outside to inside. 
+
+5. Fixed a bug that if the user provide too small pt, there is no hit generated, in this case
+   it will either crash or go into a dead loop. Now I force it to stop after 100 trials.  
+
 
 2016/03/16
 1. Fixed bug of x0_hel,y0_hel reconstruction
