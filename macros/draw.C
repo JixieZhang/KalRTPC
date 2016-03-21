@@ -57,14 +57,50 @@ void FitGauss(TH1F *h1)
   h1->Draw();
 }
 
-void draw(){
+void draw(int log_hel=0,int log_rec=1){
   double mean_dZ,sigma_dZ;
   double mean_dT,sigma_dT;
   double mean_dF,sigma_dF;
   double mean_dP,sigma_dP;
 
+  ofstream fout;
+  fout.open("table.txt",ios_base::app);
+
   TTree *t=(TTree*) gROOT->FindObject("t"); 
   //TTree *t = (TTree*)gDirectory->Get("t");
+  //////////////////////////////////////////////////////////////
+  TCanvas *c13 = new TCanvas("c13","",900,700);
+  c13->Divide(2,2);
+  c13->cd(1);
+  t->Draw("z0-z_hel>>hd0hz(80,-1,1)","","");
+  TH1F *hd0hz = (TH1F*) gROOT->FindObject("hd0hz");
+  FitGauss(hd0hz,mean_dZ,sigma_dZ);
+
+  c13->cd(2);
+  t->Draw("th0-th_hel>>hd0ht(40,-0.2,0.2)","","");
+  TH1F *hd0ht = (TH1F*) gROOT->FindObject("hd0ht");
+  FitGauss(hd0ht,mean_dT,sigma_dT);
+
+  c13->cd(3);
+  t->Draw("ph0-ph_hel>>hd0hph(100,-0.5,0.5)","","");
+  TH1F *hd0hph = (TH1F*) gROOT->FindObject("hd0hph");
+  FitGauss(hd0hph,mean_dF,sigma_dF);
+
+  c13->cd(4);
+  t->Draw("pt0-pt_hel>>hd0hp(100,-0.05,0.05)","","");
+  TH1F *hd0hp = (TH1F*) gROOT->FindObject("hd0hp");
+  FitGauss(hd0hp,mean_dP,sigma_dP);
+
+  if(log_hel) {
+    fout<<setw(30)<<"global_helix_fit"<<fixed<<setprecision(3)<<"  "
+	<<setw(8)<<mean_dZ<<" +/- " <<setw(5)<<sigma_dZ<<"  "
+	<<setw(8)<<mean_dT<<" +/- " <<setw(5)<<sigma_dT<<"  "
+	<<setw(8)<<mean_dF<<" +/- " <<setw(5)<<sigma_dF<<"  "
+	<<setprecision(4)
+	<<setw(8)<<mean_dP<<" +/- " <<setw(6)<<sigma_dP<<endl;
+  }
+  c13->SaveAs("thrown_vs_hel.png");
+
   //////////////////////////////////////////////////////////////
   TCanvas *c12 = new TCanvas("c12","",900,700);
   c12->Divide(2,2);
@@ -90,17 +126,16 @@ void draw(){
  
   c12->SaveAs("thrown_vs_rec.png");
 
-  ofstream fout;
-  fout.open("table.txt",ios_base::app);
-
-  fout<<setw(30)<<gFile->GetName()<<fixed<<setprecision(3)<<"  "
-      <<setw(8)<<mean_dZ<<" +/- " <<setw(5)<<sigma_dZ<<"  "
-      <<setw(8)<<mean_dT<<" +/- " <<setw(5)<<sigma_dT<<"  "
-      <<setw(8)<<mean_dF<<" +/- " <<setw(5)<<sigma_dF<<"  "
-      <<setprecision(4)
-      <<setw(8)<<mean_dP<<" +/- " <<setw(6)<<sigma_dP<<endl;
-
+  if(log_rec) {
+    fout<<setw(30)<<gFile->GetName()<<fixed<<setprecision(3)<<"  "
+	<<setw(8)<<mean_dZ<<" +/- " <<setw(5)<<sigma_dZ<<"  "
+	<<setw(8)<<mean_dT<<" +/- " <<setw(5)<<sigma_dT<<"  "
+	<<setw(8)<<mean_dF<<" +/- " <<setw(5)<<sigma_dF<<"  "
+	<<setprecision(4)
+	<<setw(8)<<mean_dP<<" +/- " <<setw(6)<<sigma_dP<<endl;
+  }
   fout.close();
+  
   //////////////////////////////////////////////////////////////
   TCanvas *c11 = new TCanvas("c11","",900,700);
   c11->Divide(2,2);
@@ -125,30 +160,5 @@ void draw(){
   FitGauss(hdp);
 
   c11->SaveAs("hel_vs_rec.png");
-
-  //////////////////////////////////////////////////////////////
-  TCanvas *c13 = new TCanvas("c13","",900,700);
-  c13->Divide(2,2);
-  c13->cd(1);
-  t->Draw("z0-z_hel>>hd0hz(80,-1,1)","","");
-  TH1F *hd0hz = (TH1F*) gROOT->FindObject("hd0hz");
-  FitGauss(hd0hz);
-
-  c13->cd(2);
-  t->Draw("th0-th_hel>>hd0ht(40,-0.2,0.2)","","");
-  TH1F *hd0ht = (TH1F*) gROOT->FindObject("hd0ht");
-  FitGauss(hd0ht);
-
-  c13->cd(3);
-  t->Draw("ph0-ph_hel>>hd0hph(100,-0.5,0.5)","","");
-  TH1F *hd0hph = (TH1F*) gROOT->FindObject("hd0hph");
-  FitGauss(hd0hph);
-
-  c13->cd(4);
-  t->Draw("pt0-pt_hel>>hd0hp(100,-0.05,0.05)","","");
-  TH1F *hd0hp = (TH1F*) gROOT->FindObject("hd0hp");
-  FitGauss(hd0hp);
-
-  c13->SaveAs("thrown_vs_hel.png");
 
 }

@@ -18,7 +18,7 @@
 
 ./EXKalRTPC 0 1000 0.057 0.2 -0.9 0.9  1.0e-8 ; mv h.root nt_helix_ptall_thall_err1.0e-8.root
 
-root nt_helix_ptall_thall_err1.0e0.root draw.C discardevents.C -b -q;
+root nt_helix_ptall_thall_err1.0e0.root 'draw.C(1,1)' discardevents.C -b -q;
 mkdir -p err_ptall_thall_1.0e0 ; mv *png  err_ptall_thall_1.0e0
 
 root nt_helix_ptall_thall_err1.0e-1.root draw.C discardevents.C -b -q;

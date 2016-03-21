@@ -11,7 +11,7 @@
 ./EXKalRTPC 0 1000 0.1 0.1 -1.0e-6 1.0e-6 1.0e-6 ; mv h.root nt_helix_pt0.1_err1.0e-6.root
 ./EXKalRTPC 0 1000 0.1 0.1 -1.0e-6 1.0e-6 1.0e-8 ; mv h.root nt_helix_pt0.1_err1.0e-8.root
 
-root nt_helix_pt0.1_err1.0e0.root draw.C discardevents.C -b -q;
+root nt_helix_pt0.1_err1.0e0.root 'draw.C(1,1)' discardevents.C -b -q;
 mkdir -p err_pt0.1_1.0e0 ; mv *png  err_pt0.1_1.0e0
 
 root nt_helix_pt0.1_err1.0e-1.root draw.C discardevents.C -b -q;
