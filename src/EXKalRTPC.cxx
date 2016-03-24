@@ -12,7 +12,7 @@ static const Bool_t kDir = kIterBackward;
 //static const Bool_t kDir = kIterForward;
 
 ///////////////////////////////////////////////////////////////////////
-//#define _EXKalTestDebug_ 2
+#define _EXKalTestDebug_ 2
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -124,7 +124,7 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
   z=xv.Z();
 
   pt = fabs(1.0/cpa);
-  pz = pt * fabs(tanLambda);
+  pz = pt * tanLambda;
   p  = pt * sqrt(1+tanLambda*tanLambda);   //p = pt / sinTheta 
   th = (tanLambda>0) ? asin(pt/p) : kPi-asin(pt/p);
   double fi0_vx = fi0 + dfi;  //vertex point fi0 angle in helix coordinate system
@@ -212,6 +212,13 @@ void EXKalRTPC::Tree_Init()
   t->Branch("r_hel",&r_hel,"r_hel/D");
   t->Branch("a_hel",&a_hel,"a_hel/D");
   t->Branch("b_hel",&b_hel,"b_hel/D");
+  
+  t->Branch("p_3pt",&p_3pt,"p_3pt/D");
+  t->Branch("pt_3pt",&pt_3pt,"pt_3pt/D");
+  t->Branch("th_3pt",&th_3pt,"th_3pt/D");
+  t->Branch("r_3pt",&r_3pt,"r_3pt/D");
+  t->Branch("a_3pt",&a_3pt,"a_3pt/D");
+  t->Branch("b_3pt",&b_3pt,"b_3pt/D");
 
   t->Branch("ndf",&ndf,"ndf/I");
   t->Branch("chi2",&chi2,"chi2/D");
@@ -235,6 +242,10 @@ void EXKalRTPC::Reset()
 
   p_hel=pt_hel=pz_hel=th_hel=ph_hel=x_hel=y_hel=z_hel=9999.0;
   r_hel=a_hel=b_hel=0.0; 
+
+  p_3pt=pt_3pt=th_3pt=9999.0;
+  r_3pt=a_3pt=b_3pt=0.0; 
+
   ndf=0;
   chi2=cl=0.0;
 }
@@ -266,7 +277,7 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
     while(pCounter<pMaxThrow) {
       THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max);
       fEventGen->Swim(hel,kMpr);
-      if(fKalHits->GetEntries()>=3) break;
+      if(fKalHits->GetEntries()>=4) break;
       else fKalHits->Delete();
       pCounter++;
     }
@@ -278,8 +289,8 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
   }
   else {
     while(pCounter<pMaxThrow) {
-      fEventGen->GenCircle(pt_min,pt_max);
-      if(fKalHits->GetEntries()>=3) break;
+      fEventGen->GenCircle(pt_min,pt_max,costh_min,costh_max);
+      if(fKalHits->GetEntries()>=4) break;
       else fKalHits->Delete();
       pCounter++;
     }
@@ -478,9 +489,8 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 #endif
 
   }
-
   fFile->Write();
-
+  
   return 1;
 }
 
@@ -549,6 +559,12 @@ void EXKalRTPC::Tree_Fill(TKalTrack &kaltrack)
   a_hel=fEventGen->A_rec/10.;
   b_hel=fEventGen->B_rec/10.;
 
+  p_3pt=fEventGen->P_3pt;
+  th_3pt=fEventGen->Theta_3pt;
+  pt_3pt=fEventGen->Pt_3pt;
+  r_3pt=fEventGen->R_3pt;
+  a_3pt=fEventGen->A_3pt;
+  b_3pt=fEventGen->B_3pt;
 
   fTree->Fill();
   _index_++;

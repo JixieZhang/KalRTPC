@@ -18,12 +18,18 @@ public:
    //Create a helix from 3 points to get initial parameter for Kalman Filter
    //IterDirection=true is farward, otherwise backward
    THelicalTrack CreateInitialHelix(bool IterDirection=true);
+ 
+   //Apply linear regression to "Rho*dPhi vs dZ" to determine theta and z of a helix
+   void FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
+                       double& Theta0, double& Z0);
+
    //DO a global helix fit to get initial parameter for Kalman Filter
    THelicalTrack DoHelixFit();
 
    void          Swim(THelicalTrack &heltrk, Double_t mass = 0.13957018);
 
-   int           GenCircle(double pt_min, double pt_max);
+   int           GenCircle(double pt_min, double pt_max,
+			  double cosmin=0, double cosmax=0);
 
    int           LoadOneTrack();
    //input: x y z in mm and in increasing order 
@@ -38,6 +44,10 @@ private:
    TObjArray     *fHitBufPtr;     // pointer to hit array
 
    static Double_t  fgT0;         // t0
+   
+public:
+  //debug 3-point helix
+  double P_3pt,Pt_3pt,Theta_3pt,R_3pt,A_3pt,B_3pt;
 
    ClassDef(EXEventGen,1)   // Event Generator
 };

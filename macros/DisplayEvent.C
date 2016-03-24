@@ -197,7 +197,7 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   c1->cd(4);
   double Z_rec = GetVariable("z_rec",cut);
 
-  if(NHits<1) return 0;
+  if(NHits<3) return 0;
 
   TPaveText *pt = new TPaveText(0.65,0.65,1-gStyle->GetPadRightMargin(),0.89,"brNDC");
   pt->SetFillColor(0);
@@ -228,28 +228,38 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   if(obj=gROOT->FindObject("grxz")) delete obj;
   if(obj=gROOT->FindObject("grrz")) delete obj;
 
+  TGraph *gryx=0;
+  TGraph *gryx_exp=0;
+  TGraph *gryx_discard=0;
+  TGraph *gryz=0;
+  TGraph *grxz=0;
+  TGraph *grrz=0;
+
   c1->Clear();
   //Get the TGraph object, in one canvas there can be only one 
   c1->cd(); h2yxframe->Draw();
   if(!gROOT->IsBatch()) h2yxframe->Draw("same");
   t->Draw("step_y:step_x",Acccut,"same");
-  TGraph *gryx=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx"));
-  gryx->SetName("gryx");
-  gryx->SetMarkerColor(4);gryx->SetMarkerStyle(4);
+  if(gROOT->FindObject("Graph")) {
+    gryx=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx"));
+    gryx->SetName("gryx");
+    gryx->SetMarkerColor(4);gryx->SetMarkerStyle(4);
+  }
 
   c1->Clear();
   c1->cd(); h2yxframe->Draw();
   t->Draw("step_y_exp:step_x_exp",Acccut,"same");
-  TGraph *gryx_exp=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx_exp"));
-  gryx_exp->SetName("gryx_exp");
-  gryx_exp->SetMarkerColor(6);gryx_exp->SetMarkerStyle(20);
+  if(gROOT->FindObject("Graph")) {
+    gryx_exp=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx_exp"));  
+    gryx_exp->SetName("gryx_exp");
+    gryx_exp->SetMarkerColor(6);gryx_exp->SetMarkerStyle(20);
+  }
 
   c1->Clear();
   c1->cd(); h2yxframe->Draw();
   t->Draw("step_y:step_x",Discardcut,"same");
-  TGraph *gryx_discard=0;
   if(gROOT->FindObject("Graph")) {
-    TGraph *gryx_discard=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx_discard"));
+    gryx_discard=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx_discard"));
     gryx_discard->SetName("gryx_discard");
     gryx_discard->SetMarkerColor(2);gryx_discard->SetMarkerStyle(2);
   }
@@ -257,22 +267,27 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   c1->Clear();
   c1->cd(); h2yzframe->Draw();
   t->Draw("step_y:step_z",Acccut,"same");
-  TGraph *gryz=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryz"));
-  gryz->SetName("gryz");
-  gryz->SetMarkerColor(4);gryz->SetMarkerStyle(4);
+  if(gROOT->FindObject("Graph")) {
+    gryz=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryz"));  
+    gryz->SetName("gryz");
+    gryz->SetMarkerColor(4);gryz->SetMarkerStyle(4);
+  }
 
   c1->cd(); h2xzframe->Draw();
   t->Draw("step_x:step_z",Acccut,"same");
-  TGraph *grxz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grxz"));
-  grxz->SetName("grxz");
-  grxz->SetMarkerColor(4);grxz->SetMarkerStyle(4);
+  if(gROOT->FindObject("Graph")) {
+    grxz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grxz"));  
+    grxz->SetName("grxz");
+    grxz->SetMarkerColor(4);grxz->SetMarkerStyle(4);
+  }
 		
   c1->cd(); h2rzframe->Draw();
   t->Draw("step_s:step_z",Acccut,"same");
-  TGraph *grrz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grrz"));
-  grrz->SetName("grrz");
-  grrz->SetMarkerColor(4);grrz->SetMarkerStyle(4);
-
+  if(gROOT->FindObject("Graph")) {
+    grrz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grrz"));  
+    grrz->SetName("grrz");
+    grrz->SetMarkerColor(4);grrz->SetMarkerStyle(4);
+  }
 
 
   c1->Clear();
@@ -281,38 +296,39 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   c1->cd(1); h2yxframe->Draw();
   pt->Draw();
   if(!gROOT->IsBatch()) h2yxframe->Draw("same");
-  gryx->Draw("same p");
+  if(gryx) gryx->Draw("same p");
   if(gryx_discard) gryx_discard->Draw("same p");
   t->Draw("step_y_fil:step_x_fil>>h2yx_fil",Acccut,"same*");
 
   c1->cd(2); h2yzframe->Draw();
   pt_rec->Draw();
-  gryz->Draw("same p");
+  if(gryz) gryz->Draw("same p");
   t->Draw("step_y_fil:step_z_fil>>h2yz_fil",Acccut,"same*");
 
   c1->cd(3); h2xzframe->Draw();
-  grxz->Draw("same p");
+  if(grxz) grxz->Draw("same p");
   t->Draw("step_x_fil:step_z_fil>>h2xz_fil",Acccut,"same*");
 
 		
   c1->cd(4); h2rzframe->Draw();
-  grrz->Draw("same p");
+  if(grrz) grrz->Draw("same p");
   t->Draw("step_s_fil:step_z_fil>>h2rz_fil",Acccut,"same*");
 
   c1->Update();
   c1->SaveAs(Form("Movie/RTPC_Event_%03d.png",iEvent));
 
   //////////////plot zoom in figure////////////
-  c2->Clear();
-  c2->cd();
-  gryx->SetTitle(Form("Event %d: Raw(Blue),Expected(Purple), Filtered(Black)",iEvent));
-  gryx->Draw("AP");
-  gryx_exp->Draw("samep");
-  if(gryx_discard) gryx_discard->Draw("samep");
-  t->Draw("step_y_fil:step_x_fil",Acccut,"same*");
-  c2->Update();
-  c2->SaveAs(Form("Movie/RTPC_Event_Zoom_%03d.png",iEvent));
-
+  if(gryx) {
+    c2->Clear();
+    c2->cd();
+    gryx->SetTitle(Form("Event %d: Raw(Blue),Expected(Purple), Filtered(Black)",iEvent));
+    gryx->Draw("AP");
+    gryx_exp->Draw("samep");
+    if(gryx_discard) gryx_discard->Draw("samep");
+    t->Draw("step_y_fil:step_x_fil",Acccut,"same*");
+    c2->Update();
+    c2->SaveAs(Form("Movie/RTPC_Event_Zoom_%03d.png",iEvent));
+  }
 
   t->Scan("p0:pt0:th0*57.3:ph0*57.3:z0:npt:pt_rec:th_rec*57.3:ph_rec*57.3:z_rec",cut);
 

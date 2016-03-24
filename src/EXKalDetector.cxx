@@ -34,6 +34,16 @@ EXKalDetector::EXKalDetector(Int_t m)
   //1ATM_He4DME  3.33504            1.63207E6              30.00407 - 70
 
   double A,Z,density,radlen;
+  
+  //vacuum 
+  A       =  4.0026;                           // mass number
+  Z       =  2.;                               // atomic number
+  density = 0.1665E-13;                         // [g/cm^3]
+  radlen  = 5.665E15;                           // [cm]
+  TMaterial &Vacuum = *new TMaterial("Vacuum", "Vacuum", 
+    A, Z, density, radlen, 0.);
+
+
   //BONUS material table, A and Z are fake numbers
   //D2Gas at 7 atm 300k
   A       =  2.;                               // mass number
@@ -82,7 +92,7 @@ EXKalDetector::EXKalDetector(Int_t m)
 
   // Create dummy layers of the inner cylinder of the central tracker
   double r;   //in cm
-
+ 
   //add target gas and target wall and He4 gas
   Add(new EXMeasLayer(D2Gas, Kapton, r=0.3, lhalf, EXMeasLayer::kDummy));
   Add(new EXMeasLayer(Kapton, He4Gas, r=0.3028, lhalf, EXMeasLayer::kDummy));
@@ -94,11 +104,24 @@ EXKalDetector::EXKalDetector(Int_t m)
   //add 2nd aluminized mylar foil
   Add(new EXMeasLayer(He4DME, AlMylar, r=3.0, lhalf, EXMeasLayer::kDummy));
   Add(new EXMeasLayer(AlMylar, He4DME, r=3.000407, lhalf, EXMeasLayer::kDummy));
+   /*
+  //add target gas and target wall and He4 gas
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=0.3, lhalf, EXMeasLayer::kDummy));
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=0.3028, lhalf, EXMeasLayer::kDummy));
+
+  //add first aluminized mylar foil
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=2.0, lhalf, EXMeasLayer::kDummy));
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=2.000407, lhalf, EXMeasLayer::kDummy));
+
+  //add 2nd aluminized mylar foil
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=3.0, lhalf, EXMeasLayer::kDummy));
+  Add(new EXMeasLayer(Vacuum, Vacuum, r=3.000407, lhalf, EXMeasLayer::kDummy));
+  */
 
   // Create measurement layers in the drift region
   for (Int_t layer = nlayers-1; layer >= 0; layer--) {
     EXMeasLayer* ml = new EXMeasLayer(He4DME, He4DME, kDetLayerRList[layer], lhalf, 
-      EXMeasLayer::kActive);
+      EXMeasLayer::kActive);    
     ml->SetIndex(kNDetDummyLayer+nlayers-1-layer);
     Add(ml);
   }

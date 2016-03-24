@@ -6,6 +6,7 @@
 
 #include "EXHit.h"
 #include "BonusHelixFit.hh"
+#include "GlobalDebuger.hh"
 
 //-----------------------------------
 // RTPC Parameters
@@ -25,7 +26,7 @@ static const double kRTPC_R_Cathode = 3.0;
 
 ClassImp(EXEventGen)
 
-#define _ExEventGenDebug_ 1
+#define _ExEventGenDebug_ 2
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
@@ -218,7 +219,14 @@ int  EXEventGen::LoadOneTrack()
 }
 
 //generate a circle center at (a,b) and go through (0,0)
-int  EXEventGen::GenCircle(double pt_min, double pt_max)
+//based on the helix definition: tanLambda = ctanTheta
+//when rho>0, fi0 definition is different by PI, and dfi
+//is in diff sign
+//This routine has been fully debuged, it generates helix
+//without energy loss or MSC, from (0,0,z0=0)
+//One could use random z0 too 
+int  EXEventGen::GenCircle(double pt_min, double pt_max, 
+  double costh_min, double costh_max)
 {
   const double PI = atan(1.)*4;
   double bfield_tesla = dynamic_cast<const EXKalDetector &>
@@ -227,14 +235,21 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
 
   // r_m = pt_gev/(0.3*Bz_tesla);
   double pt = gRandom->Uniform(pt_min, pt_max);  //in gev
+  double costh = gRandom->Uniform(costh_min, costh_max); 
+  double sinth = sqrt(1.0-costh*costh);
+  double tanlambda = costh/sinth;
+  double rho = pt/(0.3*bfield_tesla) * 100;  //in cm
+  double r = fabs(rho);
+  double z0 = 0;
 
-  double r = fabs(pt)/(0.3*bfield_tesla) * 100;  //in cm
-
-  double cs=0.0;  //only for theta=90deg
   //phi_c is circle center phi angle in hall coordinate system
   double phi_c = 2*TMath::Pi()*gRandom->Uniform(); 
   double a = r * cos(phi_c);
   double b = r * sin(phi_c);
+  double fi0 = phi_c-PI;
+  if(pt>0) fi0+=PI;
+  if(fi0> PI) fi0-=2*PI;
+  if(fi0<-PI) fi0+=2*PI;
 
   double phi0_p = (pt>0) ? phi_c+PI/2 : phi_c-PI/2;
   if(phi0_p> PI) phi0_p-=2*PI;
@@ -242,21 +257,21 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
 
   //base on phi angle in circle center coordinate to calculate lab x,y,z
   //note that 
-  //if (2r<S_cathode), not hit
+  //if (2r<S_cathode), no hit
   //if (2r>S_gem1) then only loop one iteration
   //if (2r<=S_gem1) then will curve back, 2 hits each layer
-  double phi_cir, phi_cir_0 = atan2(-b,-a);
+  double phi_cir;
   HitNum=0;
   //swim forward
   for(int i=0;i<kNDetLayer;i++) {
     if (kDetLayerRList[kNDetLayer-1-i]>2.*r) continue;   //no hit
     double dfi = asin(kDetLayerRList[kNDetLayer-1-i]/2./r)*2;
-    if(pt<0) phi_cir = phi_cir_0+dfi;
-    else phi_cir = phi_cir_0-dfi;
+    if(pt>0) dfi*=-1;   //from definition
+    phi_cir = fi0+dfi;
 
-    StepX[HitNum]=(r*cos(phi_cir)+a)*10.;  //in mm
-    StepY[HitNum]=(r*sin(phi_cir)+b)*10.;  //in mm
-    StepZ[HitNum]=0;
+    StepX[HitNum]=(-rho*cos(phi_cir)+a)*10.;	    //in mm
+    StepY[HitNum]=(-rho*sin(phi_cir)+b)*10.;	    //in mm
+    StepZ[HitNum]=(z0-rho*tanlambda*dfi)*10.;	    //in mm
     StepS[HitNum]=sqrt(StepX[HitNum]*StepX[HitNum]+StepY[HitNum]*StepY[HitNum]);
     StepPhi[HitNum]=atan2(StepY[HitNum],StepX[HitNum]);
     HitNum++;
@@ -267,13 +282,13 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
   {
     for(int i=0;i<kNDetLayer;i++) {
       if (kDetLayerRList[i]>2.*r) continue;   //no hit
-      double dfi = -asin(kDetLayerRList[i]/2./r)*2;
-      if(pt<0) phi_cir = phi_cir_0+dfi;
-      else phi_cir = phi_cir_0-dfi;
+      double dfi = 2*PI-asin(kDetLayerRList[i]/2./r)*2;
+      if(pt>0) dfi*=-1; //from definition
+      phi_cir = fi0+dfi;
 
-      StepX[HitNum]=(r*cos(phi_cir)+a)*10.;  //in mm
-      StepY[HitNum]=(r*sin(phi_cir)+b)*10.;  //in mm
-      StepZ[HitNum]=0;
+      StepX[HitNum]=(-rho*cos(phi_cir)+a)*10.;	//in mm
+      StepY[HitNum]=(-rho*sin(phi_cir)+b)*10.;	//in mm
+      StepZ[HitNum]=(z0-rho*tanlambda*dfi)*10.;		//in mm
       StepS[HitNum]=sqrt(StepX[HitNum]*StepX[HitNum]+StepY[HitNum]*StepY[HitNum]);
       StepPhi[HitNum]=atan2(StepY[HitNum],StepX[HitNum]);
       HitNum++;
@@ -285,15 +300,15 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max)
   this->Y0=0*10.;
   this->Z0=0*10.;
   this->Phi0_p=phi0_p;
-  this->Theta0_p=acos(cs);
-  this->P0_p=fabs(pt)/sqrt((1-cs)*(1+cs));
+  this->Theta0_p=acos(costh);
+  this->P0_p=fabs(pt)/sinth;
 
 #ifdef _ExEventGenDebug_
   //just for debug
   if(_ExEventGenDebug_>=1) {
-    cout<<"\nCircle Event:  pt="<<pt<<"  Rho="<<r
+    cout<<"\nCircle Event:  pt="<<pt<<"  Rho="<<rho
       <<", A="<<a<<", B="<<b
-      <<", phi_c="<<phi_c*57.3<<"deg "<<endl;
+      <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
       <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg  Z0="<<0<<endl;  
   }
@@ -397,23 +412,110 @@ THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection)
   double bfield = h1.GetBfield();  //in kGauss
   THelicalTrack aTrack(x1, x2, x3, bfield, IterDirection); // initial helix 
 
+  
+  const double PI=acos(0.0)*2;
+  double pRho = aTrack.GetRho();
+  Pt_3pt = pRho/aTrack.GetPtoR();
+  A_3pt = aTrack.GetXc();
+  B_3pt = aTrack.GetYc();
+  double tanLambda = aTrack.GetTanLambda();
+  P_3pt = fabs(Pt_3pt) * sqrt(1+tanLambda*tanLambda); 
+  Theta_3pt = atan(1./tanLambda);
+  if(Theta_3pt<0) Theta_3pt+=PI;
 
 #ifdef _ExEventGenDebug_
   //just for debug
-  double pRho = aTrack.GetRho();
-  double pPt = pRho/aTrack.GetPtoR();
-  double pA = aTrack.GetXc();
-  double pB = aTrack.GetYc();
-  double pPhi_c = atan2(pB,pA);
+  double pPhi_c = atan2(B_3pt,A_3pt);
   double pFi0 = aTrack.GetPhi0(); 
+
   if(_ExEventGenDebug_>=1) {
-    cout<<" 3-point Helix:  pt="<<pPt
-      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
+    cout<<" 3-point Helix:  pt="<<Pt_3pt
+      <<"  Rho="<<pRho<<", A="<<A_3pt<<", B="<<B_3pt
       <<", phi_c="<<pPhi_c*57.3<<"deg, fi0_last="<<pFi0*57.3<<"deg "<<endl;   
+    cout<<"  P_3pt="<<P_3pt<<", Theta_3pt="<<Theta_3pt*57.3<<"deg"<<endl;
   }
 #endif
 
   return aTrack;
+}
+   
+//Apply linear regression to "-Rho*dPhi vs dZ" to determine theta and z of a helix
+//according to definition, -Rho * tanLambda = dZdPhi
+//tanTheta = 1/tanLambda = -Rho/dZdPhi = -Rho*dPhi/dZ
+//it means that tanTheta is the slope of "-Rho*dPhi vs dZ"
+//so we can do linear fit to get the slope
+//if dPhi_vx is given, one can calcuate dZ_vx, then z_vx
+//linear regression formula can be found here
+//http://www.datagenetics.com/blog/august12013/index.html
+//
+void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
+                                double& Theta0, double& Z0)
+{
+    const double PI=acos(0.0)*2;
+    double rhodfi[200],dfi[200],dz[200];
+    //angle in circle coordinate system
+    double phi_c_1st=atan2(szPos[0][1]-B,szPos[0][0]-A);
+    for(int i=1;i<npt;i++) {
+      dz[i-1] = szPos[i][2]-szPos[0][2];
+      dfi[i-1] = atan2(szPos[i][1]-B,szPos[i][0]-A) - phi_c_1st;
+      if(dfi[i-1]<0) dfi[i-1] += 2*PI;
+      rhodfi[i-1] = -Rho * dfi[i-1]; 
+      if(i+1>=200) break;
+    }
+    
+    //now do the linear regression on  "Rho*dPhi vs dZ"
+    int n=npt-1;
+    double M,C;    //the function is y = M*x + C
+    double sumX=0,sumY=0,sumXY=0,sumX2=0;
+    for(int j=0;j<n;j++) {
+      sumX  += dz[j];
+      sumY  += rhodfi[j];
+      sumXY += dz[j]*rhodfi[j];
+      sumX2 += dz[j]*dz[j];
+    }
+    M = (n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX);
+    C = (sumY/n) - M*(sumX/n);
+
+    //this method does not work well for theta0=90deg
+    
+    if(_ExEventGenDebug_>=2) {
+      cout<<"FitHelixThetaZ():  dfi_span="<<dfi[n-1]<<"rad, z_span="<<dz[n-1]<<"cm"
+	<<",  <rhodfi>="<<sumY/n<<",  <dz>="<<sumX/n<<endl; 
+    }
+
+    if(fabs(dz[n-1])<0.4 && fabs(sumX/n)<0.2) {
+      if(_ExEventGenDebug_>=1) {
+	cout<<"**FitHelixThetaZ():  dz_span too small, is within uncertianty, do nothing***\n";      
+      }
+      //Z0 = sumX/n;
+      //Theta0 = PI/2;
+      return;
+    }
+    
+    //now convert M and C into theta and z according to definition
+    //tanTheta = 1/tanLambda = Rho/dZdPhi = Rho*dPhi/dZ
+    //it means that tanTheta is the slope of "Rho*dPhi vs dZ"
+    double pTheta0 = atan(M);
+    if(pTheta0<0) pTheta0 += PI;
+    
+    if((sumX/n<-0.2 && pTheta0*57.3<87) || (sumX/n>0.2 && pTheta0*57.3>93)) {
+      if(_ExEventGenDebug_>=1) {
+	cout<<"**FitHelixThetaZ(): wrong theta="<<pTheta0*57.3<<"deg, do nothing***"<<endl;
+      }
+      if(_ExEventGenDebug_>=2) {
+	for(int j=0;j<n;j++) {
+	  cout<<"point "<<setw(3)<<j<<":  rhodfi="<<setw(10)<<rhodfi[j]<<",  dfi="
+	    <<setw(10)<<dfi[j]<<",  dz="<<setw(10)<<dz[j]<<endl; 
+	}
+      }
+      return;
+    }
+
+    Theta0 = pTheta0;
+    double phi_c_vx = atan2(0-B,0-A);
+    double dfi_vx = phi_c_vx - phi_c_1st;
+    double dz_vx = ( dfi_vx - C) / M;
+    Z0 = dz_vx + szPos[0][2];
 }
 
 //DO a global helix fit to get initial parameter for Kalman Filter
@@ -456,7 +558,9 @@ THelicalTrack EXEventGen::DoHelixFit()
   //TODO: 
   //check global helix fit why it return a wrong sign of rho for large curve track
   
-  //Global helix fit might return the wrong sign, here I determine the sign  
+  //Global helix fit might return the wrong sign, expecially for large curve back tracks
+  //Once it happens, its theta and z are totally wrong, phi is off by PI according to definition 
+  //here I determine the sign  
   //using dfi_vx2first, since it always less than PI. 
   //For clock-wise track, dfi_vx2first<0  
   //the next few lines will get the phi angle on circle system, then do a subtraction
@@ -480,22 +584,64 @@ THelicalTrack EXEventGen::DoHelixFit()
 
 #ifdef _ExEventGenDebug_
   //just for debug
-  if(_ExEventGenDebug_>=5) {
-    cout<<"  Last_hit=("<<StepX_rec_m[npt-1]<<", "<<StepY_rec_m[npt-1]<<") \n";
+  if(_ExEventGenDebug_>=4) {
+    cout<<" First_hit=("<<StepX_rec_m[0]<<", "<<StepY_rec_m[0]<<", "<<StepZ_rec_m[0]<<"), ";
+    cout<<"  Last_hit=("<<StepX_rec_m[npt-1]<<", "<<StepY_rec_m[npt-1]<<", "<<StepZ_rec_m[npt-1]<<") \n";
     cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
       <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
       <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
+  } 
+  if(_ExEventGenDebug_>=3) {
+    cout<<"  npt="<<npt<<",  dz_span="<<StepZ_rec_m[npt-1]-StepZ_rec_m[0]
+      <<"cm,  chi2="<<pChi2<<endl;
   }
 #endif
 
+  //make correction for global helix fit result
   if (sign*pRho<0)  {
     cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
+    if(_ExEventGenDebug_>=1) {
+      cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
+	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+    }
     pRho *= -1.0;
     pPhi+=PI;
     if(pPhi> PI) pPhi-=2*PI;
     if(pPhi<-PI) pPhi+=2*PI;
+    //todo:  need to get resonable theta and z
+  
+    FitHelixThetaZ(npt,szPos,pRho,pA,pB,pTheta,pZ0);
+    if(_ExEventGenDebug_>=1) {
+      cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
+	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+    }
   }
-
+  else
+  {
+#ifdef _ExEventGenDebug_
+    //sometimes the global helix return wrong theta, 
+    //want to find out and correct it back
+    double ppTheta=pTheta, ppZ0=pZ0;
+    FitHelixThetaZ(npt,szPos,pRho,pA,pB,ppTheta,ppZ0);
+    if((ppTheta-PI/2)*(pTheta-PI/2)<0) {
+    if(_ExEventGenDebug_>=1) 
+      cout<<"***Before FitHelixThetaZ: Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+      pTheta=ppTheta; pZ0=ppZ0;
+    if(_ExEventGenDebug_>=1) 
+      cout<<"*** After FitHelixThetaZ: Theta="<<setw(8)<<ppTheta*57.3<<"deg, Z="<<ppZ0<<"cm \n";
+    }
+#endif
+  }
+  
+#ifdef _ExEventGenDebug_
+  //just for debug
+  if(_ExEventGenDebug_>=2) {
+    if(fabs(Theta0_p-pTheta)*57.3>5 )
+    {
+      Pause4Debug();
+    }
+  }
+#endif
   /////////////////////////////////////////////////////////////////////
   R_rec=fabs(pRho)*10;
   A_rec=pA*10;

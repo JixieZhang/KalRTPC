@@ -91,6 +91,7 @@ private:
   double p0,pt0,pz0,th0,ph0,_x0_,_y0_,_z0_;
   double p_hel,pt_hel,pz_hel,th_hel,ph_hel,x_hel,y_hel,z_hel;
   double r_hel,a_hel,b_hel;
+  double p_3pt,pt_3pt,th_3pt,r_3pt,a_3pt,b_3pt;
 
   int ndf;
   double chi2,cl;

@@ -10,7 +10,25 @@ from outside to inside.
 bad performance.
 
 
+2016/03/24
+1. Improved global helix fitter.  When the track curve too much, the global helix fitter 
+   might not fit the helix correctly. It will give wrong sign of curvature, Phi0 different 
+   by Pi and totaly wrong theta and z. When the sign is wrong, I correct the sign and phi.
+   I then did linear regreesion to "rho*dfi vs dz" to get new_theta and new_z. I judge  
+   if old_theta-PI/2 has different sign as new_theta-PI/2. If they do, I will use new_theta
+   and new_z to replace old_theta and old_z.  I do not correct theta for each event, because
+   the linear regression does not work well if theta is close to 90 deg, in which dz is
+   within its uncertainty. 
 
+2. Added 3-points helix parameter "P_3pt,Pt_3pt,Theta_3pt,R_3pt,A_3pt,B_3pt" into root tree.
+   I want to compare them with global helix to find out if I could base on Theta_3pt to 
+   correct old_theta. It turns out that  Theta_3pt is not as good as the new_theta mentioned
+   above.
+
+3. I might need to move the above improvement of global helix fit into the helix fitter 
+   subroutine.
+
+ 
 2016/03/18
 1. Optimized the nitialize helix for Kanman Filter. I found that if a track curve
    back too much, global hilix fitter will return a wrong sign of curvature and the phi 

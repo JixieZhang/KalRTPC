@@ -74,7 +74,7 @@ extern "C" {
     float* ch2ph, float* ch2z,  /* return values */ 
     float* del, float* delz)
   {
-    int Helix_Use_C_Code=0;
+    int Helix_Use_C_Code=1;
     if(Helix_Use_C_Code ) 
       rwfthc(  npt,rf,pf,wfi,zf,wzf, iopt,vv0,ee0, ch2ph, ch2z, del,delz);
     else

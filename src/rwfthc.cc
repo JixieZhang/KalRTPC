@@ -72,7 +72,7 @@ extern "C" {
     for (i=1; i<=ni; i++)
     {
       // --- Search for pivot and test for linearity and zero matrix
-      k = jj = 0; vkk = 0.0;
+      k = kk = jj = 0; vkk = 0.0;
       for (j=1; j<=n; j++)
       {
 	jj += j;
@@ -401,33 +401,34 @@ label_105:
       if (del[i] >  ONEPI) del[i] -= TWOPI;
       if (del[i] < -ONEPI) del[i] += TWOPI;
     }
+
     /*
     // -------- Fit straight line in S-Z
     for(i=0; i<n; i++)
     {
-    eee[i] = 0.5*vv0[0] * 
-    sqrtf(fabs( (rf[i]*rf[i] - vv0[3]*vv0[3]) / 
-    (1.0-aa0*vv0[0]*vv0[3])                               ));
+      eee[i] = 0.5*vv0[0] * 
+	       sqrtf(fabs( (rf[i]*rf[i] - vv0[3]*vv0[3]) / 
+	                   (1.0-aa0*vv0[0]*vv0[3])         ));
+      //printf("eee[%d] = %f\n",i,eee[i]);
+      if (eee[i] >  0.9999) 
+      { 
+	//quiet = FALSE;
+	//fprintf(stderr, "+Track circles too much for this code(eee=%f); bad dzds\n",eee[i]);
+	//badarg = TRUE;//break;
+	//printf("eee[%d] = %f\n",i,eee[i]);
+	eee[i] =  0.9999;
+      }
+      if (eee[i] < -0.9999) 
+      {
+	//quiet = FALSE;
+	//fprintf(stderr, "-Track circles too much for this code(eee=%f); bad dzds\n",eee[i]);
+	//badarg = TRUE;//break;
+	//printf("eee[%d] = %f\n",i,eee[i]);
+	eee[i] = -0.9999;
+      }
 
-    if (eee[i] >  0.9999) 
-    { 
-    //quiet = FALSE;
-    //fprintf(stderr, "Track circles too much for this code(eee=%f); bad dzds\n",eee[i]);
-    //badarg = TRUE;//break;
-    //printf("eee[%d] = %f\n",i,eee[i]);
-    //eee[i] =  0.9999;
-    }
-    if (eee[i] < -0.9999) 
-    {
-    //quiet = FALSE;
-    //fprintf(stderr, "Track circles too much for this code(eee=%f); bad dzds\n",eee[i]);
-    //badarg = TRUE;//break;
-    //printf("eee[%d] = %f\n",i,eee[i]);
-    //eee[i] = -0.9999;
-    }
-
-    sxy[i] = 2.0*asin(eee[i])/ome;
-    //printf("original sxy[%d] = %f\n",i,sxy[i]);
+      sxy[i] = 2.0*asin(eee[i])/ome;
+      //printf("original sxy[%d] = %f\n",i,sxy[i]);
     }
     */
     //if(badarg)
