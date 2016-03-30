@@ -416,6 +416,7 @@ THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection)
   const double PI=acos(0.0)*2;
   double pRho = aTrack.GetRho();
   Pt_3pt = pRho/aTrack.GetPtoR();
+  R_3pt = pRho;
   A_3pt = aTrack.GetXc();
   B_3pt = aTrack.GetYc();
   double tanLambda = aTrack.GetTanLambda();
@@ -500,7 +501,7 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
     
     if((sumX/n<-0.2 && pTheta0*57.3<87) || (sumX/n>0.2 && pTheta0*57.3>93)) {
       if(_ExEventGenDebug_>=1) {
-	cout<<"**FitHelixThetaZ(): wrong theta="<<pTheta0*57.3<<"deg, do nothing***"<<endl;
+	cout<<"**FitHelixThetaZ(): wrong fitted theta="<<pTheta0*57.3<<"deg, do nothing***"<<endl;
       }
       if(_ExEventGenDebug_>=2) {
 	for(int j=0;j<n;j++) {
@@ -596,6 +597,14 @@ THelicalTrack EXEventGen::DoHelixFit()
       <<"cm,  chi2="<<pChi2<<endl;
   }
 #endif
+  
+  ////////////////////
+  //just for debug, store r,theta,z to make figure 
+  //R_3pt = pRho;
+  //A_3pt = pTheta;
+  //B_3pt = pZ0;
+  
+  ////////////////////
 
   //make correction for global helix fit result
   if (sign*pRho<0)  {
