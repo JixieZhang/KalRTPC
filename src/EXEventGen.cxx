@@ -600,9 +600,9 @@ THelicalTrack EXEventGen::DoHelixFit()
   
   ////////////////////
   //just for debug, store r,theta,z to make figure 
-  //R_3pt = pRho;
-  //A_3pt = pTheta;
-  //B_3pt = pZ0;
+  R_3pt = pRho;
+  A_3pt = pTheta;
+  B_3pt = pZ0;
   
   ////////////////////
 
