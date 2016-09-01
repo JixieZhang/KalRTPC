@@ -23,8 +23,9 @@ public:
    void FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
                        double& Theta0, double& Z0);
 
-   //DO a global helix fit to get initial parameter for Kalman Filter
-   THelicalTrack DoHelixFit();
+   //Do global helix fit to get initial parameter for Kalman Filter
+   //IterDirection=true is farward, otherwise backward
+   THelicalTrack DoHelixFit(bool IterDirection=false);
 
    void          Swim(THelicalTrack &heltrk, Double_t mass = 0.13957018);
 
@@ -38,6 +39,8 @@ public:
 
    static void     SetT0(Double_t t0) { fgT0 = t0;   }
    static Double_t GetT0()            { return fgT0; }
+   
+   static void PrintHelix(THelicalTrack *aTrack, const char *title="helix");
 
 private:
    TKalDetCradle *fCradlePtr;     // pointer to detector system

@@ -57,7 +57,8 @@ void FitGauss(TH1F *h1)
   h1->Draw();
 }
 
-void draw(int log_hel=0,int log_rec=1){
+void draw(int log_hel=0,int log_rec=1, const char *key="")
+{
   double mean_dZ,sigma_dZ;
   double mean_dT,sigma_dT;
   double mean_dF,sigma_dF;
@@ -92,14 +93,19 @@ void draw(int log_hel=0,int log_rec=1){
   FitGauss(hd0hp,mean_dP,sigma_dP);
 
   if(log_hel) {
-    fout<<setw(30)<<"global_helix_fit"<<fixed<<setprecision(3)<<"  "
+    fout<<"\n"<<setw(40)<<"FileName"<<"  "
+	<<setw(18)<<"dZ(cm)"<<"  "
+	<<setw(18)<<"dTheta(rad)"<<"  "
+	<<setw(18)<<"dPhi(rad)"<<"  "
+	<<setw(19)<<"dPt(GeV/c)"<<endl;
+    fout<<setw(40)<<"global_helix_fit"<<fixed<<setprecision(3)<<"  "
 	<<setw(8)<<mean_dZ<<" +/- " <<setw(5)<<sigma_dZ<<"  "
 	<<setw(8)<<mean_dT<<" +/- " <<setw(5)<<sigma_dT<<"  "
 	<<setw(8)<<mean_dF<<" +/- " <<setw(5)<<sigma_dF<<"  "
 	<<setprecision(4)
 	<<setw(8)<<mean_dP<<" +/- " <<setw(6)<<sigma_dP<<endl;
   }
-  c13->SaveAs("thrown_vs_hel.png");
+  c13->SaveAs(Form("thrown_vs_hel_%s.png",key));
 
   //////////////////////////////////////////////////////////////
   TCanvas *c12 = new TCanvas("c12","",900,700);
@@ -124,10 +130,10 @@ void draw(int log_hel=0,int log_rec=1){
   TH1F *hd0p = (TH1F*) gROOT->FindObject("hd0p");
   FitGauss(hd0p,mean_dP,sigma_dP);
  
-  c12->SaveAs("thrown_vs_rec.png");
+  c12->SaveAs(Form("thrown_vs_rec_%s.png",key));
 
   if(log_rec) {
-    fout<<setw(30)<<gFile->GetName()<<fixed<<setprecision(3)<<"  "
+    fout<<setw(40)<<gFile->GetName()<<fixed<<setprecision(3)<<"  "
 	<<setw(8)<<mean_dZ<<" +/- " <<setw(5)<<sigma_dZ<<"  "
 	<<setw(8)<<mean_dT<<" +/- " <<setw(5)<<sigma_dT<<"  "
 	<<setw(8)<<mean_dF<<" +/- " <<setw(5)<<sigma_dF<<"  "
@@ -159,6 +165,6 @@ void draw(int log_hel=0,int log_rec=1){
   TH1F *hdp = (TH1F*) gROOT->FindObject("hdp");
   FitGauss(hdp);
 
-  c11->SaveAs("hel_vs_rec.png");
+  c11->SaveAs(Form("hel_vs_rec_%s.png",key));
 
 }

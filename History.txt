@@ -9,6 +9,8 @@ from outside to inside.
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2016/08/22
+1. modify to apply 2nd iteration fitting
 
 2016/03/24
 1. Improved global helix fitter.  When the track curve too much, the global helix fitter 

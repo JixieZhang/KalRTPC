@@ -4,6 +4,7 @@
 // By Jixie Zhang, Modify for RTPC12
 // ********************************************************************
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include "BonusHelixFit.hh"
@@ -97,6 +98,138 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif 
+/*
+Recursive definition of determinate using expansion by minors.
+*/
+double Determinant(double **a,int n)
+{
+  int i,j,j1,j2;
+  double det = 0;
+  double **m = NULL;
+
+  if (n < 1) { /* Error */
+
+  } else if (n == 1) { /* Shouldn't get used */
+    det = a[0][0];
+  } else if (n == 2) {
+    det = a[0][0] * a[1][1] - a[1][0] * a[0][1];
+  } else {
+    det = 0;
+    for (j1=0;j1<n;j1++) {
+      m = (double**)malloc((n-1)*sizeof(double *));
+      for (i=0;i<n-1;i++)
+	m[i] = (double*)malloc((n-1)*sizeof(double));
+      for (i=1;i<n;i++) {
+	j2 = 0;
+	for (j=0;j<n;j++) {
+	  if (j == j1)
+	    continue;
+	  m[i-1][j2] = a[i][j];
+	  j2++;
+	}
+      }
+      det += pow(-1.0,j1+2.0) * a[0][j1] * Determinant(m,n-1);
+      for (i=0;i<n-1;i++)
+	free(m[i]);
+      free(m);
+    }
+  }
+  return(det);
+}
+
+/*
+Find the cofactor matrix of a square matrix
+*/
+void CoFactor(double **a,int n,double **b)
+{
+  int i,j,ii,jj,i1,j1;
+  double det;
+  double **c;
+
+  c = (double**)malloc((n-1)*sizeof(double *));
+  for (i=0;i<n-1;i++)
+    c[i] = (double*)malloc((n-1)*sizeof(double));
+
+  for (j=0;j<n;j++) {
+    for (i=0;i<n;i++) {
+
+      /* Form the adjoint a_ij */
+      i1 = 0;
+      for (ii=0;ii<n;ii++) {
+	if (ii == i)
+	  continue;
+	j1 = 0;
+	for (jj=0;jj<n;jj++) {
+	  if (jj == j)
+	    continue;
+	  c[i1][j1] = a[ii][jj];
+	  j1++;
+	}
+	i1++;
+      }
+
+      /* Calculate the determinate */
+      det = Determinant(c,n-1);
+
+      /* Fill in the elements of the cofactor */
+      b[i][j] = pow(-1.0,i+j+2.0) * det;
+    }
+  }
+  for (i=0;i<n-1;i++)
+    free(c[i]);
+  free(c);
+}
+
+/*
+Transpose of a square matrix, do it in place
+*/
+void Transpose(double **a,int n)
+{
+  int i,j;
+  double tmp;
+
+  for (i=1;i<n;i++) {
+    for (j=0;j<i;j++) {
+      tmp = a[i][j];
+      a[i][j] = a[j][i];
+      a[j][i] = tmp;
+    }
+  }
+}
+
+//nxn matrix m times vector v, and store the reulst in vector r
+void MatrixTimesVector(double **m,int n,double *v, double *r)
+{
+  int i,j;
+  for (i=0;i<n;i++) {
+    r[i] = 0.0;
+    for (j=0;j<n;j++) {
+      r[i] += m[i][j]*v[j];
+    }
+  }
+}
+
+//nxn matrix m times scaler s, and store the reulst in m
+void MatrixTimesScaler(double **m,int n,double s)
+{
+  int i,j;
+  for (i=0;i<n;i++) {
+    for (j=0;j<n;j++) {
+      m[i][j] *= s;
+    }
+  }
+}
+
+//calculate the reverse matrix of m and store it in r
+void Reverse(double **m, int n, double **r)
+{
+  double det = Determinant(m,n);
+  //store the cofactor matrix in r
+  CoFactor(m,n,r);
+  Transpose(r,n);
+  MatrixTimesScaler(r,n,1.0/det);
+}
+
 
 /*------------------------------------------------------------------------\
 //Function name: void helix_fit(int PointNum,double szPos[][3], 

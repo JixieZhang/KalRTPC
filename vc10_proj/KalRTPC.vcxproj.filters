@@ -54,7 +54,10 @@
     <ClCompile Include="..\src\ConfigManager.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Debug\draw.C">
+    <ClCompile Include="..\src\FitCircle.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\macros\draw.C">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -81,6 +84,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\NtReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\FitCircle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

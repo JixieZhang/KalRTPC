@@ -26,7 +26,7 @@ static const double kRTPC_R_Cathode = 3.0;
 
 ClassImp(EXEventGen)
 
-#define _ExEventGenDebug_ 2
+//#define _ExEventGenDebug_ 1
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
@@ -87,6 +87,41 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
 
   return aTrack;
 }
+
+//print the helix information for a given helix track point
+void EXEventGen::PrintHelix(THelicalTrack *aTrack, const char *title)
+{
+  const double PI=acos(0.0)*2;
+  // ---------------------------
+  //  print a helical track
+  // ---------------------------
+  double tanLambda = aTrack->GetTanLambda(); 
+  double cpa = aTrack->GetKappa(); 
+  double fi0 = aTrack->GetPhi0(); 
+  double rho = aTrack->GetRho();
+  double A = aTrack->GetXc();
+  double B = aTrack->GetYc();
+  //double phi_c=atan2(B,A);
+  double phi_c=(cpa>0)?fi0:fi0+PI;
+  if(phi_c> PI) phi_c-=2*PI;
+  if(phi_c<-PI) phi_c+=2*PI;
+  double phi_p=(cpa>0.) ? phi_c+PI/2 : phi_c-PI/2;
+  if(phi_p> PI) phi_p-=2*PI;
+  if(phi_p<-PI) phi_p+=2*PI;
+
+  double pt = fabs(1.0/cpa);
+  //double pz = pt * tanLambda;
+  double p  = pt * sqrt(1+tanLambda*tanLambda);   //p = pt / sinTheta 
+  double th = (tanLambda>0) ? asin(pt/p) : PI-asin(pt/p);
+
+  cout<<"\n+---------------------------------------------------------------------+\n";
+  cout<<"  title="<<title<<endl;
+  cout<<"  Kappa="<<cpa<<", tanLambda="<<tanLambda<<"\n";
+  cout<<"  Rho="<<rho<<", A="<<A<<", B="<<B<<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
+  cout<<"  pt="<<pt<<"  P_p="<<p<<", Phi_p="<<phi_p*57.3<<"deg, Theta_p="<<th*57.3<<endl;
+  cout<<"+---------------------------------------------------------------------+\n";
+}
+
 
 void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
 {
@@ -355,7 +390,7 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int npt, bool
       if(r>=pRmin && r<pRmax) {pLyrIndex=kNDetLayer-1-j; break;}
     }
 #ifdef _ExEventGenDebug_
-    if( _ExEventGenDebug_ >= 3) {
+    if( _ExEventGenDebug_ >= 4) {
       cout<<"Hit_R="<<r<<" --> pLyrIndex="<<pLyrIndex+kNDetDummyLayer<<endl;
     }
 #endif
@@ -370,7 +405,7 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int npt, bool
       ml.ProcessHit(xx, *fHitBufPtr, smearing); // create hit point     
 
 #ifdef _ExEventGenDebug_
-      if( _ExEventGenDebug_ >= 3) {
+      if( _ExEventGenDebug_ >= 4) {
 	EXHit *hitp = dynamic_cast<EXHit *> (fHitBufPtr->Last());       
 	TVector3 xv=ml.HitToXv((TVTrackHit&)(*hitp));   
 	TVector3 xraw=hitp->GetRawXv();
@@ -429,7 +464,7 @@ THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection)
   double pPhi_c = atan2(B_3pt,A_3pt);
   double pFi0 = aTrack.GetPhi0(); 
 
-  if(_ExEventGenDebug_>=1) {
+  if(_ExEventGenDebug_>=2) {
     cout<<" 3-point Helix:  pt="<<Pt_3pt
       <<"  Rho="<<pRho<<", A="<<A_3pt<<", B="<<B_3pt
       <<", phi_c="<<pPhi_c*57.3<<"deg, fi0_last="<<pFi0*57.3<<"deg "<<endl;   
@@ -440,6 +475,8 @@ THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection)
   return aTrack;
 }
    
+
+
 //Apply linear regression to "-Rho*dPhi vs dZ" to determine theta and z of a helix
 //according to definition, -Rho * tanLambda = dZdPhi
 //tanTheta = 1/tanLambda = -Rho/dZdPhi = -Rho*dPhi/dZ
@@ -453,6 +490,7 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
                                 double& Theta0, double& Z0)
 {
     const double PI=acos(0.0)*2;
+    ///////////////////////////////////////////////////////////////////////    
     double rhodfi[200],dfi[200],dz[200];
     //angle in circle coordinate system
     double phi_c_1st=atan2(szPos[0][1]-B,szPos[0][0]-A);
@@ -463,7 +501,7 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
       rhodfi[i-1] = -Rho * dfi[i-1]; 
       if(i+1>=200) break;
     }
-    
+
     //now do the linear regression on  "Rho*dPhi vs dZ"
     int n=npt-1;
     double M,C;    //the function is y = M*x + C
@@ -478,16 +516,18 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
     C = (sumY/n) - M*(sumX/n);
 
     //this method does not work well for theta0=90deg
-    
+#ifdef _ExEventGenDebug_
     if(_ExEventGenDebug_>=2) {
       cout<<"FitHelixThetaZ():  dfi_span="<<dfi[n-1]<<"rad, z_span="<<dz[n-1]<<"cm"
 	<<",  <rhodfi>="<<sumY/n<<",  <dz>="<<sumX/n<<endl; 
     }
-
+#endif
     if(fabs(dz[n-1])<0.4 && fabs(sumX/n)<0.2) {
-      if(_ExEventGenDebug_>=1) {
+#ifdef _ExEventGenDebug_
+      if(_ExEventGenDebug_>=2) {
 	cout<<"**FitHelixThetaZ():  dz_span too small, is within uncertianty, do nothing***\n";      
       }
+#endif
       //Z0 = sumX/n;
       //Theta0 = PI/2;
       return;
@@ -500,6 +540,7 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
     if(pTheta0<0) pTheta0 += PI;
     
     if((sumX/n<-0.2 && pTheta0*57.3<87) || (sumX/n>0.2 && pTheta0*57.3>93)) {
+#ifdef _ExEventGenDebug_
       if(_ExEventGenDebug_>=1) {
 	cout<<"**FitHelixThetaZ(): wrong fitted theta="<<pTheta0*57.3<<"deg, do nothing***"<<endl;
       }
@@ -509,6 +550,7 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
 	    <<setw(10)<<dfi[j]<<",  dz="<<setw(10)<<dz[j]<<endl; 
 	}
       }
+#endif
       return;
     }
 
@@ -519,8 +561,9 @@ void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
     Z0 = dz_vx + szPos[0][2];
 }
 
-//DO a global helix fit to get initial parameter for Kalman Filter
-THelicalTrack EXEventGen::DoHelixFit() 
+//Do global helix fit to get initial parameter for Kalman Filter
+//IterDirection=true is farward, otherwise backward
+THelicalTrack EXEventGen::DoHelixFit(bool IterDirection) 
 {
   const double PI=acos(0.0)*2;
   //the buffer should be in  increasing order
@@ -585,14 +628,14 @@ THelicalTrack EXEventGen::DoHelixFit()
 
 #ifdef _ExEventGenDebug_
   //just for debug
-  if(_ExEventGenDebug_>=4) {
+  if(_ExEventGenDebug_>=5) {
     cout<<" First_hit=("<<StepX_rec_m[0]<<", "<<StepY_rec_m[0]<<", "<<StepZ_rec_m[0]<<"), ";
     cout<<"  Last_hit=("<<StepX_rec_m[npt-1]<<", "<<StepY_rec_m[npt-1]<<", "<<StepZ_rec_m[npt-1]<<") \n";
     cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
       <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
       <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
   } 
-  if(_ExEventGenDebug_>=3) {
+  if(_ExEventGenDebug_>=4) {
     cout<<"  npt="<<npt<<",  dz_span="<<StepZ_rec_m[npt-1]-StepZ_rec_m[0]
       <<"cm,  chi2="<<pChi2<<endl;
   }
@@ -608,11 +651,13 @@ THelicalTrack EXEventGen::DoHelixFit()
 
   //make correction for global helix fit result
   if (sign*pRho<0)  {
+#ifdef _ExEventGenDebug_
     cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
-    if(_ExEventGenDebug_>=1) {
+    if(_ExEventGenDebug_>=2) {
       cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
 	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
+#endif
     pRho *= -1.0;
     pPhi+=PI;
     if(pPhi> PI) pPhi-=2*PI;
@@ -620,10 +665,12 @@ THelicalTrack EXEventGen::DoHelixFit()
     //todo:  need to get resonable theta and z
   
     FitHelixThetaZ(npt,szPos,pRho,pA,pB,pTheta,pZ0);
-    if(_ExEventGenDebug_>=1) {
+#ifdef _ExEventGenDebug_
+    if(_ExEventGenDebug_>=2) {
       cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
 	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
+#endif
   }
   else
   {
@@ -633,10 +680,10 @@ THelicalTrack EXEventGen::DoHelixFit()
     double ppTheta=pTheta, ppZ0=pZ0;
     FitHelixThetaZ(npt,szPos,pRho,pA,pB,ppTheta,ppZ0);
     if((ppTheta-PI/2)*(pTheta-PI/2)<0) {
-    if(_ExEventGenDebug_>=1) 
+    if(_ExEventGenDebug_>=2) 
       cout<<"***Before FitHelixThetaZ: Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
       pTheta=ppTheta; pZ0=ppZ0;
-    if(_ExEventGenDebug_>=1) 
+    if(_ExEventGenDebug_>=2) 
       cout<<"*** After FitHelixThetaZ: Theta="<<setw(8)<<ppTheta*57.3<<"deg, Z="<<ppZ0<<"cm \n";
     }
 #endif
@@ -692,11 +739,21 @@ THelicalTrack EXEventGen::DoHelixFit()
   Double_t y0  = 0;  // can also use pY0;
   Double_t z0  = pZ0;
 
+  
+  //IterDirection=true is farward, return helix state at 1st point
+  //otherwise backward, return helix state at last point
   double fi0_last = fi0+dfi_vx2last;
   if(fi0_last> PI) fi0_last-=2*PI;
   if(fi0_last<-PI) fi0_last+=2*PI;
 
-  THelicalTrack aTrack(dr,fi0_last,cpa,dz,tnl,x0,y0,z0,b);
+  double fi0_1st = fi0+dfi_vx2first;
+  if(fi0_1st> PI) fi0_1st-=2*PI;
+  if(fi0_1st<-PI) fi0_1st+=2*PI;
+
+  //this helix track is not ideal, but only fi0,tnl and cpa will be used
+  //by the caller
+  double ret_fi0 = (IterDirection==kIterBackward)?fi0_last:fi0_1st;
+  THelicalTrack aTrack(dr,ret_fi0,cpa,dz,tnl,x0,y0,z0,b);
 
   this->P0_rec_p=fabs(pt)/sin(pTheta);
   this->X0_rec_p=pX0*10.;
@@ -708,10 +765,11 @@ THelicalTrack EXEventGen::DoHelixFit()
 
 #ifdef _ExEventGenDebug_
   //just for debug
-  if(_ExEventGenDebug_>=1) {
+  if(_ExEventGenDebug_>=2) {
     cout<<"  global Helix:  pt="<<pt
       <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
       <<", phi_c="<<Phi_c*57.3<<"deg,"
+      <<" fi0_1st="<<fi0_1st*57.3<<"deg "
       <<" fi0_last="<<fi0_last*57.3<<"deg "<<endl;
     cout<<"  P_hel="<<P0_rec_p<<", Phi_hel="<<Phi0_rec_p*57.3
       <<"deg, Theta_hel="<<Theta0_rec_p*57.3<<"deg,  Z_hel="<<pZ0

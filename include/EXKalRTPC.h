@@ -33,7 +33,9 @@ public:
   bool PrepareATrack(double *x_mm, double *y_mm,double *z_mm, int npt);
   bool PrepareATrack(int job, double pt_min, double pt_max, 
     double costh_min, double costh_max);
-
+  
+  void FitForward4InitHelix(THelicalTrack &Hel_last,TKalMatrix &C_last);
+  void FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st);
   int DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n);
 
   int KalRTPC(int job, int nevents, double pt_min, double pt_max, 

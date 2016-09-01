@@ -12,9 +12,10 @@ static const Bool_t kDir = kIterBackward;
 //static const Bool_t kDir = kIterForward;
 
 ///////////////////////////////////////////////////////////////////////
-#define _EXKalTestDebug_ 2
+//#define _EXKalTestDebug_ 4
 
 ///////////////////////////////////////////////////////////////////////
+
 
 EXKalRTPC::EXKalRTPC()
 {
@@ -108,13 +109,18 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
   TVector3 xv(-99,-99,-99);
   Double_t dfi=0;
   THelicalTrack hel = (dynamic_cast<TKalTrackState *>(&state))->GetHelix();
+  
+#ifdef _EXKalTestDebug_
+  if(Global_Debug_Level >= 4) {
+    EXEventGen::PrintHelix(&hel, "final helix at 1st point:"); 
+  }
+#endif
 
   //by helix definition" Pz = Pt * tanLambda, tanLambda = ctan(theta)
   double tanLambda = state(4,0); //or tanLambda = hel.GetTanLambda(); 
   double cpa = state(2,0);       //or cpa = hel.GetKappa(); 
   double fi0 = state(1,0);       //or fi0 = hel.GetPhi0(); 
   double rho = hel.GetRho();
-
 
   //GetVextex(hel,0,0,xv,dfi,r_rec,a_rec,b_rec);
   GetVextex2(hel,0,0,xv,dfi,r_rec,a_rec,b_rec);
@@ -269,14 +275,24 @@ bool EXKalRTPC::PrepareATrack(double *x_mm, double *y_mm,double *z_mm, int npt)
 //Let the event generator to generate a track
 bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double costh_min, double costh_max)
 {
-  //sometimes the use will provide too small pt_min, which will cause some
+  //sometimes the user will provide too small pt_min, which will cause some
   //events have no hits, I have to avoid this situation
-  //Here I set a maximum number of throw as 100, if it fail then quit 
+  //Here I set a maximum number of throw as 100, if it fails then quit 
   int pCounter=0,pMaxThrow=100;
   if(job==0) {
     while(pCounter<pMaxThrow) {
       THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max);
+#ifdef _EXKalTestDebug_
+      if(Global_Debug_Level >= 4) {
+	EXEventGen::PrintHelix(&hel, "KalRTPC(backward): thrown helix at vertex:");  
+      }
+#endif
       fEventGen->Swim(hel,kMpr);
+#ifdef _EXKalTestDebug_
+      if(Global_Debug_Level >= 4) {
+	EXEventGen::PrintHelix(&hel, "KalRTPC(backward): thrown helix at last point:");  
+      }
+#endif
       if(fKalHits->GetEntries()>=4) break;
       else fKalHits->Delete();
       pCounter++;
@@ -328,7 +344,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     // ============================================================
     bool ret=PrepareATrack(job, pt_min, pt_max, costh_min, costh_max);
     if(!ret) break;
-
+    
     // ============================================================
     //  Do Kalman Filter
     // ============================================================
@@ -336,12 +352,51 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     // ---------------------------
     // Create initial helix
     // ---------------------------
-    // initial helix 
-    THelicalTrack hel_3point = fEventGen->CreateInitialHelix(kDir); 
-    THelicalTrack helstart = fEventGen->DoHelixFit();    
+    // 
+    // ============================================================
+    //  Do Kalman Filter in forward direction for the initial helix
+    // ============================================================   
+    THelicalTrack helstart;
+    TKalMatrix C_start(kSdim,kSdim);
 
-    //for some curve back tracks, global helix fit fail
-    if(helstart.GetRho()*hel_3point.GetRho()<0) helstart=hel_3point;
+    bool bApply2Iter = true;
+
+    if(bApply2Iter) 
+    {
+#ifdef _EXKalTestDebug_
+      //this part just for debug, show the 1st iter forward fitting result
+      //to compare with 2nd iter
+      if(Global_Debug_Level >= 4) {
+	FitForward4InitHelix(helstart,C_start);
+	EXEventGen::PrintHelix(&helstart, "FitForward result: helix at last point:");
+	//cout<<"\nFitForward4InitHelix covMat:"<<endl;
+	//C_start.DebugPrint(25);
+      }
+#endif
+      //Fit backward and smooth it back to the most outside point
+      FitBackward4InitHelix(helstart,C_start);
+#ifdef _EXKalTestDebug_
+      if(Global_Debug_Level >= 4) {
+	EXEventGen::PrintHelix(&helstart, "Fitbackward and smooth back result: helix at last point:");
+	//cout<<"\nFitBackward4InitHelix covMat(smoothed back):"<<endl;
+	//C_start.DebugPrint(25);
+      }
+#endif
+    }
+    else
+    {
+      THelicalTrack hel_3point = fEventGen->CreateInitialHelix(kDir);
+      THelicalTrack hel_global = fEventGen->DoHelixFit(kDir);   
+#ifdef _EXKalTestDebug_
+      if(Global_Debug_Level >= 4) {
+	EXEventGen::PrintHelix(&hel_3point, "KalRTPC(backward): 3-point helix at last point:"); 
+	EXEventGen::PrintHelix(&hel_global, "KalRTPC(backward): global helix at last point:"); 
+      }
+#endif
+      //for some curve back tracks, global helix fit fails, 
+      //use 3-point result if it happens
+      helstart = (hel_global.GetRho()*hel_3point.GetRho()>0) ? hel_global : hel_3point;
+    }
 
     // ---------------------------
     //  Create a dummy site: sited
@@ -368,9 +423,16 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     if (kSdim == 6) svd(5,0) = 0.;
 
     static TKalMatrix C(kSdim,kSdim);
-    for (Int_t i=0; i<kSdim; i++) {
-      //C(i,i) = 1.e0;         // dummy error matrix
-      C(i,i) = fCovMElement;   // dummy error matrix
+    if(bApply2Iter){
+       for (Int_t i=0; i<kSdim; i++) C(i,i) = C_start(i,i); 
+       //C = C_start;
+    }
+    else
+    {
+      for (Int_t i=0; i<kSdim; i++) {
+	//C(i,i) = 0.05;         // dummy error matrix
+	C(i,i) = fCovMElement;   // dummy error matrix
+      }
     }
 
     sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));
@@ -405,7 +467,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
       step_status[npt]=1;
 
 #ifdef _EXKalTestDebug_
-      if(Global_Debug_Level >= 3) {
+      if(Global_Debug_Level >= 5) {
 	cerr << "MeasLayer "<<setw(2)<<ml.GetIndex()
 	  <<": R="<<setw(6)<<ml.GetR()<<": ";
 	cerr << "xraw=("<<setw(8)<<xraw.X()<<",  "<<setw(8)<<xraw.Y()
@@ -434,7 +496,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 	//TVKalState &state_fil1 = kaltrack.GetState(TVKalSite::kFiltered);
 	//TVKalState *state_fil2 = &kaltrack.GetState(TVKalSite::kFiltered);
 
-	if(Global_Debug_Level >= 4) {
+	if(Global_Debug_Level >= 7) {
 	  TVKalState *state_fil = (TVKalState*) &(site.GetCurState());
 	  THelicalTrack hel_fil = (dynamic_cast<TKalTrackState *>(state_fil))->GetHelix();
 	  TVector3 x_fil=hel_fil.CalcXAt(0.0);
@@ -455,6 +517,9 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
       npt++;
       hitp = dynamic_cast<EXHit *>(next());
     }
+    //this line will smooth the cursor back to the 1st site, which means GetCurSite()
+    //will return the 1st site, not the last site
+    //Please also note that 1st point is located at the cathode, the last point at GEM1
     //kaltrack.SmoothBackTo(1);                          // smooth back.
 
     
@@ -472,9 +537,9 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
       x_rec, y_rec, z_rec, r_rec, a_rec, b_rec );
     
 #ifdef _EXKalTestDebug_
-    if(Global_Debug_Level >= 5) {
-      TKalMatrix pC = theLastState->GetCovMat();
-      pC.Print(); 
+    if(Global_Debug_Level >= 4) {
+      cout<<"\nFinal covMat:"<<endl;
+      theLastState->GetCovMat().DebugPrint(25);
     }
 #endif
 
@@ -500,7 +565,7 @@ void EXKalRTPC::Tree_Fill(TKalTrack &kaltrack)
 {
   //most of these are coming from  EXEventGen::NtReader, which is in mm
 
-  TIter next(fKalHits, kDir);   
+  TIter next(fKalHits, kIterForward);   
   //Note that the first site of kaltrack is a dummy site
   //do not include it into the output root tree
   int npt=0, iSite=1;  //site 0 is dummy site, start from 1
@@ -595,7 +660,13 @@ int EXKalRTPC::DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n)
 
   // initial helix 
   THelicalTrack hel_3point = fEventGen->CreateInitialHelix(kDir); 
-  THelicalTrack helstart = fEventGen->DoHelixFit();    
+  THelicalTrack helstart = fEventGen->DoHelixFit(kDir);     
+#ifdef _EXKalTestDebug_
+    if(Global_Debug_Level >= 4) {
+      EXEventGen::PrintHelix(&hel_3point, "3-point helix at last point:"); 
+      EXEventGen::PrintHelix(&helstart, "global helix at last point:"); 
+    }
+#endif   
 
   //for some curve back tracks, global helix fit fail
   if(helstart.GetRho()*hel_3point.GetRho()<0) helstart=hel_3point;
@@ -670,6 +741,9 @@ int EXKalRTPC::DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n)
     npt++;
     hitp = dynamic_cast<EXHit *>(next());
   }
+  //this line will smooth the cursor back to the 1st site, which means GetCurSite()
+  //will return the 1st site, not the last site
+  //Please also note that 1st point is located at the cathode, the last point at GEM1
   //kaltrack.SmoothBackTo(1);                          // smooth back.
 
   // ============================================================
@@ -685,4 +759,222 @@ int EXKalRTPC::DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n)
   cl   = TMath::Prob(chi2, ndf);
 
   return 1;
+}
+
+//this routine is to fit the existing hits in forward direction to get
+//a helix, then use this helix as input to the 2nd iteration
+void EXKalRTPC::FitForward4InitHelix(THelicalTrack &Hel_last,TKalMatrix &C_last)
+{
+  //note: hits are all stored in fKalHits
+
+  // ============================================================
+  //  Do Kalman Filter in forward direction to get a helix
+  // ============================================================
+
+  // ---------------------------
+  // Create initial helix
+  // ---------------------------
+
+  // initial helix 
+    THelicalTrack hel_3point = fEventGen->CreateInitialHelix(kIterForward);
+    THelicalTrack helstart = fEventGen->DoHelixFit(kIterForward);   
+#ifdef _EXKalTestDebug_
+    if(Global_Debug_Level >= 4) {
+      EXEventGen::PrintHelix(&hel_3point, "FitForward4InitHelix(): 3-point helix at 1st point:"); 
+      EXEventGen::PrintHelix(&helstart, "FitForward4InitHelix(): global helix at 1st point:"); 
+    }
+#endif  
+
+  //for some curve back tracks, global helix fit fail
+  if(helstart.GetRho()*hel_3point.GetRho()<0) helstart=hel_3point;
+
+  // ---------------------------
+  //  Create a dummy site: sited
+  // ---------------------------
+  //fitting forward
+  Int_t i1 = 0;
+  EXHit hitd = *dynamic_cast<EXHit *>(fKalHits->At(i1));
+  hitd(0,1) = 1.e6;   // give a huge error to d
+  hitd(1,1) = 1.e6;   // give a huge error to z
+
+  TKalTrackSite &sited = *new TKalTrackSite(hitd);
+  sited.SetOwner();   // site owns states
+
+
+  // ---------------------------
+  //  Set dummy state to sited
+  // ---------------------------
+
+  static TKalMatrix svd(kSdim,1);
+  svd(0,0) = 0.;
+  svd(1,0) = helstart.GetPhi0();
+  svd(2,0) = helstart.GetKappa();
+  svd(3,0) = 0.;
+  svd(4,0) = helstart.GetTanLambda();
+  if (kSdim == 6) svd(5,0) = 0.;
+
+  static TKalMatrix C(kSdim,kSdim);
+  for (Int_t i=0; i<kSdim; i++) {
+    C(i,i) = fCovMElement;   // dummy error matrix
+  }
+
+  sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));
+  sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kFiltered));
+
+  // ---------------------------
+  //  Add sited to the kaltrack
+  // ---------------------------
+
+  TKalTrack kaltrack;    // a track is a kal system
+  kaltrack.SetMass(kMpr);
+  kaltrack.SetOwner();   // kaltrack owns sites
+  kaltrack.Add(&sited);  // add the dummy site to the track
+
+  // ---------------------------
+  //  Prepare hit iterrator
+  // ---------------------------
+
+  TIter nextforward(fKalHits, kIterForward);   // looping forward
+
+  // ---------------------------
+  //  Start Kalman Filter
+  // ---------------------------
+
+  EXHit *hitp = dynamic_cast<EXHit *>(nextforward());
+  while (hitp) {     // loop over hits    
+    TKalTrackSite  &site = *new TKalTrackSite(*hitp); // create a site for this hit
+    if (!kaltrack.AddAndFilter(site)) {               // add and filter this site
+      delete &site;                                   // delete this site, if failed
+    }
+    hitp = dynamic_cast<EXHit *>(nextforward());
+  }
+  //this line will smooth the cursor back to the 1st site, which means GetCurSite()
+  //will return the 1st site, not the last site
+  //Please also note that 1st point is located at the GEM1, the last point at GEM1
+  //kaltrack.SmoothBackTo(1);                           // smooth back.
+
+  // ============================================================
+  //  Get the helix at the last site then return it back
+  // ============================================================
+  
+  TKalTrackState *theLastState = dynamic_cast<TKalTrackState*> (&(kaltrack.GetCurSite().GetCurState()));
+  Hel_last = theLastState->GetHelix();
+  C_last = theLastState->GetCovMat();
+#ifdef _EXKalTestDebug_
+  if(Global_Debug_Level >= 4) {
+    cout<<"\nFitForward4InitHelix covMat:"<<endl;
+    theLastState->GetCovMat().DebugPrint(25);
+  }
+#endif  
+
+}
+
+
+//this routine is to fit the existing hits in forward direction to get
+//a helix, then use this helix as input to the 2nd iteration
+//note that at the end of the fit, it is smooth back to the 1st site
+void EXKalRTPC::FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st)
+{
+  //note: hits are all stored in fKalHits
+
+  // ============================================================
+  //  Do Kalman Filter in forward direction to get a helix
+  // ============================================================
+
+  // ---------------------------
+  // Create initial helix
+  // ---------------------------
+
+  // initial helix 
+  THelicalTrack hel_3point = fEventGen->CreateInitialHelix(kIterBackward); 
+  THelicalTrack helstart = fEventGen->DoHelixFit(kIterBackward);    
+#ifdef _EXKalTestDebug_
+  if(Global_Debug_Level >= 4) {
+    EXEventGen::PrintHelix(&hel_3point, "FitBackward4InitHelix(): 3-point helix at last point:"); 
+    EXEventGen::PrintHelix(&helstart, "FitBackward4InitHelix(): global helix at last point:"); 
+  }
+#endif    
+
+  //for some curve back tracks, global helix fit fail
+  if(helstart.GetRho()*hel_3point.GetRho()<0) helstart=hel_3point;
+
+  // ---------------------------
+  //  Create a dummy site: sited
+  // ---------------------------
+  //fitting backward
+  Int_t i1 = fKalHits->GetEntries() - 1;
+  EXHit hitd = *dynamic_cast<EXHit *>(fKalHits->At(i1));
+  hitd(0,1) = 1.e6;   // give a huge error to d
+  hitd(1,1) = 1.e6;   // give a huge error to z
+
+  TKalTrackSite &sited = *new TKalTrackSite(hitd);
+  sited.SetOwner();   // site owns states
+
+
+  // ---------------------------
+  //  Set dummy state to sited
+  // ---------------------------
+
+  static TKalMatrix svd(kSdim,1);
+  svd(0,0) = 0.;
+  svd(1,0) = helstart.GetPhi0();
+  svd(2,0) = helstart.GetKappa();
+  svd(3,0) = 0.;
+  svd(4,0) = helstart.GetTanLambda();
+  if (kSdim == 6) svd(5,0) = 0.;
+
+  static TKalMatrix C(kSdim,kSdim);
+  for (Int_t i=0; i<kSdim; i++) {
+    C(i,i) = fCovMElement;   // dummy error matrix
+  }
+
+  sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));
+  sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kFiltered));
+
+  // ---------------------------
+  //  Add sited to the kaltrack
+  // ---------------------------
+
+  TKalTrack kaltrack;    // a track is a kal system
+  kaltrack.SetMass(kMpr);
+  kaltrack.SetOwner();   // kaltrack owns sites
+  kaltrack.Add(&sited);  // add the dummy site to the track
+
+  // ---------------------------
+  //  Prepare hit iterrator
+  // ---------------------------
+
+  TIter nextbackward(fKalHits, kIterBackward);   // looping backward
+
+  // ---------------------------
+  //  Start Kalman Filter
+  // ---------------------------
+
+  EXHit *hitp = dynamic_cast<EXHit *>(nextbackward());
+  while (hitp) {     // loop over hits    
+    TKalTrackSite  &site = *new TKalTrackSite(*hitp); // create a site for this hit
+    if (!kaltrack.AddAndFilter(site)) {               // add and filter this site
+      delete &site;                                   // delete this site, if failed
+    }
+    hitp = dynamic_cast<EXHit *>(nextbackward());
+  }
+  //this line will smooth the cursor back to the 1st site, which means GetCurSite()
+  //will return the 1st site, not the last site
+  //Please also note that 1st point is located at the cathode, the last point at GEM1
+  kaltrack.SmoothBackTo(1);                           // smooth back.
+
+  // ============================================================
+  //  Get the last site then return it back
+  // ============================================================
+    
+  TKalTrackState *theLastState = dynamic_cast<TKalTrackState*> (&(kaltrack.GetCurSite().GetCurState()));
+  Hel_1st = theLastState->GetHelix();
+  C_1st = theLastState->GetCovMat();
+#ifdef _EXKalTestDebug_
+  if(Global_Debug_Level >= 4) {
+    cout<<"\nFitBackward4InitHelix covMat:"<<endl;
+    theLastState->GetCovMat().DebugPrint(25);
+  }
+#endif  
+
 }

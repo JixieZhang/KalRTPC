@@ -1,6 +1,7 @@
 #include "EXKalDetector.h"
 #include "EXMeasLayer.h"
 #include "EXHit.h"
+#include "math.h"
 
 #include "TRandom.h" // from ROOT
 //By jixie: the system think the particle carry negative charge by default
@@ -33,18 +34,23 @@ EXKalDetector::EXKalDetector(Int_t m)
   //Al-Mylay-Al  1.412              289.52                 30.0 - 30.00407
   //1ATM_He4DME  3.33504            1.63207E6              30.00407 - 70
 
-  double A,Z,density,radlen;
+  // effective atomic number, Zeff,  using Murty's paper: Nature 207, 398-399 (24 July 1965)
+  //R. C. Murty, "Effective atomic numbers of heterogeneous materials", 
+  //also see https://en.wikipedia.org/wiki/Effective_atomic_number
+  //    Z_eff = pow(Sum{ f_i * Zi^2.94 },1/2.94), where f_i = n_i*Z_i/Z_total
+  //==> Z_eff = pow(Sum{n_i*Z_i^3.94}/Z_total,1/2.94 )
+  double A,Z,density,radlen,A_eff,Z_eff,Sum_A,Sum_Z;
   
   //vacuum 
   A       =  4.0026;                           // mass number
   Z       =  2.;                               // atomic number
-  density = 0.1665E-13;                         // [g/cm^3]
-  radlen  = 5.665E15;                           // [cm]
+  density = 0.1665E-13;                        // [g/cm^3]
+  radlen  = 5.665E15;                          // [cm]
   TMaterial &Vacuum = *new TMaterial("Vacuum", "Vacuum", 
     A, Z, density, radlen, 0.);
 
 
-  //BONUS material table, A and Z are fake numbers
+  //BONUS material table,
   //D2Gas at 7 atm 300k
   A       =  2.;                               // mass number
   Z       =  1.;                               // atomic number
@@ -53,9 +59,14 @@ EXKalDetector::EXKalDetector(Int_t m)
   TMaterial &D2Gas = *new TMaterial("D2Gas", "D2Gas_7ATM_300k", 
     A, Z, density, radlen, 0.);
 
-  //kapton, A and Z is fake numebr
-  A       = 16.0107;                           // mass number
-  Z       =  7.0;                              // atomic number
+  //kapton, A and Z are effective numebers
+  //(C22H10N2O5)n
+  Sum_A = 12.*22+1.*10+14.*2+16.*5;
+  Sum_Z =  6.*22+1.*10+ 7.*2+ 8.*5;
+  Z_eff = pow((22*pow(6.,3.94)+10.+2*pow(7.,3.94)+5*pow(8.,3.94))/Sum_Z,1/2.94);
+  A_eff = Z_eff * Sum_A / Sum_Z;
+  A       = A_eff;                             // mass number
+  Z       = Z_eff;                             // atomic number
   density = 1.42;                              // [g/cm^3]
   radlen  = 28.5758;                           // [cm]
   TMaterial &Kapton = *new TMaterial("Kapton", "Kapton", 
@@ -69,18 +80,27 @@ EXKalDetector::EXKalDetector(Int_t m)
   TMaterial &He4Gas = *new TMaterial("He4Gas", "He4_1ATM_300k", 
     A, Z, density, radlen, 0.);
 
-  //aluminized mylar
-  A       = 28.0107;                           // mass number
-  Z       =  14.;                              // atomic number
+  //aluminized mylar (C10H8O4)n
+  Sum_A = 12.*10+1.*8+16.*4;
+  Sum_Z =  6.*10+1.*8+ 8.*4;
+  Z_eff = pow((10*pow(6.,3.94)+8.+4*pow(8.,3.94))/Sum_Z,1/2.94);
+  A_eff = Z_eff * Sum_A / Sum_Z;
+  A       = A_eff;                             // mass number
+  Z       = Z_eff;                             // atomic number
   density = 1.412;                             // [g/cm^3]
   radlen  = 28.952;                            // [cm]
   TMaterial &AlMylar = *new TMaterial("AlMylar", "Al-Mylay-Al", 
     A, Z, density, radlen, 0.);
 
-  //He4+DME gas mixture (1:9) at 1 atm 300k
-  A       =  14.0026;                           // mass number
-  Z       =  7.5;                               // atomic number
-  density = 3.33504E-3;                         // [g/cm^3]
+  //He4+DME (C2H6O,density=2.11mg/cm^3 at 273k) gas mixture (8:2=4:1) 
+  //at 1 atm 300k
+  Sum_A = 12.*2+1.*6+16.*1+4.*4;
+  Sum_Z =  6.*2+1.*6+ 8.*1+2.*4;
+  Z_eff = pow((2*pow(6.,3.94)+6.+1*pow(8.,3.94)+4*pow(2.,3.94))/Sum_Z,1/2.94);
+  A_eff = Z_eff * Sum_A / Sum_Z;
+  A       =  A_eff;                             // mass number
+  Z       =  Z_eff;                             // atomic number
+  density = 0.51722E-3;                         // [g/cm^3]
   radlen  = 1.63207E5;                          // [cm]
   TMaterial &He4DME = *new TMaterial("He4DME", "He4_Mix_DME_1to9_1ATM_300k", 
     A, Z, density, radlen, 0.);
@@ -96,6 +116,7 @@ EXKalDetector::EXKalDetector(Int_t m)
   //add target gas and target wall and He4 gas
   Add(new EXMeasLayer(D2Gas, Kapton, r=0.3, lhalf, EXMeasLayer::kDummy));
   Add(new EXMeasLayer(Kapton, He4Gas, r=0.3028, lhalf, EXMeasLayer::kDummy));
+  //Add(new EXMeasLayer(Kapton, He4Gas, r=0.3050, lhalf, EXMeasLayer::kDummy));
 
   //add first aluminized mylar foil
   Add(new EXMeasLayer(He4Gas, AlMylar, r=2.0, lhalf, EXMeasLayer::kDummy));
