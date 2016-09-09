@@ -94,6 +94,15 @@ private:
   double p_hel,pt_hel,pz_hel,th_hel,ph_hel,x_hel,y_hel,z_hel;
   double r_hel,a_hel,b_hel;
   double p_3pt,pt_3pt,th_3pt,r_3pt,a_3pt,b_3pt;
+  
+  double r_hel_raw,th_hel_raw,ph_hel_raw,a_hel_raw,b_hel_raw,z_hel_raw;
+
+  //I want to study the Kalman Filter fitted resolution as a function of
+  //initial parameter: Rho, Phi0, Theta
+  //the true variable at 1st and last site
+  double rho_1st, tnl_1st, phi0_1st;
+  double rho_last, tnl_last, phi0_last;
+  double rho_kal_ini, tnl_kal_ini, phi0_kal_ini;
 
   int ndf;
   double chi2,cl;

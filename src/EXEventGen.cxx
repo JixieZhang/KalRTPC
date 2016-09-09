@@ -128,7 +128,11 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
   // ---------------------------
   //  Swim track and Make hits
   // ---------------------------
-
+  //-----------------------------------------
+  //reset the values
+  Rho_1st=TanLambda_1st=Phi0_1st=0.0;
+  Rho_last=TanLambda_last=Phi0_last=0.0;
+  //-----------------------------------------
   Double_t dfi       = -dynamic_cast<TVSurface *>(fCradlePtr->At(0))
     ->GetSortingPolicy()
     / heltrk.GetRho();
@@ -204,9 +208,27 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
     }
     if (ml.IsActive()) {
       ml.ProcessHit(xx, *fHitBufPtr,true); // create hit point
+      //Jixie: need to take information out from here and store into the root file
+      if(fabs(Rho_1st)<0.01) {
+	Rho_1st = heltrk.GetRho();
+	TanLambda_1st = heltrk.GetTanLambda();
+	Phi0_1st = heltrk.GetPhi0(); 
+      }
+
+      //I can not tell when the track reach the last hit
+      //so I store them at each hit when it curves back
+      //When the track die in the drift region, its rho is 
+      //not an number any more
+      double tmpRho=heltrk.GetRho();
+      if(dlyr<0 && fabs(tmpRho)>0.01) {
+	Rho_last = tmpRho;
+	TanLambda_last = heltrk.GetTanLambda();
+	Phi0_last = heltrk.GetPhi0(); 
+      }
     }
     if (lyr == nlayers - 1) break;
   }
+ 
 }
 
 int  EXEventGen::LoadOneTrack()
@@ -592,7 +614,7 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
  
   ////////////////////////////////////////////////////////////////////////
 
-  //do the helix fit and store all result into the tree leaves buffer
+  //do the helix fit and store all results into the tree leaves buffer
   double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2;
   int fit_to_beamline=1;
   helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
@@ -642,10 +664,13 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
 #endif
   
   ////////////////////
-  //just for debug, store r,theta,z to make figure 
-  R_3pt = pRho;
-  A_3pt = pTheta;
-  B_3pt = pZ0;
+  //store global helix result before my correction 
+  R_hel_raw = pRho;
+  Theta_hel_raw = pTheta;
+  Phi_hel_raw = pPhi;
+  A_hel_raw = pA;
+  B_hel_raw = pB;
+  Z_hel_raw = pZ0;
   
   ////////////////////
 
@@ -750,7 +775,7 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
   if(fi0_1st> PI) fi0_1st-=2*PI;
   if(fi0_1st<-PI) fi0_1st+=2*PI;
 
-  //this helix track is not ideal, but only fi0,tnl and cpa will be used
+  //this helix track is not ideal, but only fi0, tnl and cpa will be used
   //by the caller
   double ret_fi0 = (IterDirection==kIterBackward)?fi0_last:fi0_1st;
   THelicalTrack aTrack(dr,ret_fi0,cpa,dz,tnl,x0,y0,z0,b);

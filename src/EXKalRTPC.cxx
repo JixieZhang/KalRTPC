@@ -225,6 +225,23 @@ void EXKalRTPC::Tree_Init()
   t->Branch("r_3pt",&r_3pt,"r_3pt/D");
   t->Branch("a_3pt",&a_3pt,"a_3pt/D");
   t->Branch("b_3pt",&b_3pt,"b_3pt/D");
+  
+  t->Branch("r_hel_raw",&r_hel_raw,"r_hel_raw/D");
+  t->Branch("th_hel_raw",&th_hel_raw,"th_hel_raw/D");
+  t->Branch("ph_hel_raw",&ph_hel_raw,"ph_hel_raw/D");
+  t->Branch("a_hel_raw",&a_hel_raw,"a_hel_raw/D");
+  t->Branch("b_hel_raw",&b_hel_raw,"b_hel_raw/D");
+  t->Branch("z_hel_raw",&z_hel_raw,"z_hel_raw/D");
+
+  t->Branch("rho_1st",&rho_1st,"rho_1st/D");
+  t->Branch("tnl_1st",&tnl_1st,"tnl_1st/D");
+  t->Branch("phi0_1st",&phi0_1st,"phi0_1st/D");
+  t->Branch("rho_last",&rho_last,"rho_last/D");
+  t->Branch("tnl_last",&tnl_last,"tnl_last/D");
+  t->Branch("phi0_last",&phi0_last,"phi0_last/D");
+  t->Branch("rho_kal_ini",&rho_kal_ini,"rho_kal_ini/D");
+  t->Branch("tnl_kal_ini",&tnl_kal_ini,"tnl_kal_ini/D");
+  t->Branch("phi0_kal_ini",&phi0_kal_ini,"phi0_kal_ini/D");
 
   t->Branch("ndf",&ndf,"ndf/I");
   t->Branch("chi2",&chi2,"chi2/D");
@@ -245,12 +262,18 @@ void EXKalRTPC::Reset()
     step_x_exp[i]=step_y_exp[i]=step_z_exp[i]=0.0;
     step_x_fil[i]=step_y_fil[i]=step_z_fil[i]=0.0;
   }
+  
+  r_hel_raw=th_hel_raw=ph_hel_raw=a_hel_raw=b_hel_raw=z_hel_raw=9999.0;
 
   p_hel=pt_hel=pz_hel=th_hel=ph_hel=x_hel=y_hel=z_hel=9999.0;
   r_hel=a_hel=b_hel=0.0; 
 
   p_3pt=pt_3pt=th_3pt=9999.0;
   r_3pt=a_3pt=b_3pt=0.0; 
+  
+  rho_1st=tnl_1st=phi0_1st=0;
+  rho_last=tnl_last=phi0_last=0;
+  rho_kal_ini=tnl_kal_ini=phi0_kal_ini=0;
 
   ndf=0;
   chi2=cl=0.0;
@@ -359,7 +382,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     THelicalTrack helstart;
     TKalMatrix C_start(kSdim,kSdim);
 
-    bool bApply2Iter = true;
+    bool bApply2Iter = false;
 
     if(bApply2Iter) 
     {
@@ -397,7 +420,15 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
       //use 3-point result if it happens
       helstart = (hel_global.GetRho()*hel_3point.GetRho()>0) ? hel_global : hel_3point;
     }
+    
+    // ---------------------------
+    //store the initial parameter: Rho, Phi0, Theta
+    // ---------------------------
+    rho_kal_ini  = helstart.GetRho();  
+    tnl_kal_ini  = helstart.GetTanLambda(); 
+    phi0_kal_ini = helstart.GetPhi0(); 
 
+      
     // ---------------------------
     //  Create a dummy site: sited
     // ---------------------------
@@ -623,6 +654,21 @@ void EXKalRTPC::Tree_Fill(TKalTrack &kaltrack)
   r_hel=fEventGen->R_rec/10.;
   a_hel=fEventGen->A_rec/10.;
   b_hel=fEventGen->B_rec/10.;
+  
+  //store global helix result before my correction 
+  r_hel_raw = fEventGen->R_hel_raw;
+  th_hel_raw= fEventGen->Theta_hel_raw;
+  ph_hel_raw= fEventGen->Phi_hel_raw; 
+  a_hel_raw = fEventGen->A_hel_raw;
+  b_hel_raw = fEventGen->B_hel_raw;
+  z_hel_raw = fEventGen->Z_hel_raw;
+  
+  rho_1st=fEventGen->Rho_1st;
+  tnl_1st=fEventGen->TanLambda_1st;
+  phi0_1st=fEventGen->Phi0_1st;
+  rho_last=fEventGen->Rho_last;
+  tnl_last=fEventGen->TanLambda_last;
+  phi0_last=fEventGen->Phi0_last;
 
   p_3pt=fEventGen->P_3pt;
   th_3pt=fEventGen->Theta_3pt;

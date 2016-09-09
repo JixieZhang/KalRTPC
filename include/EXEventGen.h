@@ -51,6 +51,11 @@ private:
 public:
   //debug 3-point helix
   double P_3pt,Pt_3pt,Theta_3pt,R_3pt,A_3pt,B_3pt;
+  //debug raw_global helix
+  double Phi_hel_raw,Theta_hel_raw,R_hel_raw,A_hel_raw,B_hel_raw,Z_hel_raw;
+  //record the helix at the 1st and last hit for studying Kalman filter
+  double Rho_1st, TanLambda_1st, Phi0_1st;
+  double Rho_last, TanLambda_last, Phi0_last;
 
    ClassDef(EXEventGen,1)   // Event Generator
 };
