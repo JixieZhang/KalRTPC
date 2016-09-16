@@ -4,6 +4,7 @@
 // By Jixie Zhang, Modify for RTPC12
 // ********************************************************************
 
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -98,138 +99,65 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif 
-/*
-Recursive definition of determinate using expansion by minors.
-*/
-double Determinant(double **a,int n)
+
+//apply corrction to R and Phi
+void CorrHelixRPhi(double &Rho, double &Phi)
 {
-  int i,j,j1,j2;
-  double det = 0;
-  double **m = NULL;
-
-  if (n < 1) { /* Error */
-
-  } else if (n == 1) { /* Shouldn't get used */
-    det = a[0][0];
-  } else if (n == 2) {
-    det = a[0][0] * a[1][1] - a[1][0] * a[0][1];
-  } else {
-    det = 0;
-    for (j1=0;j1<n;j1++) {
-      m = (double**)malloc((n-1)*sizeof(double *));
-      for (i=0;i<n-1;i++)
-	m[i] = (double*)malloc((n-1)*sizeof(double));
-      for (i=1;i<n;i++) {
-	j2 = 0;
-	for (j=0;j<n;j++) {
-	  if (j == j1)
-	    continue;
-	  m[i-1][j2] = a[i][j];
-	  j2++;
-	}
-      }
-      det += pow(-1.0,j1+2.0) * a[0][j1] * Determinant(m,n-1);
-      for (i=0;i<n-1;i++)
-	free(m[i]);
-      free(m);
-    }
+  std::cout<<"\nBefore CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
+  
+/*******************************************   
+ph_hel-ph0:r_hel          
+Minimizer is Linear                                                    
+Chi2                      =       3325.1                               
+NDf                       =           76                               
+p0                        =      1.44928   +/-   0.0193378             
+p1                        =     -0.93305   +/-   0.0176701             
+p2                        =      0.24896   +/-   0.00640558            
+p3                        =   -0.0355206   +/-   0.00119808            
+p4                        =   0.00292522   +/-   0.000125733           
+p5                        = -0.000139073   +/-   7.4615e-06            
+p6                        =  3.53636e-06   +/-   2.33549e-07           
+p7                        = -3.71634e-08   +/-   2.99358e-09  
+*///****************************************
+  
+  double R=fabs(Rho);
+  if(R<20.0 && R>2.6) {
+    double Para_dPhiVsR[] = {1.44928, -0.93305, 0.24896, -0.0355206,
+      0.00292522, -0.000139073, 3.53636e-06, -3.71634e-08};
+    double dPhi = Para_dPhiVsR[0];
+    for(int i=1;i<=7;i++) dPhi += Para_dPhiVsR[i]*pow(R,i);
+    Phi = Phi - dPhi;
   }
-  return(det);
-}
 
-/*
-Find the cofactor matrix of a square matrix
-*/
-void CoFactor(double **a,int n,double **b)
-{
-  int i,j,ii,jj,i1,j1;
-  double det;
-  double **c;
 
-  c = (double**)malloc((n-1)*sizeof(double *));
-  for (i=0;i<n-1;i++)
-    c[i] = (double*)malloc((n-1)*sizeof(double));
-
-  for (j=0;j<n;j++) {
-    for (i=0;i<n;i++) {
-
-      /* Form the adjoint a_ij */
-      i1 = 0;
-      for (ii=0;ii<n;ii++) {
-	if (ii == i)
-	  continue;
-	j1 = 0;
-	for (jj=0;jj<n;jj++) {
-	  if (jj == j)
-	    continue;
-	  c[i1][j1] = a[ii][jj];
-	  j1++;
-	}
-	i1++;
-      }
-
-      /* Calculate the determinate */
-      det = Determinant(c,n-1);
-
-      /* Fill in the elements of the cofactor */
-      b[i][j] = pow(-1.0,i+j+2.0) * det;
-    }
+/******************************************
+r_hel-rho_1st:r_hel, only good for 2.6<r<4.2          
+Minimizer is Linear
+Chi2                      =      635.106
+NDf                       =           74
+p0                        =     -1083.82   +/-   43.3963
+p1                        =         1858   +/-   77.8616
+p2                        =     -1343.62   +/-   59.2763
+p3                        =      531.657   +/-   24.8203
+p4                        =     -124.419   +/-   6.17324
+p5                        =      17.2351   +/-   0.912016
+p6                        =     -1.30966   +/-   0.0741081
+p7                        =     0.042147   +/-   0.00255522       
+*///****************************************
+  
+  if(R<4.2 && R>2.6) {
+  double Para_dRVsR[] = { -1083.82, 1858, -1343.62, 531.657, -124.419,
+			  17.2351, -1.30966, 0.042147};
+    double dR = Para_dRVsR[0];
+    for(int i=1;i<=7;i++) dR += Para_dRVsR[i]*pow(R,i);
+    R = R - dR;
+    Rho = (Rho<0)? -R : R;
+    //std::cout<<"\t\t dR="<<dR<<std::endl;
   }
-  for (i=0;i<n-1;i++)
-    free(c[i]);
-  free(c);
+
+  std::cout<<"After  CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
+
 }
-
-/*
-Transpose of a square matrix, do it in place
-*/
-void Transpose(double **a,int n)
-{
-  int i,j;
-  double tmp;
-
-  for (i=1;i<n;i++) {
-    for (j=0;j<i;j++) {
-      tmp = a[i][j];
-      a[i][j] = a[j][i];
-      a[j][i] = tmp;
-    }
-  }
-}
-
-//nxn matrix m times vector v, and store the reulst in vector r
-void MatrixTimesVector(double **m,int n,double *v, double *r)
-{
-  int i,j;
-  for (i=0;i<n;i++) {
-    r[i] = 0.0;
-    for (j=0;j<n;j++) {
-      r[i] += m[i][j]*v[j];
-    }
-  }
-}
-
-//nxn matrix m times scaler s, and store the reulst in m
-void MatrixTimesScaler(double **m,int n,double s)
-{
-  int i,j;
-  for (i=0;i<n;i++) {
-    for (j=0;j<n;j++) {
-      m[i][j] *= s;
-    }
-  }
-}
-
-//calculate the reverse matrix of m and store it in r
-void Reverse(double **m, int n, double **r)
-{
-  double det = Determinant(m,n);
-  //store the cofactor matrix in r
-  CoFactor(m,n,r);
-  Transpose(r,n);
-  MatrixTimesScaler(r,n,1.0/det);
-}
-
 
 /*------------------------------------------------------------------------\
 //Function name: void helix_fit(int PointNum,double szPos[][3], 
@@ -273,10 +201,30 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   float delz[MAX_HITS_ON_CHAIN];
 
   float phi0;
-
-  npt=0;
   if(PointNum>MAX_HITS_ON_CHAIN) PointNum=MAX_HITS_ON_CHAIN-1;
+
+  ///////////////////////////////////////////
+  //By Jixie:  this helix fit does not work if the track curve back
+  //Here I simply remove those points when they start to curve back.
+  //I only keep those points that all the way reach maxR
+  
+  npt=0;
+  double tmpR=0.0,tmpRmax=0.0;
   for (jj=0; jj<PointNum; jj++)
+  { 
+    tmpR = sqrt(pow(szPos[jj][0],2)+pow(szPos[jj][1],2));
+    if (tmpR>tmpRmax) {
+      tmpRmax=tmpR;
+      npt++;
+    }
+  }
+//#ifdef HELIXFIT_DEBUG
+  if(npt<PointNum)
+    std::cout<<"helix_fit(): input PointNum="<<PointNum
+      <<", used PointNum="<<npt<<std::endl;
+//#endif
+
+  for (jj=0; jj<npt; jj++)
   {// r,phi,z coordinate
 #ifdef HELIXFIT_DEBUG
     printf("point %3d: X=%.2f  Y=%.2f  Z=%.2f\n",jj+1,szPos[jj][0],szPos[jj][1],szPos[jj][2]);
@@ -291,7 +239,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
     wfi[jj]= 1.0;
     wzf[jj]= 1.0;
   }
-  npt=PointNum;
+  
   if(fit_track_to_beamline)
   {
     rf[npt]= 0.0;
@@ -338,6 +286,9 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   Z0 = (double)vv0[4];
   DCA = fabs(vv0[3]); /* dca = distance of closest approach to beamline */
   Chi2 = (npt>5)? (double)(ch2ph+ch2z/(npt-5)) : 9999.9;
+
+  //By Jixie: aaply correction, only useful for RTPC12 
+  CorrHelixRPhi(Rho,Phi);
 
 #ifdef HELIXFIT_DEBUG
   printf("\nhelix_fit: fitting %d hits then return (a,b,r)= (%6.4f %6.4f %6.4f)\n",

@@ -6,6 +6,7 @@
 
 #include "EXHit.h"
 #include "BonusHelixFit.hh"
+#include "CircleFitter_LM.h"
 #include "GlobalDebuger.hh"
 
 //-----------------------------------
@@ -26,10 +27,11 @@ static const double kRTPC_R_Cathode = 3.0;
 
 ClassImp(EXEventGen)
 
-//#define _ExEventGenDebug_ 1
+//#define _ExEventGenDebug_ 2
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
+CircleFitter_LM gLMFitter;
 
 THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   double cosmin, double cosmax)
@@ -143,7 +145,9 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
 
   for (Int_t lyr = 0; lyr >= 0; lyr += dlyr) { // loop over layers
     // change direction if it starts looping back
-    if (lyr == nlayers - 1) dlyr = -1;
+    //by Jixie: do not include curve back hits
+    if (lyr > nlayers -1 ) break; 
+    //if (lyr == nlayers - 1) dlyr = -1;
 
     EXMeasLayer &ml = *dynamic_cast<EXMeasLayer *>(fCradlePtr->At(lyr));
     TVSurface   &ms = *dynamic_cast<TVSurface *>(fCradlePtr->At(lyr));
@@ -209,8 +213,9 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
     if (ml.IsActive()) {
       ml.ProcessHit(xx, *fHitBufPtr,true); // create hit point
       //Jixie: need to take information out from here and store into the root file
-      if(fabs(Rho_1st)<0.01) {
-	Rho_1st = heltrk.GetRho();
+      double tmpRho=heltrk.GetRho();
+      if(fabs(Rho_1st)<0.01 && fabs(tmpRho)>0.01) {
+	Rho_1st = tmpRho;
 	TanLambda_1st = heltrk.GetTanLambda();
 	Phi0_1st = heltrk.GetPhi0(); 
       }
@@ -219,8 +224,7 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
       //so I store them at each hit when it curves back
       //When the track die in the drift region, its rho is 
       //not an number any more
-      double tmpRho=heltrk.GetRho();
-      if(dlyr<0 && fabs(tmpRho)>0.01) {
+      if(fabs(tmpRho)>0.01) {
 	Rho_last = tmpRho;
 	TanLambda_last = heltrk.GetTanLambda();
 	Phi0_last = heltrk.GetPhi0(); 
@@ -231,6 +235,7 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
  
 }
 
+//Note that G4 provide hits in mm
 int  EXEventGen::LoadOneTrack()
 {
   int nhits = 0;
@@ -241,9 +246,14 @@ int  EXEventGen::LoadOneTrack()
       cout<<"Reach the end of input root file \n";
       return -1;
     }
+    double tmpR=0.0,tmpRmax=0.0;
     nhits=0;
     for(int i=0;i<HitNum_m;i++) {
       if(StepID_m[i]>0) {
+	//By Jixie @ 20160914:  do not include curve back hits!!!
+	tmpR=sqrt(StepX_rec_m[i]*StepX_rec_m[i]+StepX_rec_m[i]*StepY_rec_m[i]);
+	if(tmpR<=tmpRmax) continue;
+	tmpRmax=tmpR;
 	xx[nhits]=StepX_rec_m[i];
 	yy[nhits]=StepY_rec_m[i];
 	zz[nhits]=StepZ_rec_m[i];
@@ -723,7 +733,14 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
     }
   }
 #endif
+  //////////////////////////////////////
+  //now Fit the circle using Levenberg-Marquardt method
+  //////////////////////////////////////
+  //gLMFitter.DoFit(npt,szPos,pA,pB,pRho);
+
+
   /////////////////////////////////////////////////////////////////////
+  //Those are G4 tree variables, it is in mm
   R_rec=fabs(pRho)*10;
   A_rec=pA*10;
   B_rec=pB*10;
@@ -733,6 +750,7 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
   DCA_rec=pDCA*10;
   
   
+
   //helix center phi angle in the hall
   double Phi_c = (pRho>0.) ? Phi_rec-PI/2 : Phi_rec+PI/2;
   //do not use the next line, 

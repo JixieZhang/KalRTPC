@@ -122,6 +122,7 @@
     </ClCompile>
     <ClCompile Include="..\src\BField_Helm.cc" />
     <ClCompile Include="..\src\BonusHelixFit.cc" />
+    <ClCompile Include="..\src\CircleFitter_LM.cc" />
     <ClCompile Include="..\src\ConfigManager.cc" />
     <ClCompile Include="..\src\EXEventGen.cxx" />
     <ClCompile Include="..\src\EXHit.cxx" />
@@ -136,6 +137,7 @@
     <ClCompile Include="..\src\rwfthc.cc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\CircleFitter_LM.h" />
     <ClInclude Include="..\include\EXEventGen.h" />
     <ClInclude Include="..\include\EXHit.h" />
     <ClInclude Include="..\include\EXKalDetector.h" />

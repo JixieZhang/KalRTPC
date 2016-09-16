@@ -69,12 +69,12 @@ void CmpAllSite(){
   TCanvas *c12 = new TCanvas("c12","",900,700);
   c12->Divide(3,2);
   c12->cd(1);
-  t->Draw("step_x-step_x_exp>>hd0x_exp(50,-0.5,0.5)","step_status>0","");
+  t->Draw("step_x-step_x_exp>>hd0x_exp(100,-5,5)","step_status>0","");
   TH1F *hd0x_exp = (TH1F*) gROOT->FindObject("hd0x_exp");
   FitGauss(hd0x_exp);
  
   c12->cd(2);
-  t->Draw("step_y-step_y_exp>>hd0y_exp(50,-0.5,0.5)","step_status>0","");
+  t->Draw("step_y-step_y_exp>>hd0y_exp(100,-5,5)","step_status>0","");
   TH1F *hd0y_exp = (TH1F*) gROOT->FindObject("hd0y_exp");
   FitGauss(hd0y_exp);
 
@@ -85,12 +85,12 @@ void CmpAllSite(){
 
 
   c12->cd(4);
-  t->Draw("step_x-step_x_fil>>hd0x_fil(50,-0.5,0.5)","step_status>0","");
+  t->Draw("step_x-step_x_fil>>hd0x_fil(100,-5,5)","step_status>0","");
   TH1F *hd0x_fil = (TH1F*) gROOT->FindObject("hd0x_fil");
   FitGauss(hd0x_fil);
 
   c12->cd(5);
-  t->Draw("step_y-step_y_fil>>hd0y_fil(50,-0.5,0.5)","step_status>0","");
+  t->Draw("step_y-step_y_fil>>hd0y_fil(100,-5,5)","step_status>0","");
   TH1F *hd0x_fil = (TH1F*) gROOT->FindObject("hd0y_fil");
   FitGauss(hd0y_fil);
 
@@ -132,12 +132,12 @@ void CmpLastSite(){
   TCanvas *c12 = new TCanvas("c12","",900,700);
   c12->Divide(3,2);
   c12->cd(1);
-  t->Draw("step_x[npt-1]-step_x_exp[npt-1]>>hd0x_exp(50,-0.5,0.5)","step_status[npt-1]>0","");
+  t->Draw("step_x[npt-1]-step_x_exp[npt-1]>>hd0x_exp(100,-5,5)","step_status[npt-1]>0","");
   TH1F *hd0x_exp = (TH1F*) gROOT->FindObject("hd0x_exp");
   FitGauss(hd0x_exp);
  
   c12->cd(2);
-  t->Draw("step_y[npt-1]-step_y_exp[npt-1]>>hd0y_exp(50,-0.5,0.5)","step_status[npt-1]>0","");
+  t->Draw("step_y[npt-1]-step_y_exp[npt-1]>>hd0y_exp(100,-5,5)","step_status[npt-1]>0","");
   TH1F *hd0y_exp = (TH1F*) gROOT->FindObject("hd0y_exp");
   FitGauss(hd0y_exp);
 
@@ -148,12 +148,12 @@ void CmpLastSite(){
 
 
   c12->cd(4);
-  t->Draw("step_x[npt-1]-step_x_fil[npt-1]>>hd0x_fil(50,-0.5,0.5)","step_status[npt-1]>0","");
+  t->Draw("step_x[npt-1]-step_x_fil[npt-1]>>hd0x_fil(100,-5,5)","step_status[npt-1]>0","");
   TH1F *hd0x_fil = (TH1F*) gROOT->FindObject("hd0x_fil");
   FitGauss(hd0x_fil);
 
   c12->cd(5);
-  t->Draw("step_y[npt-1]-step_y_fil[npt-1]>>hd0y_fil(50,-0.5,0.5)","step_status[npt-1]>0","");
+  t->Draw("step_y[npt-1]-step_y_fil[npt-1]>>hd0y_fil(100,-5,5)","step_status[npt-1]>0","");
   TH1F *hd0x_fil = (TH1F*) gROOT->FindObject("hd0y_fil");
   FitGauss(hd0y_fil);
 

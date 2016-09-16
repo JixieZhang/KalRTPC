@@ -30,32 +30,64 @@ using namespace std;
 #include "TCanvas.h"
 #include "TGraphErrors.h"
 
-void FitGauss(TH1F *h1, double &mean, double &sigma)
+
+TF1* FitGauss(TH1* h1, double &mean, double &sigma, double range_in_sigma=1.5)
 {
-  if(!h1) return;
-  h1->Fit("gaus","","Q");
-  TF1 *f = (TF1 *)h1->GetListOfFunctions()->FindObject("gaus");
-  mean=f->GetParameter(1);
-  sigma=f->GetParameter(2);
-  
-  h1->Fit("gaus","","R+",mean-1.5*sigma,mean+1.5*sigma);
-  f = (TF1 *)h1->GetListOfFunctions()->FindObject("gaus");
-  mean=f->GetParameter(1);
-  sigma=f->GetParameter(2);
-  h1->Draw();
+	//cout<<"h1->GetEntries()="<<h1->GetEntries()<<endl;
+	if(h1->GetEntries()<50) return NULL;
+
+	double xmin=h1->GetMean()-5.0*h1->GetRMS();
+	double xmax=h1->GetMean()+5.0*h1->GetRMS();
+	//h1->Fit("gaus","RQ","",xmin,xmax);
+	h1->Fit("gaus","Q");
+	TF1 *f=(TF1*)h1->GetListOfFunctions()->FindObject("gaus");
+	mean=f->GetParameter(1);
+	sigma=f->GetParameter(2);
+	xmin=mean-range_in_sigma*sigma;
+	xmax=mean+range_in_sigma*sigma;
+	double chi2_1 = f->GetChisquare()/f->GetNDF();
+
+	h1->Fit("gaus","RQ","",xmin,xmax);
+	f=(TF1*)h1->GetListOfFunctions()->FindObject("gaus");	
+	double chi2_2 = f->GetChisquare()/f->GetNDF();
+	//cout<<"chi2_1="<<chi2_1<<"\t chi2_2="<<chi2_2<<endl;
+	if(chi2_2>1.1*chi2_1) {
+      //2nd iteration is worse than 1st iteratin, roll back to previous fit
+	  h1->Fit("gaus","Q");
+	  f=(TF1*)h1->GetListOfFunctions()->FindObject("gaus");	
+	}
+		
+	mean=f->GetParameter(1);
+	sigma=f->GetParameter(2);
+	  
+
+	if(gStyle->GetOptFit()==0)
+	{
+		char str[100];
+		TText *text=0;
+
+		double xx=gStyle->GetPadLeftMargin()+0.03; 
+		TPaveText *pt = new TPaveText(xx,0.20,xx+0.45,0.45,"brNDC");
+		pt->SetBorderSize(0);
+		pt->SetFillColor(0);
+		sprintf(str,"Mean = %.3G",mean);
+		text=pt->AddText(str);
+		text->SetTextColor(2);
+		sprintf(str,"Sigma = %.3G",sigma);
+		text=pt->AddText(str);
+		text->SetTextColor(2);
+		pt->Draw("same");
+	}
+
+	return f;
 }
 
-void FitGauss(TH1F *h1)
+TF1* FitGauss(TH1* h1,double range_in_sigma=1.5)
 {
-  if(!h1) return;
-  h1->Fit("gaus","","Q");
-  TF1 *f = (TF1 *)h1->GetListOfFunctions()->FindObject("gaus");
-  double mean=f->GetParameter(1);
-  double sigma=f->GetParameter(2);
-  
-  h1->Fit("gaus","","R+",mean-1.5*sigma,mean+1.5*sigma);
-  h1->Draw();
+	double mean,sigma;
+	return FitGauss(h1,mean,sigma,range_in_sigma);
 }
+
 
 void draw(int log_hel=0,int log_rec=1, const char *key="")
 {
