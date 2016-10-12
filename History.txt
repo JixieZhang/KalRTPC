@@ -9,9 +9,20 @@ from outside to inside.
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2016/10/11
+1. After a lot of careful comparison I found that: 
+	A) for non-curve-back tracks: global helix fitter is good enough,
+		both 1-iter-KF and 2-iter-KF improve it very little. 
+		1-iter-KF is better than 2-iter-KF in pt, but worse in phi. 
+	B) for curve-back tracks:  global helix fitter need afterwards correction.
+		only 2-iter-KF be able to reconstruct phi, but ruin pt reconstruction.
+2. Update this code to this config: 2-iter-KF-Backward-wholeMatrix-with-phicorr		
+   This update just to release the current code. Later on I will extract the kernl 
+   of it to a library. 
+
 2016/09/15
 1. Added  Levenberg-Marquardt circle fitter
-2. Updated global helix fitter. After carefully comparison I found that if a track
+2. Updated global helix fitter. After careful comparison I found that if a track
    curves back, we only fit the first part of the track bebfore it curves for R and Phi.
    But we will fit theta and z using whe whole tracks.
  
