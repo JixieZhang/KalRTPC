@@ -382,7 +382,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     THelicalTrack helstart;
     TKalMatrix C_start(kSdim,kSdim);
 
-    bool bApply2Iter = false;
+    bool bApply2Iter = true;
 
     if(bApply2Iter) 
     {
@@ -398,6 +398,7 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 #endif
       //Fit backward and smooth it back to the most outside point
       FitBackward4InitHelix(helstart,C_start);
+      //FitForward4InitHelix(helstart,C_start);
 #ifdef _EXKalTestDebug_
       if(Global_Debug_Level >= 4) {
 	EXEventGen::PrintHelix(&helstart, "Fitbackward and smooth back result: helix at last point:");
@@ -424,9 +425,15 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
     // ---------------------------
     //store the initial parameter: Rho, Phi0, Theta
     // ---------------------------
+    //helstart.GetPtoR() will return alpha.   alpha/kappa=rho
     rho_kal_ini  = helstart.GetRho();  
     tnl_kal_ini  = helstart.GetTanLambda(); 
     phi0_kal_ini = helstart.GetPhi0(); 
+    
+    //debug: I want to use exact last point
+    //rho_kal_ini  = fEventGen->Rho_last;
+    //tnl_kal_ini  = fEventGen->TanLambda_last;
+    //phi0_kal_ini = fEventGen->Phi0_last;
 
       
     // ---------------------------
@@ -447,16 +454,17 @@ int EXKalRTPC::KalRTPC(int job, int nevents, double pt_min, double pt_max, doubl
 
     static TKalMatrix svd(kSdim,1);
     svd(0,0) = 0.;
-    svd(1,0) = helstart.GetPhi0();
-    svd(2,0) = helstart.GetKappa();
+    svd(1,0) = phi0_kal_ini;                   //helstart.GetPhi0();
+    svd(2,0) = helstart.GetPtoR()/rho_kal_ini; //helstart.GetKappa();
     svd(3,0) = 0.;
-    svd(4,0) = helstart.GetTanLambda();
+    svd(4,0) = tnl_kal_ini;                    //helstart.GetTanLambda();
     if (kSdim == 6) svd(5,0) = 0.;
+
 
     static TKalMatrix C(kSdim,kSdim);
     if(bApply2Iter){
-       for (Int_t i=0; i<kSdim; i++) C(i,i) = C_start(i,i); 
-       //C = C_start;
+       //for (Int_t i=0; i<kSdim; i++) C(i,i) = C_start(i,i); 
+       C = C_start;
     }
     else
     {

@@ -6,7 +6,7 @@
 
 using namespace std;
 
-#define CircleFitter_LM_Debug 6
+//#define CircleFitter_LM_Debug 6
 
 CircleFitter_LM::CircleFitter_LM() //Constructor (initializes the private data members)
 {

@@ -12,7 +12,7 @@ extern   const double kDetLayerRList[];  //in decreasing order
 class EXKalDetector : public TVKalDetector {
 public:
    // Ctor and Dtor
-   EXKalDetector(Int_t m = 100);
+   EXKalDetector(Int_t m = 100); //m is the maximum number of measurement layers
    ~EXKalDetector();
 
    // Utility methods

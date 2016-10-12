@@ -27,7 +27,7 @@ static const double kRTPC_R_Cathode = 3.0;
 
 ClassImp(EXEventGen)
 
-//#define _ExEventGenDebug_ 2
+//#define _ExEventGenDebug_ 0
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
@@ -395,19 +395,32 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max,
 }
 
 //x y z in mm and in increasing order 
-void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int npt, bool smearing)
+void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_, bool smearing)
 {
   // ---------------------------
   //  use given track to make hits
   // ---------------------------
   TVector3 xx; 
-
+  //I only keep those points that all the way reach maxR
+  int npt=0;
+  double tmpR=0.0,tmpRmax=0.0;
+  for (int jj=0; jj<_npt_; jj++)
+  { 
+    tmpR = sqrt(pow(x[jj],2)+pow(y[jj],2));
+    if (tmpR>tmpRmax) {
+      tmpRmax=tmpR;
+      npt++;
+    }
+  }
+  
   for (int i = 0; i < npt; i++) { 
     ///////////////////////////////////////////////////
     //determine which measurement layer this hit belongs to
     ///////////////////////////////////////////////////
-
+    //By Jixie: This block should be replaced by BinarySearch()
+    //
     //Note that x,y,z from ntuple are in unit of mm
+    //also note that kDetLayerRList is in decreasing order
     xx.SetXYZ(x[i]/10.,y[i]/10.,z[i]/10.);
     int pLyrIndex=-1;    
     //pLyrIndex = Get Layer Index From R
@@ -736,6 +749,7 @@ THelicalTrack EXEventGen::DoHelixFit(bool IterDirection)
   //////////////////////////////////////
   //now Fit the circle using Levenberg-Marquardt method
   //////////////////////////////////////
+  //sometimes this routine return very large values
   //gLMFitter.DoFit(npt,szPos,pA,pB,pRho);
 
 

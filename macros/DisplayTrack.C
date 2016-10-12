@@ -1,5 +1,5 @@
-//This script is to plot the trajectory of RTPC events
-//
+//This script is to plot +/- 5 trajectories of RTPC events in KalRTPC
+//I use it to study the energy loss effect of KalRTPC
 #include <iostream>
 using namespace std;
 
@@ -145,7 +145,7 @@ int GetEntries(const char *var,TCut cut)
 //display the trajectory of an event
 //if entry>0, display the specified event
 //otherwise, display the current event
-int  DisplayEvent( int entry=0, TCut extracut="")
+int  DisplayTrack( int entry=0, TCut extracut="")
 {
   if(thisevent<=0) Init();
 
@@ -161,13 +161,9 @@ int  DisplayEvent( int entry=0, TCut extracut="")
     return -1;
   }
 
-  char strcut[255]; sprintf(strcut,"index==%d",iEvent);
-  char strAcccut[255]; sprintf(strAcccut,"index==%d && step_status==1",iEvent);
-  char strDiscut[255]; sprintf(strDiscut,"index==%d && step_status==0",iEvent);
-
-  cout<<"Event Cut   = \""<<strcut<<"\" \n";
-  cout<<"Acc Cut     = \""<<strAcccut<<"\" \n";
-  cout<<"Discart Cut = \""<<strDiscut<<"\" \n";
+  char strcut[255]; sprintf(strcut,"abs(index-%d)<5",iEvent);
+  char strAcccut[255]; sprintf(strAcccut,"abs(index-%d)<5 && step_status==1",iEvent);
+  char strDiscut[255]; sprintf(strDiscut,"abs(index-%d)<5 && step_status==0",iEvent);
 
   TCut cut = strcut;
   TCut Acccut = strAcccut;
@@ -203,15 +199,15 @@ int  DisplayEvent( int entry=0, TCut extracut="")
 
   if(NHits<3) return 0;
 
-  TPaveText *pt = new TPaveText(0.65,0.65,1-gStyle->GetPadRightMargin(),0.89,"brNDC");
+  TPaveText *pt = new TPaveText(0.65,0.75,1-gStyle->GetPadRightMargin(),0.89,"brNDC");
   pt->SetFillColor(0);
   if(gROOT->IsBatch()) pt->SetFillStyle(4000);
   pt->SetBorderSize(0);
   //pt->AddText(Form("Event %d", iEvent));
   pt->AddText(Form("Pt_{0}=%.4f",Pt));
   pt->AddText(Form("#theta_{0}=%.1f^{o}",Theta0));
-  pt->AddText(Form("#phi_{0}=%.1f^{o}",Phi0));
-  pt->AddText(Form("Z_{0}=%.2f",Z0));
+  //pt->AddText(Form("#phi_{0}=%.1f^{o}",Phi0));
+  //pt->AddText(Form("Z_{0}=%.2f",Z0));
   //pt->AddText(Form("NHits=%d",NHits));
 
   TPaveText *pt_rec = new TPaveText(0.65,0.65,1-gStyle->GetPadRightMargin(),0.89,"brNDC");
@@ -224,7 +220,7 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   pt_rec->AddText(Form("#phi_{rec}=%.1f^{o}",Phi_rec));
   pt_rec->AddText(Form("Z_{rec}=%.2f",Z_rec));
 
-  h2yxframe->SetTitle(Form("Event %d: y-x, %d Hits", iEvent,NHits));
+  //h2yxframe->SetTitle(Form("Event %d: y-x, %d Hits", iEvent,NHits));
 
   TObject *obj=0;
   if(obj=gROOT->FindObject("gryx")) delete obj;
@@ -266,6 +262,7 @@ int  DisplayEvent( int entry=0, TCut extracut="")
     gryx_discard=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx_discard"));
     gryx_discard->SetName("gryx_discard");
     gryx_discard->SetMarkerColor(2);gryx_discard->SetMarkerStyle(2);
+    gryx_discard->SetMarkerColor(4);gryx_discard->SetMarkerStyle(4);
   }
 
   c1->Clear();
@@ -295,14 +292,16 @@ int  DisplayEvent( int entry=0, TCut extracut="")
 
 
   c1->Clear();
-  c1->Divide(2,2);
+  //c1->Divide(2,2);
 
-  c1->cd(1); h2yxframe->Draw();
+  //c1->cd(1); 
+  h2yxframe->Draw();
   pt->Draw();
   if(!gROOT->IsBatch()) h2yxframe->Draw("same");
   if(gryx) gryx->Draw("same p");
+  
   if(gryx_discard) gryx_discard->Draw("same p");
-  t->Draw("step_y_fil:step_x_fil>>h2yx_fil",Acccut,"same*");
+  /*t->Draw("step_y_fil:step_x_fil>>h2yx_fil",Acccut,"same*");
 
   c1->cd(2); h2yzframe->Draw();
   pt_rec->Draw();
@@ -317,10 +316,11 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   c1->cd(4); h2rzframe->Draw();
   if(grrz) grrz->Draw("same p");
   t->Draw("step_s_fil:step_z_fil>>h2rz_fil",Acccut,"same*");
-
+*/
   c1->Update();
   c1->SaveAs(Form("Movie/RTPC_Event_%03d.png",iEvent));
 
+  return NHits;
   //////////////plot zoom in figure////////////
   if(gryx) {
     c2->Clear();
@@ -349,7 +349,7 @@ void go(int n=1,int second=2, int istart=0)
       int nHits = 0;
       while (nHits==0) 
 	{
-	  nHits = DisplayEvent(thisevent++);
+	  nHits = DisplayTrack(thisevent++);
 	  if(nHits == -1) break;
 	}
       c1->Update(); 
@@ -364,7 +364,7 @@ void DisplayMyEvent(TCut cut="")
   int nHits = 0;
   while (nHits==0) 
     {
-      nHits = DisplayEvent(0,cut);
+      nHits = DisplayTrack(0,cut);
       if(nHits == -1) break;
     }
   c1->Update();
@@ -381,7 +381,7 @@ void SliceShowMyEvent(int n=1, int second=2, int istart=0,
       int nHits = 0;
       while (nHits==0) 
 	{
-	  nHits = DisplayEvent(thisevent++,cut);
+	  nHits = DisplayTrack(thisevent++,cut);
 	  if(nHits == -1) break;
 	}
       c1->Update();

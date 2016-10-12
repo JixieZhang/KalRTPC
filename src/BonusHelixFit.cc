@@ -103,51 +103,79 @@ extern "C" {
 //apply corrction to R and Phi
 void CorrHelixRPhi(double &Rho, double &Phi)
 {
-  std::cout<<"\nBefore CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
+  //std::cout<<"\nBefore CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
   
 /*******************************************   
 ph_hel-ph0:r_hel          
-Minimizer is Linear                                                    
-Chi2                      =       3325.1                               
-NDf                       =           76                               
-p0                        =      1.44928   +/-   0.0193378             
-p1                        =     -0.93305   +/-   0.0176701             
-p2                        =      0.24896   +/-   0.00640558            
-p3                        =   -0.0355206   +/-   0.00119808            
-p4                        =   0.00292522   +/-   0.000125733           
-p5                        = -0.000139073   +/-   7.4615e-06            
-p6                        =  3.53636e-06   +/-   2.33549e-07           
-p7                        = -3.71634e-08   +/-   2.99358e-09  
+Minimizer is Linear 
+Minimizer is Linear
+Chi2                      =      295.674
+NDf                       =           70
+p0                        =     0.753136   +/-   0.012418
+p1                        =    -0.391614   +/-   0.00821305
+p2                        =    0.0836029   +/-   0.00212053
+p3                        =  -0.00944999   +/-   0.000278826
+p4                        =  0.000611348   +/-   2.03734e-05
+p5                        = -2.26783e-05   +/-   8.35706e-07
+p6                        =  4.47764e-07   +/-   1.79782e-08
+p7                        = -3.64278e-09   +/-   1.57649e-10
+double Para_dPhiVsR[] = {0.753136, -0.391614, 0.0836029, -0.00944999,
+0.000611348, -2.26783e-05, 4.47764e-07, -3.64278e-09};
+//this is the 1st iteration, it has some problem at r<2.0, its deviation 
+//goes up to 0.1 rad
+//below is the 2nd iteration
+Minimizer is Linear
+Chi2                      =       60.333
+NDf                       =           17
+p0                        =      11.0937   +/-   0.949287
+p1                        =     -17.3801   +/-   1.61812
+p2                        =      11.0492   +/-   1.11925
+p3                        =     -3.65267   +/-   0.40273
+p4                        =     0.663338   +/-   0.0796389
+p5                        =   -0.0628701   +/-   0.00821993
+p6                        =   0.00243461   +/-   0.000346527
+         c1->SaveAs("dPhiVSR_pol7_2nd.png")
+
 *///****************************************
   
   double R=fabs(Rho);
-  if(R<20.0 && R>2.6) {
-    double Para_dPhiVsR[] = {1.44928, -0.93305, 0.24896, -0.0355206,
-      0.00292522, -0.000139073, 3.53636e-06, -3.71634e-08};
-    double dPhi = Para_dPhiVsR[0];
-    for(int i=1;i<=7;i++) dPhi += Para_dPhiVsR[i]*pow(R,i);
-    Phi = Phi - dPhi;
+  if(R>24.0) R=24.;
+  if(R<1.5) R=1.5; 
+  double Para_dPhiVsR[] = {0.753136, -0.391614, 0.0836029, -0.00944999,
+    0.000611348, -2.26783e-05, 4.47764e-07, -3.64278e-09};
+  double dPhi = Para_dPhiVsR[0];
+  for(int i=1;i<=7;i++) dPhi += Para_dPhiVsR[i]*pow(R,i);
+  Phi = Phi - dPhi;
+  //apply 2nd correction if R<5.5 cm
+  if(R<5.5) {
+    double Para_dPhiVsR_2nd[] = {11.0937, -17.3801, 11.0492, -3.65267,
+      0.663338, -0.0628701, 0.00243461};
+    double dPhi_2nd = Para_dPhiVsR_2nd[0];
+    for(int i=1;i<=6;i++) dPhi_2nd += Para_dPhiVsR_2nd[i]*pow(R,i);
+    Phi = Phi - dPhi_2nd;
   }
 
+  return;
 
 /******************************************
-r_hel-rho_1st:r_hel, only good for 2.6<r<4.2          
+r_hel-rho_1st:r_hel, only good for 1.0<r<14.5          
 Minimizer is Linear
-Chi2                      =      635.106
-NDf                       =           74
-p0                        =     -1083.82   +/-   43.3963
-p1                        =         1858   +/-   77.8616
-p2                        =     -1343.62   +/-   59.2763
-p3                        =      531.657   +/-   24.8203
-p4                        =     -124.419   +/-   6.17324
-p5                        =      17.2351   +/-   0.912016
-p6                        =     -1.30966   +/-   0.0741081
-p7                        =     0.042147   +/-   0.00255522       
+Chi2                      =      309.129
+NDf                       =           36
+p0                        =       8.2822   +/-   0.315595
+p1                        =     -8.35421   +/-   0.352006
+p2                        =      3.32568   +/-   0.158319
+p3                        =    -0.685895   +/-   0.0371099
+p4                        =    0.0797764   +/-   0.00489482
+p5                        =  -0.00527024   +/-   0.000364195
+p6                        =  0.000184178   +/-   1.42139e-05
+p7                        = -2.64062e-06   +/-   2.2562e-07  
 *///****************************************
-  
-  if(R<4.2 && R>2.6) {
-  double Para_dRVsR[] = { -1083.82, 1858, -1343.62, 531.657, -124.419,
-			  17.2351, -1.30966, 0.042147};
+  R=fabs(Rho);
+  if(R>14.5) R=14.5;
+  if(R<14.50001) {
+  double Para_dRVsR[] = { 8.2822, -8.35421, 3.32568, -0.685895, 0.0797764,
+			  -0.00527024, 0.000184178, -2.64062e-06};
     double dR = Para_dRVsR[0];
     for(int i=1;i<=7;i++) dR += Para_dRVsR[i]*pow(R,i);
     R = R - dR;
@@ -155,7 +183,7 @@ p7                        =     0.042147   +/-   0.00255522
     //std::cout<<"\t\t dR="<<dR<<std::endl;
   }
 
-  std::cout<<"After  CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
+  //std::cout<<"After  CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
 
 }
 
@@ -288,7 +316,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   Chi2 = (npt>5)? (double)(ch2ph+ch2z/(npt-5)) : 9999.9;
 
   //By Jixie: aaply correction, only useful for RTPC12 
-  CorrHelixRPhi(Rho,Phi);
+  //CorrHelixRPhi(Rho,Phi);
 
 #ifdef HELIXFIT_DEBUG
   printf("\nhelix_fit: fitting %d hits then return (a,b,r)= (%6.4f %6.4f %6.4f)\n",

@@ -1,0 +1,28 @@
+cd /media/DISK500G/work/KalmanFilter/_git_Kalman/KalRTPC
+./_EXKalRTPC_1Iter 0 10000 0.1 0.1 0.5 0.5 ; mv h.root nt_100MeV_60deg_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.1 0.1 0.5 0.5 ; mv h.root nt_100MeV_60deg_2Iter.root ; 
+
+./_EXKalRTPC_1Iter 0 10000 0.1 0.1 ; mv h.root nt_100MeV_90deg_1Iter.root ;
+./_EXKalRTPC_2Iter 0 10000 0.1 0.1 ; mv h.root nt_100MeV_90deg_2Iter.root ;
+
+
+./_EXKalRTPC_1Iter 0 10000 0.07 0.07 -0.9 0.9 ; mv h.root nt_70MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.07 0.07 -0.9 0.9 ; mv h.root nt_70MeV_AllAngle_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.1 0.1 -0.9 0.9 ; mv h.root nt_100MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.1 0.1 -0.9 0.9 ; mv h.root nt_100MeV_AllAngle_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.15 0.15 -0.9 0.9 ; mv h.root nt_150MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.15 0.15 -0.9 0.9 ; mv h.root nt_150MeV_AllAngle_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.035 0.055 -0. 0. ; mv h.root nt_35to55MeV_90deg_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.035 0.055 -0. 0. ; mv h.root nt_35to55MeV_90deg_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.035 0.055 -0.9 0.9 ; mv h.root nt_35to55MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.035 0.055 -0.9 0.9 ; mv h.root nt_35to55MeV_AllAngle_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.057 0.070 -0.9 0.9 ; mv h.root nt_57to70MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.057 0.070 -0.9 0.9 ; mv h.root nt_57to70MeV_AllAngle_2Iter.root ;
+
+./_EXKalRTPC_1Iter 0 10000 0.057 0.155 -0.9 0.9 ; mv h.root nt_57to155MeV_AllAngle_1Iter.root ; 
+./_EXKalRTPC_2Iter 0 10000 0.057 0.155 -0.9 0.9 ; mv h.root nt_57to155MeV_AllAngle_2Iter.root ;
