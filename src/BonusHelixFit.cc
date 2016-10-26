@@ -318,7 +318,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   Chi2 = (npt>5)? (double)(ch2ph+ch2z/(npt-5)) : 9999.9;
 
   //By Jixie: aaply correction, only useful for RTPC12 
-  CorrHelixRPhi(Rho,Phi);
+  //CorrHelixRPhi(Rho,Phi);
 
 #ifdef HELIXFIT_DEBUG
   printf("\n: fitting %d hits then return (a,b,r)= (%6.4f %6.4f %6.4f)\n",
