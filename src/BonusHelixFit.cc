@@ -188,7 +188,7 @@ p7                        = -2.64062e-06   +/-   2.2562e-07
 }
 
 /*------------------------------------------------------------------------\
-//Function name: void helix_fit(int PointNum,double szPos[][3], 
+//Function name: void (int PointNum,double szPos[][3], 
 //  double& Rho, double& A, double& B,double& Phi, double& Theta, 
 //  double& X0, double& Y0,double& Z0, double &DCA, double &chi2);
 //
@@ -246,11 +246,13 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
       npt++;
     }
   }
-//#ifdef HELIXFIT_DEBUG
+#ifdef HELIXFIT_DEBUG
   if(npt<PointNum)
-    std::cout<<"helix_fit(): input PointNum="<<PointNum
+    std::cout<<"(): input PointNum="<<PointNum
       <<", used PointNum="<<npt<<std::endl;
-//#endif
+#endif
+  if(npt<5)	return;
+
 
   for (jj=0; jj<npt; jj++)
   {// r,phi,z coordinate
@@ -319,7 +321,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   CorrHelixRPhi(Rho,Phi);
 
 #ifdef HELIXFIT_DEBUG
-  printf("\nhelix_fit: fitting %d hits then return (a,b,r)= (%6.4f %6.4f %6.4f)\n",
+  printf("\n: fitting %d hits then return (a,b,r)= (%6.4f %6.4f %6.4f)\n",
     PointNum,X,Y,R);
 #endif
 }

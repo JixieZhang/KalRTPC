@@ -282,7 +282,7 @@ int  EXEventGen::LoadOneTrack()
 #endif
 
   MakeHitsFromTraj(xx,yy,zz,nhits,false);
-  return HitNum_m;
+  return nhits;
 }
 
 //generate a circle center at (a,b) and go through (0,0)

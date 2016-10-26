@@ -323,8 +323,8 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
     if(pCounter>=pMaxThrow) return false;
   }
   else if(job==1) { 
-    //by Jixie: read from root tree
-    if(fEventGen->LoadOneTrack()<0) return false;
+    //by Jixie: read from root tree, do not fit if less than 5 hits
+    if(fEventGen->LoadOneTrack()<5) return false;
   }
   else {
     while(pCounter<pMaxThrow) {

@@ -150,7 +150,7 @@ void DeltaXXX(const char* infile="h.root",
 	DeltaCut[0]='\0'; //I have to give this terminal sign to this buffer, otherwise strlen() will not work
 	sprintf(DeltaCut,"%s",vipcut);
 
-	const char *strXVar[]={"pt0*1000","th0","ph0","z0"};
+	const char *strXVar[]={"pt0*1000","th0","ph0","z0*10"};
 	const char *strXTitle[]={"Thrown Pt (MeV/c)","Thrown #theta (rad)","Thrown #phi (rad)",
 		"Thrown Z (mm)"};
 	const char *strXName[]={"pt","th","ph","z"};
@@ -164,7 +164,8 @@ void DeltaXXX(const char* infile="h.root",
 	TH1F *h1=0;
 	TH2F *h2=0;
 	TH1F *hMean=0, *hSigma=0,*hSigma_neg=0;
-	
+	TH1F *hMeanList[nDelta][nVar];
+	TH1F *hSigmaList[nDelta][nVar];
 
 	//Plot 1-D 
 	TCanvas *c31 = new TCanvas("c31","",1100,700);
@@ -250,9 +251,10 @@ void DeltaXXX(const char* infile="h.root",
 	//plot 2-D
 	for(int dd=0;dd<nDelta;dd++)
 	{
-		char tmpName[100];
+		char tmpName[100],tmpTitle[100];
 		sprintf(tmpName,"c32_%s",strYName[dd]);
-		TCanvas *c32 = new TCanvas(tmpName,strYName[dd],(1+dd)*30,(1+dd)*30,900,800);
+		sprintf(tmpTitle,"c32_%s",strYName[dd]);
+		TCanvas *c32 = new TCanvas(tmpName,tmpTitle,(1+dd)*30,(1+dd)*30,900,800);
 		int pCol=int(ceil(nVar/3.0));
 		int pRow=int(ceil(double(nVar)/double(pCol)));
 		c32->Divide(pCol,pRow);
@@ -275,7 +277,10 @@ void DeltaXXX(const char* infile="h.root",
 			sprintf(hName_2,"%s_2",hName);
 			hMean  = (TH1F*) gROOT->FindObject(hName_1);
 			hSigma = (TH1F*) gROOT->FindObject(hName_2);
-
+			
+			hMean->SetYTitle(Form("Mean_%s",strYName[dd]));
+			hSigma->SetYTitle(Form("#sigma_%s",strYName[dd]));
+			
 			hMean->SetMarkerStyle(20); hMean->SetMarkerColor(1);
 			hSigma->SetMarkerStyle(22); hSigma->SetMarkerColor(2);hSigma->SetLineColor(2);
 			
@@ -285,10 +290,54 @@ void DeltaXXX(const char* infile="h.root",
 			hMean->Draw("same");
 			hSigma->Draw("lcsame");
 			hSigma_neg->Draw("lcsame");
+			
+			hMeanList[dd][vv]=hMean;
+			hSigmaList[dd][vv]=hSigma;
 		}
 		c32->cd(0);
 		c32->Modified();
 		c32->SaveAs(Form("Graph/%s_%s.png",strYName[dd],key));
+	}
+	
+	
+	/////////////////////////////////////////////////////////
+	//plot 2-D resolution only, compare kalman filter result to global helix result 
+	const int kNDelta=nDelta/2;
+	for(int dd=0;dd<kNDelta;dd++)
+	{
+		char tmpName[100],tmpTitle[100];
+		sprintf(tmpName,"c33_%s_VS_%s",strYName[dd],strYName[dd+kNDelta]);
+		sprintf(tmpTitle,"%s VS %s",strYName[dd],strYName[dd+kNDelta]);
+		TCanvas *c33 = new TCanvas(tmpName,tmpTitle,(1+dd)*30,(1+dd)*30,900,800);
+		int pCol=int(ceil(nVar/3.0));
+		int pRow=int(ceil(double(nVar)/double(pCol)));
+		c33->Divide(pCol,pRow);
+		for(int vv=0;vv<nVar;vv++)
+		{
+			c33->cd(vv+1);gPad->SetRightMargin(0.12);
+			hSigmaList[dd+kNDelta][vv]->SetLineColor(4);
+			hSigmaList[dd+kNDelta][vv]->SetMarkerColor(4);
+			hSigmaList[dd+kNDelta][vv]->SetMarkerStyle(20);
+			
+			hSigmaList[dd][vv]->SetYTitle(Form("#sigma_#{%s}",strYName[dd]));
+			hSigmaList[dd+kNDelta][vv]->SetYTitle(Form("#sigma_#{%s}",strYName[dd]));
+			hSigmaList[dd][vv]->SetTitle("KF(red) vs GHF(blue)");
+			hSigmaList[dd+kNDelta][vv]->SetTitle("KF(red) vs GHF(blue)");
+			
+			double max1=hSigmaList[dd][vv]->GetMaximum();
+			double max2=hSigmaList[dd+kNDelta][vv]->GetMaximum();
+			if(max1>max2) {
+				hSigmaList[dd][vv]->Draw("lc");
+				hSigmaList[dd+kNDelta][vv]->Draw("lcsame");
+			}
+			else {
+				hSigmaList[dd+kNDelta][vv]->Draw("lc");
+				hSigmaList[dd][vv]->Draw("lcsame");
+			}
+		}
+		c33->cd(0);
+		c33->Modified();
+		c33->SaveAs(Form("Graph/Res_%sVS%s_%s.png",strYName[dd],strYName[dd+kNDelta],key));
 	}
 	return;
 }
