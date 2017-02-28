@@ -17,6 +17,6 @@ install KalmanFilter package, then type 'make;make install' to install it.
 
 To run this in windows:
 
-vc10 project files are also aviable. You have to prepare g77,
-clhep and root by youselves. Then put KalmanFilter and KalRTPC into 
+vc10 project files are also available. You have to prepare g77,
+clhep and root(v5.28) by youselves. Then put KalmanFilter and KalRTPC into 
 the same directory. Then open the solution file with VC10. 
