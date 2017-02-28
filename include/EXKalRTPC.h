@@ -17,7 +17,16 @@
 #include "EXEventGen.h"
 #include "EXHit.h"
 
+/////////////////////////////////////////////////////////////////
+//Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
+#ifndef MaxHit
 #define MaxHit 200
+#endif
+#define MinHit 5
+/////////////////////////////////////////////////////////////////
+
+static const double kMpr = 0.938272013;
+static const double kPi = atan(1.0)*4;
 
 class EXKalRTPC {
 
@@ -25,34 +34,39 @@ public:
   EXKalRTPC();
   virtual ~EXKalRTPC();
 
-  void BeginOfRun();
-  void EndOfRun();
-
   //create a track, store everything into fKalHits
   //prepare a track from xyz array, make sure radii are in increasing order  
-  bool PrepareATrack(double *x_mm, double *y_mm,double *z_mm, int npt);
-  bool PrepareATrack(int job, double pt_min, double pt_max, 
-    double costh_min, double costh_max);
-  
-  void FitForward4InitHelix(THelicalTrack &Hel_last,TKalMatrix &C_last);
-  void FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st);
-  int DoFitAndFilter(double *x_mm, double *y_mm, double *z_mm, int n);
+  bool PrepareATrack(double *x, double *y,double *z, int npt, bool smearing=false,
+		bool bIncludeCurveBackHits=true);
+  bool PrepareATrack(int job, double pt_min, double pt_max, double costh_min,
+    double costh_max, double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=true);
 
-  int KalRTPC(int job, int nevents, double pt_min, double pt_max, 
-    double costh_min, double costh_max);
 
-  //reconstruct to vertex using helix at last hit
+	//Provide suggestion if need to apply 2nd iteration kalman filter
+	//if bIncludeCurveBackHits==false,  it will remove backward hits, otherwise just 
+	//copy all hits pointer into fKalHits_Forward
+	//It will also fill the smeared hit position array
+	//Note that the hit buffer must be sorted by time in increasing order
+  bool JudgeFor2ndIteration(bool bIncludeCurveBackHits=false);
+
+  int  DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n, 
+											bool bIncludeCurveBackHits=false);
+  int  DoFitAndFilter(bool bApply2Iter=false);
+
+  //Use the last site to swim back to the beam line
   void ReconVertex(TVKalState &state, double &p, double &pt, double &pz, 
     double &th, double &ph, double &x, double &y, double &z, 
     double &r_rec, double &a_rec, double &b_rec);
-  
+
   void SetCovMElement(double val) {fCovMElement=val;};
+  
+  void  Reset();
+
+  void Example(int job, int nevents, double pt_min, double pt_max, double costh_min, 
+    double costh_max, double z_min, double z_max);
 
 private:
 
-  void  Tree_Init();
-  void  Tree_Fill(TKalTrack &kaltrack);
-  void  Reset();
 
   //Get vertex by finding TCylinder crossing point
   int GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
@@ -61,51 +75,65 @@ private:
   //get vertex by finding dca to bpm point
   int GetVextex2(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
     TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
-  
+
+  //Create a helix from 3 points to get initial parameter for Kalman Filter
+  //IterDirection=true is farward, otherwise backward
+  THelicalTrack GetIniHelixBy3Pts(bool IterDirection=true);
+
+  //Do global helix fit to get initial parameter for Kalman Filter
+  //IterDirection=true is farward, otherwise backward
+  THelicalTrack GetIniHelixByGHF(bool IterDirection=false);
+  //Apply linear regression to "Rho*dPhi vs dZ" to determine theta and z of a helix
+  void CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
+    double& Theta0, double& Z0);
+
+  void FitForward4InitHelix(THelicalTrack &Hel_last,TKalMatrix &C_last);
+  void FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st);
 
 public:
 
   TFile* fFile;
 
-  TObjArray     *fKalHits;    // hit buffer
+  TKalTrack     *fKalTrack;   // The buffer to hold the fitted result
+  TObjArray     *fKalHits;    // hit buffer to hold original hits, include the backward hits
+  TObjArray     *fKalHits_Forward;    // hit buffer to hold only the forward part of hits
   TKalDetCradle *fCradle;     // detctor system
   EXKalDetector *fDetector;   // detector
   EXEventGen    *fEventGen;   // enevt generator
-  
+
+
 private:
   double fCovMElement;
 
-private:
-  //root variables
-  TTree* fTree;
-  int _index_;
-  double p_rec,pt_rec,pz_rec,th_rec,ph_rec,x_rec,y_rec,z_rec;
-  double r_rec,a_rec,b_rec;
-  int npt;
-  double step_x[MaxHit],step_y[MaxHit],step_z[MaxHit];
-  double step_px[MaxHit],step_py[MaxHit],step_pz[MaxHit];
-  double step_bx[MaxHit],step_by[MaxHit],step_bz[MaxHit];
-  int step_status[MaxHit];
-  double step_x_exp[MaxHit],step_y_exp[MaxHit],step_z_exp[MaxHit];
-  double step_x_fil[MaxHit],step_y_fil[MaxHit],step_z_fil[MaxHit];
+public:
+  //root variables, will be stored into root tree by manager
 
-  //varible from global fitter, come from g4 root tree 
-  double p0,pt0,pz0,th0,ph0,_x0_,_y0_,_z0_;
-  double p_hel,pt_hel,pz_hel,th_hel,ph_hel,x_hel,y_hel,z_hel;
-  double r_hel,a_hel,b_hel;
-  double p_3pt,pt_3pt,th_3pt,r_3pt,a_3pt,b_3pt;
-  
-  double r_hel_raw,th_hel_raw,ph_hel_raw,a_hel_raw,b_hel_raw,z_hel_raw;
+  //store kalman filter resonstriction result
+  double P_rec, Pt_rec, Pz_rec, Theta_rec, Phi_rec, X_rec, Y_rec, Z_rec;
+  double R_rec, A_rec, B_rec;
+  int    NDF;
+  double Chi2;
 
-  //I want to study the Kalman Filter fitted resolution as a function of
-  //initial parameter: Rho, Phi0, Theta
-  //the true variable at 1st and last site
-  double rho_1st, tnl_1st, phi0_1st;
-  double rho_last, tnl_last, phi0_last;
+  //store the initial values providing to KF
   double rho_kal_ini, tnl_kal_ini, phi0_kal_ini;
 
-  int ndf;
-  double chi2,cl;
+
+  //store reconstructed hits or detector smeared thrown hits, in unit of cm
+  //will be filled in RemoveBackwardHits(), plan to use these array to fill tree 
+  int HitNum;  
+  double StepX_rec[MaxHit],StepY_rec[MaxHit],StepZ_rec[MaxHit],StepPhi_rec[MaxHit],StepS_rec[MaxHit];
+
+  //step_status is used tell if this site has been used by KF, will be updated by DoFitAndFilter()
+  int step_status[MaxHit];
+
+  //store 3-point helix
+  double P_3pt,Pt_3pt,Theta_3pt,R_3pt,A_3pt,B_3pt;
+  //store raw_global helix result before Jixie's corrections
+  double Phi_hel_raw,Theta_hel_raw,R_hel_raw,A_hel_raw,B_hel_raw,Z_hel_raw;
+  double X_hel_raw, Y_hel_raw, DCA_hel_raw, Chi2_hel_raw;
+  //store final Global Helix Fit result
+  double P_hel, Phi_hel,Theta_hel,R_hel,A_hel,B_hel,Z_hel;
+  double X_hel, Y_hel, DCA_hel, Chi2_hel;
 
 };
 

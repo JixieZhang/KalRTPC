@@ -127,6 +127,7 @@
     <ClCompile Include="..\src\EXEventGen.cxx" />
     <ClCompile Include="..\src\EXHit.cxx" />
     <ClCompile Include="..\src\EXKalDetector.cxx" />
+    <ClCompile Include="..\src\EXKalManager.cxx" />
     <ClCompile Include="..\src\EXKalRTPC.cxx" />
     <ClCompile Include="..\EXKalRTPCDict.cxx" />
     <ClCompile Include="..\src\EXMeasLayer.cxx" />
@@ -141,6 +142,7 @@
     <ClInclude Include="..\include\EXEventGen.h" />
     <ClInclude Include="..\include\EXHit.h" />
     <ClInclude Include="..\include\EXKalDetector.h" />
+    <ClInclude Include="..\include\EXKalManager.h" />
     <ClInclude Include="..\include\EXKalRTPC.h" />
     <ClInclude Include="..\EXKalRTPCDict.h" />
     <ClInclude Include="..\include\EXMeasLayer.h" />

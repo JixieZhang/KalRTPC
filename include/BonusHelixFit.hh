@@ -1,6 +1,7 @@
 //Header file for helix fit, c++ code!!!
-#ifndef _HELIX_FIT_
-#define _HELIX_FIT_
+#ifndef BONUS_HELIX_FIT_H
+#define BONUS_HELIX_FIT_H
+
 ///////////////////////////////////////////////////////////////////////
 
 /*------------------------------------------------------------------------\
@@ -28,5 +29,8 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
 void HelixFit(int PointNum,double szPos[][3], double& R, double& A, double& B, 
   double& Phi_deg, double& Theta_deg, double& Z0, int fit_track_to_beamline=1);
 
+//}
+
 ////////////////////////////////////////////////////////////////////////
-#endif //#ifdef _HELIX_FIT_
+#endif //#ifdef BONUS_HELIX_FIT_H
+

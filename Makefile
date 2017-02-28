@@ -13,7 +13,7 @@ MYHOST      := $(shell hostname -s)
 ########################################################################
 EXECFILE    := EXKalRTPC
 LIBNAME     := EXKalRTPC
-VERSION     := 1.0.1
+VERSION     := 1.0.2
 
 LIBFILE     := lib$(LIBNAME).so
 USERDICT    := $(LIBNAME)Dict

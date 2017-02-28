@@ -9,6 +9,30 @@ from outside to inside.
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2017/02/22
+1. Reorganized the whole project by the following: 
+A) added EXKalManager class to handle input output framework;
+B) removed root tree I/O from EXKalRTPC. 
+C) removed readding G4 root tree from EXEevntGen, put it into EXKalManager
+D) made EXKalRTPC to be a clean module to do the Kalman Filter fit. EXKalRTPC contians
+   2 hits buffers: fKalHits and fKalHits_Forward.  
+   To use this code, user need to do the following:
+   1) Reset the buff using Reset(); 
+   2) Prepare a chain in time increasing order using PrepareATrack(xxx);
+   3) Determine if it needs 2 iteration KF fitting and copy fKalHits to fKalHits_Forward
+     using JudgeFor2ndIteration(bool bIncludeCurveBackHits);
+  4) Do the fit using DoFitAndFilter(), which will fit fKalHits_Forward;
+  see EXKalRTPC::Example() for details. 
+E) made EXEventGen to be a clean module to generate track and fill original hit buffer
+2. Added Chain-Finder module into this program. I do not want to change the 
+   tree structure for this. Therefore the output root tree is organized in this way:
+   1) one entry contains only one chain, which include all hits and fitted result
+   2) one event contains multiple entries.  User need to use 'eventid, trackid' to tell   
+      when an event ends.
+   To use the chain-finder, user can read multiple entries from the input root file then
+   fill all hits into the hit pool. chain-finder will use this pool to do its job. 
+   
+      
 2016/10/11
 1. After a lot of careful comparison I found that: 
 	A) for non-curve-back tracks: global helix fitter is good enough,

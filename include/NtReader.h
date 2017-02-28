@@ -241,6 +241,7 @@ Int_t NtReader::GetEntry(Long64_t entry)
   if (!fChain) return 0;
   return fChain->GetEntry(entry);
 }
+
 void NtReader::Init()
 {
   // The Init() function is called when the selector needs to initialize

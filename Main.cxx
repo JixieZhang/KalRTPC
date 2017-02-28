@@ -1,4 +1,6 @@
-//RTPC Kalman filter main program
+//By Jixie Zhang: RTPC Kalman filter main program
+//This program is used to test the kalman filter module
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -6,8 +8,8 @@
 #include <TApplication.h>
 using namespace std;
 
-#include "EXKalRTPC.h"
- 
+#include "EXKalManager.h"
+
 
 int main (int argc, char **argv)
 {
@@ -18,11 +20,14 @@ int main (int argc, char **argv)
   int nevents;
   double pt_min=0.1, pt_max=0.1;
   double costh_min=-0.00001, costh_max=0.00001;
+  double z_min=0.0, z_max=0.0;
   double error=0.05;
+  char   infile[100];
 
   if(argc<3) {
-    cerr << "Usage: "<<argv[0] <<" <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1]" 
-      <<"[costh_min=-0.00001] [costh_max=0.00001] [error=0.05]"<< endl;
+    cerr << "Usage: "<<argv[0] <<" <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \\"<<endl 
+         <<"        [costh_min=-0.00001] [costh_max=0.00001] [error=0.05] [z_min=0.0] [z_max=0.0] \\"<<endl
+	 <<"        [infile=infile.root]"<<endl<<endl;
     cerr << "\t  job: 0 generate helix, 1 loadtrack from geant4 root file, 2 generate circle\n";
     cerr << "\t  nevents: number of events to generate \n";
     cerr << "\t  pt_min_gev and pt_max_gev: specifiy the range of pt in Gev \n";
@@ -39,10 +44,15 @@ int main (int argc, char **argv)
   if(argc>5) costh_min = atof(argv[5]);
   if(argc>6) costh_max = atof(argv[6]);
   if(argc>7) error = atof(argv[7]);
-  
-  EXKalRTPC aKalFilter;
+  if(argc>8) z_min = atof(argv[8]);
+  if(argc>9) z_max = atof(argv[9]);
+  if(argc>10)  sprintf(infile, "%s",argv[10]);
+  else  sprintf(infile, "%s","infile.root");
+
+  EXKalManager aKalFilter;
   aKalFilter.SetCovMElement(error);
-  aKalFilter.KalRTPC(job,nevents,pt_min,pt_max,costh_min,costh_max);
-  
+  aKalFilter.SetG4InputFile(infile);
+  aKalFilter.Run(job,nevents,pt_min,pt_max,costh_min,costh_max,z_min,z_max);
+
   return 0;
 }

@@ -48,7 +48,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>c:\root\include;Z:\work\KalmanFilter\src\geomlib;Z:\work\KalmanFilter\src\kallib;Z:\work\KalmanFilter\src\utils;Z:\work\KalmanFilter\src\kaltracklib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>c:\root\include;..\..\KalmanFilter\src\geomlib;..\..\KalmanFilter\src\kallib;..\..\KalmanFilter\src\utils;..\..\KalmanFilter\src\kaltracklib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>

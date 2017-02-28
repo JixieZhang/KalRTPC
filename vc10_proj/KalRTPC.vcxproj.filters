@@ -63,6 +63,9 @@
     <ClCompile Include="..\src\CircleFitter_LM.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\EXKalManager.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\EXEventGen.h">
@@ -93,6 +96,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\CircleFitter_LM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EXKalManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -24,7 +24,7 @@
 #include <iomanip>
 using namespace std;
 
-#define _EXMeasLayerDebug_ 1
+//#define _EXMeasLayerDebug_ 1
 
 Bool_t   EXMeasLayer::kActive = kTRUE;
 Bool_t   EXMeasLayer::kDummy = kFALSE;

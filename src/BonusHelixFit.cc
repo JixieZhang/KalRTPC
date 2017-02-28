@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "BonusHelixFit.hh"
+using namespace std;
+
 //#define HELIXFIT_DEBUG 1
 /*
 SUBROUTINE RWFTHL(NPT,RF,PF,WFI,ZF,WZF,IOPT,
@@ -100,44 +101,46 @@ extern "C" {
 }
 #endif 
 
+#include "BonusHelixFit.hh"
+
 //apply corrction to R and Phi
 void CorrHelixRPhi(double &Rho, double &Phi)
 {
   //std::cout<<"\nBefore CorrHelixRPhi():  R="<<Rho<<"  Phi="<<Phi<<std::endl;
-  
-/*******************************************   
-ph_hel-ph0:r_hel          
-Minimizer is Linear 
-Minimizer is Linear
-Chi2                      =      295.674
-NDf                       =           70
-p0                        =     0.753136   +/-   0.012418
-p1                        =    -0.391614   +/-   0.00821305
-p2                        =    0.0836029   +/-   0.00212053
-p3                        =  -0.00944999   +/-   0.000278826
-p4                        =  0.000611348   +/-   2.03734e-05
-p5                        = -2.26783e-05   +/-   8.35706e-07
-p6                        =  4.47764e-07   +/-   1.79782e-08
-p7                        = -3.64278e-09   +/-   1.57649e-10
-double Para_dPhiVsR[] = {0.753136, -0.391614, 0.0836029, -0.00944999,
-0.000611348, -2.26783e-05, 4.47764e-07, -3.64278e-09};
-//this is the 1st iteration, it has some problem at r<2.0, its deviation 
-//goes up to 0.1 rad
-//below is the 2nd iteration
-Minimizer is Linear
-Chi2                      =       60.333
-NDf                       =           17
-p0                        =      11.0937   +/-   0.949287
-p1                        =     -17.3801   +/-   1.61812
-p2                        =      11.0492   +/-   1.11925
-p3                        =     -3.65267   +/-   0.40273
-p4                        =     0.663338   +/-   0.0796389
-p5                        =   -0.0628701   +/-   0.00821993
-p6                        =   0.00243461   +/-   0.000346527
-         c1->SaveAs("dPhiVSR_pol7_2nd.png")
 
-*///****************************************
-  
+  /*******************************************   
+  ph_hel-ph0:r_hel          
+  Minimizer is Linear 
+  Minimizer is Linear
+  Chi2                      =      295.674
+  NDf                       =           70
+  p0                        =     0.753136   +/-   0.012418
+  p1                        =    -0.391614   +/-   0.00821305
+  p2                        =    0.0836029   +/-   0.00212053
+  p3                        =  -0.00944999   +/-   0.000278826
+  p4                        =  0.000611348   +/-   2.03734e-05
+  p5                        = -2.26783e-05   +/-   8.35706e-07
+  p6                        =  4.47764e-07   +/-   1.79782e-08
+  p7                        = -3.64278e-09   +/-   1.57649e-10
+  double Para_dPhiVsR[] = {0.753136, -0.391614, 0.0836029, -0.00944999,
+  0.000611348, -2.26783e-05, 4.47764e-07, -3.64278e-09};
+  //this is the 1st iteration, it has some problem at r<2.0, its deviation 
+  //goes up to 0.1 rad
+  //below is the 2nd iteration
+  Minimizer is Linear
+  Chi2                      =       60.333
+  NDf                       =           17
+  p0                        =      11.0937   +/-   0.949287
+  p1                        =     -17.3801   +/-   1.61812
+  p2                        =      11.0492   +/-   1.11925
+  p3                        =     -3.65267   +/-   0.40273
+  p4                        =     0.663338   +/-   0.0796389
+  p5                        =   -0.0628701   +/-   0.00821993
+  p6                        =   0.00243461   +/-   0.000346527
+  c1->SaveAs("dPhiVSR_pol7_2nd.png")
+
+  *///****************************************
+
   double R=fabs(Rho);
   if(R>24.0) R=24.;
   if(R<1.5) R=1.5; 
@@ -157,25 +160,25 @@ p6                        =   0.00243461   +/-   0.000346527
 
   return;
 
-/******************************************
-r_hel-rho_1st:r_hel, only good for 1.0<r<14.5          
-Minimizer is Linear
-Chi2                      =      309.129
-NDf                       =           36
-p0                        =       8.2822   +/-   0.315595
-p1                        =     -8.35421   +/-   0.352006
-p2                        =      3.32568   +/-   0.158319
-p3                        =    -0.685895   +/-   0.0371099
-p4                        =    0.0797764   +/-   0.00489482
-p5                        =  -0.00527024   +/-   0.000364195
-p6                        =  0.000184178   +/-   1.42139e-05
-p7                        = -2.64062e-06   +/-   2.2562e-07  
-*///****************************************
+  /******************************************
+  r_hel-rho_1st:r_hel, only good for 1.0<r<14.5          
+  Minimizer is Linear
+  Chi2                      =      309.129
+  NDf                       =           36
+  p0                        =       8.2822   +/-   0.315595
+  p1                        =     -8.35421   +/-   0.352006
+  p2                        =      3.32568   +/-   0.158319
+  p3                        =    -0.685895   +/-   0.0371099
+  p4                        =    0.0797764   +/-   0.00489482
+  p5                        =  -0.00527024   +/-   0.000364195
+  p6                        =  0.000184178   +/-   1.42139e-05
+  p7                        = -2.64062e-06   +/-   2.2562e-07  
+  *///****************************************
   R=fabs(Rho);
   if(R>14.5) R=14.5;
   if(R<14.50001) {
-  double Para_dRVsR[] = { 8.2822, -8.35421, 3.32568, -0.685895, 0.0797764,
-			  -0.00527024, 0.000184178, -2.64062e-06};
+    double Para_dRVsR[] = { 8.2822, -8.35421, 3.32568, -0.685895, 0.0797764,
+      -0.00527024, 0.000184178, -2.64062e-06};
     double dR = Para_dRVsR[0];
     for(int i=1;i<=7;i++) dR += Para_dRVsR[i]*pow(R,i);
     R = R - dR;
@@ -188,6 +191,10 @@ p7                        = -2.64062e-06   +/-   2.2562e-07
 }
 
 /*------------------------------------------------------------------------\
+///////////////////////////////////////////
+//By Jixie:  this helix fit does not work if the track curve back
+//User should simply remove those points 
+//
 //Function name: void (int PointNum,double szPos[][3], 
 //  double& Rho, double& A, double& B,double& Phi, double& Theta, 
 //  double& X0, double& Y0,double& Z0, double &DCA, double &chi2);
@@ -231,27 +238,8 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   float phi0;
   if(PointNum>MAX_HITS_ON_CHAIN) PointNum=MAX_HITS_ON_CHAIN-1;
 
-  ///////////////////////////////////////////
-  //By Jixie:  this helix fit does not work if the track curve back
-  //Here I simply remove those points when they start to curve back.
-  //I only keep those points that all the way reach maxR
-  
-  npt=0;
-  double tmpR=0.0,tmpRmax=0.0;
-  for (jj=0; jj<PointNum; jj++)
-  { 
-    tmpR = sqrt(pow(szPos[jj][0],2)+pow(szPos[jj][1],2));
-    if (tmpR>tmpRmax) {
-      tmpRmax=tmpR;
-      npt++;
-    }
-  }
-#ifdef HELIXFIT_DEBUG
-  if(npt<PointNum)
-    std::cout<<"(): input PointNum="<<PointNum
-      <<", used PointNum="<<npt<<std::endl;
-#endif
-  if(npt<5)	return;
+  npt = PointNum;
+  if(npt<5) return;
 
 
   for (jj=0; jj<npt; jj++)
@@ -269,7 +257,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
     wfi[jj]= 1.0;
     wzf[jj]= 1.0;
   }
-  
+
   if(fit_track_to_beamline)
   {
     rf[npt]= 0.0;
@@ -317,7 +305,8 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   DCA = fabs(vv0[3]); /* dca = distance of closest approach to beamline */
   Chi2 = (npt>5)? (double)(ch2ph+ch2z/(npt-5)) : 9999.9;
 
-  //By Jixie: aaply correction, only useful for RTPC12 
+  //By Jixie: apply correction, only useful for RTPC12 
+  //user should provide the next subroutine, it is detector dependence thing
   //CorrHelixRPhi(Rho,Phi);
 
 #ifdef HELIXFIT_DEBUG
@@ -338,4 +327,3 @@ void HelixFit(int PointNum,double szPos[][3], double& R, double& A, double& B,
   Phi_deg=Phi*180./PI;
   Theta_deg=Theta*180./PI;
 }
-

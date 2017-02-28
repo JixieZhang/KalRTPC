@@ -5,9 +5,13 @@
 #include "TRandom.h"
 
 #include "EXHit.h"
-#include "BonusHelixFit.hh"
-#include "CircleFitter_LM.h"
 #include "GlobalDebuger.hh"
+
+#include <stdio.h>
+#include <iomanip>
+#include <iostream>
+
+using namespace std;
 
 //-----------------------------------
 // RTPC Parameters
@@ -27,22 +31,22 @@ static const double kRTPC_R_Cathode = 3.0;
 
 ClassImp(EXEventGen)
 
-//#define _ExEventGenDebug_ 0
+//#define _ExEventGenDebug_ 2
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
-CircleFitter_LM gLMFitter;
-
+//This routine will create parameters for a THelicalTrack,
+//There are no hits inside, just a abstract track 
 THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
-  double cosmin, double cosmax)
+  double cosmin, double cosmax, double z_min, double z_max)
 {
-  const double PI=acos(0.0)*2;
+  const double kPi=acos(0.0)*2;
   // ---------------------------
   //  Generate a helical track
   // ---------------------------
-  //Jixie: pivot point is (0,0,0) this helix happens to go throught (0,0,0)
+  //Jixie: pivot point is (0,0,z0) this helix happens to go throught (0,0,z0)
   Double_t dr  = __DR__;
-  Double_t fi0 = __FI0__ + 2*PI*(gRandom->Uniform()-0.5);
+  Double_t fi0 = __FI0__ + 2*kPi*(gRandom->Uniform()-0.5);
   Double_t pt  = gRandom->Uniform(pt_min, pt_max);
   Double_t cpa = 1. / pt;
   Double_t dz  = __DZ__;
@@ -50,7 +54,8 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   Double_t tnl = cs / TMath::Sqrt((1-cs)*(1+cs)); 
   Double_t x0  = __X0__;
   Double_t y0  = __Y0__;
-  Double_t z0  = __Z0__;
+  //Double_t z0  = __Z0__;
+  Double_t z0  = gRandom->Uniform(z_min, z_max);
 
   Double_t b   = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
@@ -58,22 +63,22 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
 
   THelicalTrack aTrack(dr,fi0,cpa,dz,tnl,x0,y0,z0,b);
 
-  //pass these information to NtReader buffer so KalRTPC can load them 
+  //pass these information into buffer so KalRTPC can load them 
   //into the output tree
 
   //double phi_c=atan2(this->B_rec,this->A_rec);
-  double phi_c=(cpa>0)?fi0:fi0+PI;
-  if(phi_c> PI) phi_c-=2*PI;
-  if(phi_c<-PI) phi_c+=2*PI;
-  Phi0_p=(cpa>0.) ? phi_c+PI/2 : phi_c-PI/2;
-  if(Phi0_p> PI) Phi0_p-=2*PI;
-  if(Phi0_p<-PI) Phi0_p+=2*PI;
+  double phi_c=(cpa>0)?fi0:fi0+kPi;
+  if(phi_c> kPi) phi_c-=2*kPi;
+  if(phi_c<-kPi) phi_c+=2*kPi;
+  Phi0=(cpa>0.) ? phi_c+kPi/2 : phi_c-kPi/2;
+  if(Phi0> kPi) Phi0-=2*kPi;
+  if(Phi0<-kPi) Phi0+=2*kPi;
 
-  this->X0=x0*10.;
-  this->Y0=y0*10.;
-  this->Z0=z0*10.;
-  this->Theta0_p=acos(cs);
-  this->P0_p=fabs(pt)/TMath::Sqrt((1-cs)*(1+cs));
+  this->X0=x0;
+  this->Y0=y0;
+  this->Z0=z0;
+  this->Theta0=acos(cs);
+  this->P0=fabs(pt)/TMath::Sqrt((1-cs)*(1+cs));
 
 
 #ifdef _ExEventGenDebug_
@@ -82,8 +87,8 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
     cout<<"\n Helix Event:  pt="<<pt<<"  Rho="<<aTrack.GetRho()
       <<", A="<<aTrack.GetXc()<<", B="<<aTrack.GetYc()
       <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
-    cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
-      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg  Z0="<<z0<<endl;
+    cout<<"  P0_p="<<P0<<", Phi0_p="<<Phi0*57.3
+      <<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<z0<<endl;
   }
 #endif
 
@@ -93,7 +98,7 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
 //print the helix information for a given helix track point
 void EXEventGen::PrintHelix(THelicalTrack *aTrack, const char *title)
 {
-  const double PI=acos(0.0)*2;
+  const double kPi=acos(0.0)*2;
   // ---------------------------
   //  print a helical track
   // ---------------------------
@@ -104,17 +109,17 @@ void EXEventGen::PrintHelix(THelicalTrack *aTrack, const char *title)
   double A = aTrack->GetXc();
   double B = aTrack->GetYc();
   //double phi_c=atan2(B,A);
-  double phi_c=(cpa>0)?fi0:fi0+PI;
-  if(phi_c> PI) phi_c-=2*PI;
-  if(phi_c<-PI) phi_c+=2*PI;
-  double phi_p=(cpa>0.) ? phi_c+PI/2 : phi_c-PI/2;
-  if(phi_p> PI) phi_p-=2*PI;
-  if(phi_p<-PI) phi_p+=2*PI;
+  double phi_c=(cpa>0)?fi0:fi0+kPi;
+  if(phi_c> kPi) phi_c-=2*kPi;
+  if(phi_c<-kPi) phi_c+=2*kPi;
+  double phi_p=(cpa>0.) ? phi_c+kPi/2 : phi_c-kPi/2;
+  if(phi_p> kPi) phi_p-=2*kPi;
+  if(phi_p<-kPi) phi_p+=2*kPi;
 
   double pt = fabs(1.0/cpa);
   //double pz = pt * tanLambda;
   double p  = pt * sqrt(1+tanLambda*tanLambda);   //p = pt / sinTheta 
-  double th = (tanLambda>0) ? asin(pt/p) : PI-asin(pt/p);
+  double th = (tanLambda>0) ? asin(pt/p) : kPi-asin(pt/p);
 
   cout<<"\n+---------------------------------------------------------------------+\n";
   cout<<"  title="<<title<<endl;
@@ -125,7 +130,7 @@ void EXEventGen::PrintHelix(THelicalTrack *aTrack, const char *title)
 }
 
 
-void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
+void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Double_t mass)
 {
   // ---------------------------
   //  Swim track and Make hits
@@ -142,12 +147,17 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
   Int_t    nlayers   = fCradlePtr->GetEntries();
   Int_t    dlyr      = 1;
   Double_t dfisum    = 0.;
+  StepNum=0;
 
   for (Int_t lyr = 0; lyr >= 0; lyr += dlyr) { // loop over layers
     // change direction if it starts looping back
-    //by Jixie: do not include curve back hits
-    if (lyr > nlayers -1 ) break; 
-    //if (lyr == nlayers - 1) dlyr = -1;
+    if(!bIncludeCurveBackHits) {
+      //by Jixie: do not include curve back hits
+      if (lyr > nlayers -1 ) break; 
+    }
+    else {
+      if (lyr == nlayers - 1) dlyr = -1;
+    }
 
     EXMeasLayer &ml = *dynamic_cast<EXMeasLayer *>(fCradlePtr->At(lyr));
     TVSurface   &ms = *dynamic_cast<TVSurface *>(fCradlePtr->At(lyr));
@@ -213,89 +223,45 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Double_t mass)
     if (ml.IsActive()) {
       ml.ProcessHit(xx, *fHitBufPtr,true); // create hit point
       //Jixie: need to take information out from here and store into the root file
+      StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
+      StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
+      StepNum++;
+			if(StepNum>=MaxHit) break;
+
+      //here I try to store rho, tanLambda and fi0 for the 1st and last hit
+      //But I can not tell when the track reach the last step.
+      //Note that when the track die in the drift region, heltrk.GetRho() return NAN
+      //it is not a number any more. Therefore I have to store it at each step
+      //I use 'fabs(tmpRho)>0.01' to tell tmpRho is NAN or not
       double tmpRho=heltrk.GetRho();
       if(fabs(Rho_1st)<0.01 && fabs(tmpRho)>0.01) {
-	Rho_1st = tmpRho;
-	TanLambda_1st = heltrk.GetTanLambda();
-	Phi0_1st = heltrk.GetPhi0(); 
+				Rho_1st = tmpRho;
+				TanLambda_1st = heltrk.GetTanLambda();
+				Phi0_1st = heltrk.GetPhi0(); 
       }
 
-      //I can not tell when the track reach the last hit
-      //so I store them at each hit when it curves back
-      //When the track die in the drift region, its rho is 
-      //not an number any more
       if(fabs(tmpRho)>0.01) {
-	Rho_last = tmpRho;
-	TanLambda_last = heltrk.GetTanLambda();
-	Phi0_last = heltrk.GetPhi0(); 
+				Rho_last = tmpRho;
+				TanLambda_last = heltrk.GetTanLambda();
+				Phi0_last = heltrk.GetPhi0(); 
       }
     }
     if (lyr == nlayers - 1) break;
   }
- 
-}
 
-//Note that G4 provide hits in mm
-int  EXEventGen::LoadOneTrack()
-{
-  int nhits = 0;
-  double xx[200],yy[200],zz[200];
-  while (nhits<5) {
-    int n = NtReader::LoadATrack();
-    if( n == -1 ) {
-      cout<<"Reach the end of input root file \n";
-      return -1;
-    }
-    double tmpR=0.0,tmpRmax=0.0;
-    nhits=0;
-    for(int i=0;i<HitNum_m;i++) {
-      if(StepID_m[i]>0) {
-	//By Jixie @ 20160914:  do not include curve back hits!!!
-	tmpR=sqrt(StepX_rec_m[i]*StepX_rec_m[i]+StepX_rec_m[i]*StepY_rec_m[i]);
-	if(tmpR<=tmpRmax) continue;
-	tmpRmax=tmpR;
-	xx[nhits]=StepX_rec_m[i];
-	yy[nhits]=StepY_rec_m[i];
-	zz[nhits]=StepZ_rec_m[i];
-	nhits++;
-	if(nhits>=200) break;
-      }
-    }
-  }
-
-#ifdef _ExEventGenDebug_
-  //just for debug
-  if(_ExEventGenDebug_>=1) {
-    cout<<"\nNtuple Event "<<setw(5)<<Index<<":  HitNum_m="<<setw(2)<<HitNum_m
-      <<",  Smax="<<setw(8)<<Smax<<",  Smin="<<setw(8)<<Smin<<endl
-      <<"  P0="<<P0_p<<",  Pt="<<P0_p*sin(Theta0_p)<<", Theta0="
-      <<Theta0_p*57.3<<", Phi0="<<Phi0_p*57.3<<"  Z0="<<Z0/10.<<"cm"<<endl;
-  }
-  if(_ExEventGenDebug_>=4) {
-    for(int i=0;i<HitNum_m;i++) {
-      cout<<"Hit "<<setw(2)<<i<<"("<<setw(8)<<StepX_rec_m[i]<<", "
-	<<setw(8)<<StepY_rec_m[i]<<", "
-	<<setw(8)<<StepZ_rec_m[i]<<") ==>  S="<<setw(8)<<StepS_rec_m[i]
-      <<" mm  Phi="<<setw(8)<<StepPhi_rec_m[i]*57.3<<" deg"<<endl;
-    }
-  }
-#endif
-
-  MakeHitsFromTraj(xx,yy,zz,nhits,false);
-  return nhits;
 }
 
 //generate a circle center at (a,b) and go through (0,0)
 //based on the helix definition: tanLambda = ctanTheta
-//when rho>0, fi0 definition is different by PI, and dfi
+//when rho>0, fi0 definition is different by kPi, and dfi
 //is in diff sign
 //This routine has been fully debuged, it generates helix
 //without energy loss or MSC, from (0,0,z0=0)
 //One could use random z0 too 
-int  EXEventGen::GenCircle(double pt_min, double pt_max, 
-  double costh_min, double costh_max)
+int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, double costh_max,
+  double z_min, double z_max, bool bIncludeCurveBackHits)
 {
-  const double PI = atan(1.)*4;
+  const double kPi = atan(1.)*4;
   double bfield_tesla = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
     (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield()/10;
@@ -305,30 +271,37 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max,
   double costh = gRandom->Uniform(costh_min, costh_max); 
   double sinth = sqrt(1.0-costh*costh);
   double tanlambda = costh/sinth;
-  double rho = pt/(0.3*bfield_tesla) * 100;  //in cm
+  double rho = pt/(0.3*bfield_tesla) * 100;      //in cm
   double r = fabs(rho);
-  double z0 = 0;
+  double z0 = gRandom->Uniform(z_min, z_max);
 
   //phi_c is circle center phi angle in hall coordinate system
-  double phi_c = 2*TMath::Pi()*gRandom->Uniform(); 
+  double phi_c = 2*kPi*gRandom->Uniform(); 
   double a = r * cos(phi_c);
   double b = r * sin(phi_c);
-  double fi0 = phi_c-PI;
-  if(pt>0) fi0+=PI;
-  if(fi0> PI) fi0-=2*PI;
-  if(fi0<-PI) fi0+=2*PI;
+  double fi0 = phi_c-kPi;
+  if(pt>0) fi0+=kPi;
+  if(fi0> kPi) fi0-=2*kPi;
+  if(fi0<-kPi) fi0+=2*kPi;
 
-  double phi0_p = (pt>0) ? phi_c+PI/2 : phi_c-PI/2;
-  if(phi0_p> PI) phi0_p-=2*PI;
-  if(phi0_p<-PI) phi0_p+=2*PI;
+  //phi0_p is the phi angle of the momentum at vertex
+  double phi0_p = (pt>0) ? phi_c+kPi/2 : phi_c-kPi/2;
+  if(phi0_p> kPi) phi0_p-=2*kPi;
+  if(phi0_p<-kPi) phi0_p+=2*kPi;
+
+
+  //record these variables for root tree
+  //since there is no MS or ELoss, rho and tanlambda should not change
+  Rho_1st=Rho_last=rho;
+  TanLambda_1st=TanLambda_last=tanlambda;
 
   //base on phi angle in circle center coordinate to calculate lab x,y,z
   //note that 
   //if (2r<S_cathode), no hit
   //if (2r>S_gem1) then only loop one iteration
-  //if (2r<=S_gem1) then will curve back, 2 hits each layer
+  //if (2r<=S_gem1) then will curve back,6 2 hits each layer
   double phi_cir;
-  HitNum=0;
+  StepNum=0;
   //swim forward
   for(int i=0;i<kNDetLayer;i++) {
     if (kDetLayerRList[kNDetLayer-1-i]>2.*r) continue;   //no hit
@@ -336,51 +309,56 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max,
     if(pt>0) dfi*=-1;   //from definition
     phi_cir = fi0+dfi;
 
-    StepX[HitNum]=(-rho*cos(phi_cir)+a)*10.;	    //in mm
-    StepY[HitNum]=(-rho*sin(phi_cir)+b)*10.;	    //in mm
-    StepZ[HitNum]=(z0-rho*tanlambda*dfi)*10.;	    //in mm
-    StepS[HitNum]=sqrt(StepX[HitNum]*StepX[HitNum]+StepY[HitNum]*StepY[HitNum]);
-    StepPhi[HitNum]=atan2(StepY[HitNum],StepX[HitNum]);
-    HitNum++;
-  }
-  
-  //swim backward
-  if(kRTPC_R_GEM1>2.*r)
-  {
-    for(int i=0;i<kNDetLayer;i++) {
-      if (kDetLayerRList[i]>2.*r) continue;   //no hit
-      double dfi = 2*PI-asin(kDetLayerRList[i]/2./r)*2;
-      if(pt>0) dfi*=-1; //from definition
-      phi_cir = fi0+dfi;
+    //record these variables for root tree
+    if(StepNum==0) {Phi0_1st=phi_cir;}
 
-      StepX[HitNum]=(-rho*cos(phi_cir)+a)*10.;	//in mm
-      StepY[HitNum]=(-rho*sin(phi_cir)+b)*10.;	//in mm
-      StepZ[HitNum]=(z0-rho*tanlambda*dfi)*10.;		//in mm
-      StepS[HitNum]=sqrt(StepX[HitNum]*StepX[HitNum]+StepY[HitNum]*StepY[HitNum]);
-      StepPhi[HitNum]=atan2(StepY[HitNum],StepX[HitNum]);
-      HitNum++;
+    StepX[StepNum]=-rho*cos(phi_cir)+a;	    //in cm
+    StepY[StepNum]=-rho*sin(phi_cir)+b;	    //in cm
+    StepZ[StepNum]=z0-rho*tanlambda*dfi;	  //in cm
+    StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
+    StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
+    StepNum++;
+    if(StepNum>=MaxHit) break;
+  }
+
+  //swim backward
+  if(bIncludeCurveBackHits) {
+    if(kRTPC_R_GEM1>2.*r) {
+      for(int i=0;i<kNDetLayer;i++) {
+				if (kDetLayerRList[i]>2.*r) continue;   //no hit
+				double dfi = 2*kPi-asin(kDetLayerRList[i]/2./r)*2;
+				if(pt>0) dfi*=-1; //from definition
+				phi_cir = fi0+dfi;
+
+				StepX[StepNum]=-rho*cos(phi_cir)+a;	    //in cm
+				StepY[StepNum]=-rho*sin(phi_cir)+b;	    //in cm
+				StepZ[StepNum]=z0-rho*tanlambda*dfi;	  //in cm
+				StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
+				StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
+				StepNum++;
+				if(StepNum>=MaxHit) break;
+      }
     }
   }
   //pass these information to NtReader buffer so KalRTPC can load them 
   //into the output tree
-  this->X0=0*10.;
-  this->Y0=0*10.;
-  this->Z0=0*10.;
-  this->Phi0_p=phi0_p;
-  this->Theta0_p=acos(costh);
-  this->P0_p=fabs(pt)/sinth;
+  this->X0=0;
+  this->Y0=0;
+  this->Z0=z0;
+  this->Phi0=phi0_p;
+  this->Theta0=acos(costh);
+  this->P0=fabs(pt)/sinth;
 
 #ifdef _ExEventGenDebug_
   //just for debug
   if(_ExEventGenDebug_>=1) {
-    cout<<"\nCircle Event:  pt="<<pt<<"  Rho="<<rho
-      <<", A="<<a<<", B="<<b
+    cout<<"\nCircle Event:  pt="<<pt<<"  Rho="<<rho<<", A="<<a<<", B="<<b
       <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
-    cout<<"  P0_p="<<P0_p<<", Phi0_p="<<Phi0_p*57.3
-      <<"deg, Theta0_p="<<Theta0_p*57.3<<"deg  Z0="<<0<<endl;  
+    cout<<"  P0_p="<<P0<<", Phi0_p="<<Phi0*57.3
+      <<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<Z0<<endl;  
   }
   if(_ExEventGenDebug_>=4) {
-    for(int i=0;i<HitNum;i++) {
+    for(int i=0;i<StepNum;i++) {
       cout<<"Hit "<<setw(2)<<i<<"("<<setw(8)<<StepX[i]<<", "
 	<<setw(8)<<StepY[i]<<", "
 	<<setw(8)<<StepZ[i]<<") ==>  S="<<setw(8)<<StepS[i]
@@ -389,39 +367,44 @@ int  EXEventGen::GenCircle(double pt_min, double pt_max,
   }
 #endif
 
-  MakeHitsFromTraj(StepX,StepY,StepZ,HitNum,true);
+  MakeHitsFromTraj(StepX,StepY,StepZ,StepNum,true);
 
-  return HitNum;
+  return StepNum;
 }
 
-//x y z in mm and in increasing order 
-void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_, bool smearing)
+//x y z in cm and in increasing time order 
+void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
+ bool smearing, bool bIncludeCurveBackHits)
 {
-  // ---------------------------
+  // ------------------------------------------------------
   //  use given track to make hits
-  // ---------------------------
-  TVector3 xx; 
-  //I only keep those points that all the way reach maxR
+  // ------------------------------------------------------
   int npt=0;
-  double tmpR=0.0,tmpRmax=0.0;
-  for (int jj=0; jj<_npt_; jj++)
-  { 
-    tmpR = sqrt(pow(x[jj],2)+pow(y[jj],2));
-    if (tmpR>tmpRmax) {
-      tmpRmax=tmpR;
-      npt++;
-    }
-  }
   
+  if(!bIncludeCurveBackHits) { 
+		//Do this block if you only keep forward going points
+		double tmpR=0.0,tmpRmax=0.0;
+		for (int jj=0; jj<_npt_; jj++) { 
+			tmpR = sqrt(pow(x[jj],2)+pow(y[jj],2));
+			//use 1 mm margin to determine if the track curve back or not
+			if (tmpR+0.1 < tmpRmax) break; 
+			if (tmpR>tmpRmax) tmpRmax=tmpR;
+			npt++;
+		}
+  } else {
+		npt = _npt_;
+	}
+	
+	StepNum=0;
+  TVector3 xx; 
   for (int i = 0; i < npt; i++) { 
     ///////////////////////////////////////////////////
     //determine which measurement layer this hit belongs to
     ///////////////////////////////////////////////////
     //By Jixie: This block should be replaced by BinarySearch()
     //
-    //Note that x,y,z from ntuple are in unit of mm
-    //also note that kDetLayerRList is in decreasing order
-    xx.SetXYZ(x[i]/10.,y[i]/10.,z[i]/10.);
+    //Note that kDetLayerRList is in decreasing order
+    xx.SetXYZ(x[i],y[i],z[i]);
     int pLyrIndex=-1;    
     //pLyrIndex = Get Layer Index From R
     double r=xx.Perp();
@@ -449,17 +432,23 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_, bo
     if (ml.IsActive()) {
       ml.ProcessHit(xx, *fHitBufPtr, smearing); // create hit point     
 
+			//Jixie: need to take information out from here and store into the root file
+      StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
+      StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
+      StepNum++;
+			if(StepNum>=MaxHit) break;
+
 #ifdef _ExEventGenDebug_
       if( _ExEventGenDebug_ >= 4) {
-	EXHit *hitp = dynamic_cast<EXHit *> (fHitBufPtr->Last());       
-	TVector3 xv=ml.HitToXv((TVTrackHit&)(*hitp));   
-	TVector3 xraw=hitp->GetRawXv();
-	cerr << "MeasLayer "<<setw(2)<< ml.GetIndex()
-	  <<": R="<<setw(6)<< ml.GetR()<<": ";
-	cerr << "Xv  =("<<setw(8)<< xv.X()<<",  "
-	  <<setw(8)<<xv.Y()<<", "<<setw(8)<<xv.Z()<<"); ";
-	cerr << "Xraw=("<<setw(8)<< xraw.X()<<",  "
-	  <<setw(8)<<xraw.Y()<<", "<<setw(8)<<xraw.Z()<<"): \n";
+				EXHit *hitp = dynamic_cast<EXHit *> (fHitBufPtr->Last());       
+				TVector3 xv=ml.HitToXv((TVTrackHit&)(*hitp));   
+				TVector3 xraw=hitp->GetRawXv();
+				cerr << "MeasLayer "<<setw(2)<< ml.GetIndex()
+					<<": R="<<setw(6)<< ml.GetR()<<": ";
+				cerr << "Xv  =("<<setw(8)<< xv.X()<<",  "
+					<<setw(8)<<xv.Y()<<", "<<setw(8)<<xv.Z()<<"); ";
+				cerr << "Xraw=("<<setw(8)<< xraw.X()<<",  "
+					<<setw(8)<<xraw.Y()<<", "<<setw(8)<<xraw.Z()<<"): \n";
       }
 #endif
     }
@@ -467,373 +456,24 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_, bo
   }
 }
 
-
-//Create a helix from 3 points to get initial parameter for Kalman Filter
-//IterDirection=true is farward, otherwise backward
-THelicalTrack EXEventGen::CreateInitialHelix(bool IterDirection) 
+//x y z in mm and in increasing time order 
+void EXEventGen::MakeHitsFromTraj_mm(double *x_mm, double *y_mm, double *z_mm, 
+  int npt, bool smearing, bool bIncludeCurveBackHits)
 {
-  Int_t i1, i2, i3;
-  if (IterDirection == kIterBackward) {
-    i3 = 0;
-    i1 = fHitBufPtr->GetEntries() - 1;
-    i2 = i1 / 2;
-  } else {
-    i1 = 0;
-    i3 = fHitBufPtr->GetEntries() - 1;
-    i2 = i3 / 2;
+  double *x=new double[npt]; 
+  double *y=new double[npt]; 
+  double *z=new double[npt]; 
+
+  //convert from mm to cm
+  for (int i = 0; i < npt; i++) { 
+    x[i]=x_mm[i]/10.0;
+    y[i]=y_mm[i]/10.0;
+    z[i]=z_mm[i]/10.0;
   }
 
-  EXHit   &h1 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i1));   // first hit
-  EXHit   &h2 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i2));   // middle hit
-  EXHit   &h3 = *dynamic_cast<EXHit *>(fHitBufPtr->At(i3));   // last hit
-  TVector3 x1 = h1.GetMeasLayer().HitToXv(h1);
-  TVector3 x2 = h2.GetMeasLayer().HitToXv(h2);
-  TVector3 x3 = h3.GetMeasLayer().HitToXv(h3);
-  double bfield = h1.GetBfield();  //in kGauss
-  THelicalTrack aTrack(x1, x2, x3, bfield, IterDirection); // initial helix 
+  MakeHitsFromTraj(x, y, z, npt, smearing, bIncludeCurveBackHits);	
 
-  
-  const double PI=acos(0.0)*2;
-  double pRho = aTrack.GetRho();
-  Pt_3pt = pRho/aTrack.GetPtoR();
-  R_3pt = pRho;
-  A_3pt = aTrack.GetXc();
-  B_3pt = aTrack.GetYc();
-  double tanLambda = aTrack.GetTanLambda();
-  P_3pt = fabs(Pt_3pt) * sqrt(1+tanLambda*tanLambda); 
-  Theta_3pt = atan(1./tanLambda);
-  if(Theta_3pt<0) Theta_3pt+=PI;
-
-#ifdef _ExEventGenDebug_
-  //just for debug
-  double pPhi_c = atan2(B_3pt,A_3pt);
-  double pFi0 = aTrack.GetPhi0(); 
-
-  if(_ExEventGenDebug_>=2) {
-    cout<<" 3-point Helix:  pt="<<Pt_3pt
-      <<"  Rho="<<pRho<<", A="<<A_3pt<<", B="<<B_3pt
-      <<", phi_c="<<pPhi_c*57.3<<"deg, fi0_last="<<pFi0*57.3<<"deg "<<endl;   
-    cout<<"  P_3pt="<<P_3pt<<", Theta_3pt="<<Theta_3pt*57.3<<"deg"<<endl;
-  }
-#endif
-
-  return aTrack;
-}
-   
-
-
-//Apply linear regression to "-Rho*dPhi vs dZ" to determine theta and z of a helix
-//according to definition, -Rho * tanLambda = dZdPhi
-//tanTheta = 1/tanLambda = -Rho/dZdPhi = -Rho*dPhi/dZ
-//it means that tanTheta is the slope of "-Rho*dPhi vs dZ"
-//so we can do linear fit to get the slope
-//if dPhi_vx is given, one can calcuate dZ_vx, then z_vx
-//linear regression formula can be found here
-//http://www.datagenetics.com/blog/august12013/index.html
-//
-void EXEventGen::FitHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
-                                double& Theta0, double& Z0)
-{
-    const double PI=acos(0.0)*2;
-    ///////////////////////////////////////////////////////////////////////    
-    double rhodfi[200],dfi[200],dz[200];
-    //angle in circle coordinate system
-    double phi_c_1st=atan2(szPos[0][1]-B,szPos[0][0]-A);
-    for(int i=1;i<npt;i++) {
-      dz[i-1] = szPos[i][2]-szPos[0][2];
-      dfi[i-1] = atan2(szPos[i][1]-B,szPos[i][0]-A) - phi_c_1st;
-      if(dfi[i-1]<0) dfi[i-1] += 2*PI;
-      rhodfi[i-1] = -Rho * dfi[i-1]; 
-      if(i+1>=200) break;
-    }
-
-    //now do the linear regression on  "Rho*dPhi vs dZ"
-    int n=npt-1;
-    double M,C;    //the function is y = M*x + C
-    double sumX=0,sumY=0,sumXY=0,sumX2=0;
-    for(int j=0;j<n;j++) {
-      sumX  += dz[j];
-      sumY  += rhodfi[j];
-      sumXY += dz[j]*rhodfi[j];
-      sumX2 += dz[j]*dz[j];
-    }
-    M = (n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX);
-    C = (sumY/n) - M*(sumX/n);
-
-    //this method does not work well for theta0=90deg
-#ifdef _ExEventGenDebug_
-    if(_ExEventGenDebug_>=2) {
-      cout<<"FitHelixThetaZ():  dfi_span="<<dfi[n-1]<<"rad, z_span="<<dz[n-1]<<"cm"
-	<<",  <rhodfi>="<<sumY/n<<",  <dz>="<<sumX/n<<endl; 
-    }
-#endif
-    if(fabs(dz[n-1])<0.4 && fabs(sumX/n)<0.2) {
-#ifdef _ExEventGenDebug_
-      if(_ExEventGenDebug_>=2) {
-	cout<<"**FitHelixThetaZ():  dz_span too small, is within uncertianty, do nothing***\n";      
-      }
-#endif
-      //Z0 = sumX/n;
-      //Theta0 = PI/2;
-      return;
-    }
-    
-    //now convert M and C into theta and z according to definition
-    //tanTheta = 1/tanLambda = Rho/dZdPhi = Rho*dPhi/dZ
-    //it means that tanTheta is the slope of "Rho*dPhi vs dZ"
-    double pTheta0 = atan(M);
-    if(pTheta0<0) pTheta0 += PI;
-    
-    if((sumX/n<-0.2 && pTheta0*57.3<87) || (sumX/n>0.2 && pTheta0*57.3>93)) {
-#ifdef _ExEventGenDebug_
-      if(_ExEventGenDebug_>=1) {
-	cout<<"**FitHelixThetaZ(): wrong fitted theta="<<pTheta0*57.3<<"deg, do nothing***"<<endl;
-      }
-      if(_ExEventGenDebug_>=2) {
-	for(int j=0;j<n;j++) {
-	  cout<<"point "<<setw(3)<<j<<":  rhodfi="<<setw(10)<<rhodfi[j]<<",  dfi="
-	    <<setw(10)<<dfi[j]<<",  dz="<<setw(10)<<dz[j]<<endl; 
-	}
-      }
-#endif
-      return;
-    }
-
-    Theta0 = pTheta0;
-    double phi_c_vx = atan2(0-B,0-A);
-    double dfi_vx = phi_c_vx - phi_c_1st;
-    double dz_vx = ( dfi_vx - C) / M;
-    Z0 = dz_vx + szPos[0][2];
-}
-
-//Do global helix fit to get initial parameter for Kalman Filter
-//IterDirection=true is farward, otherwise backward
-THelicalTrack EXEventGen::DoHelixFit(bool IterDirection) 
-{
-  const double PI=acos(0.0)*2;
-  //the buffer should be in  increasing order
-  TIter next(fHitBufPtr, true);  //forward direction
-
-  // ---------------------------
-  //  Start to extract all hits
-  // ---------------------------
-  //in unit of cm
-  double szPos[200][3];
-  int npt = 0;
-  EXHit *hitp = dynamic_cast<EXHit *>(next());
-  while (hitp) {     // loop over hits    
-    //fill the global variables for root tree
-    //TVector3 xraw = hitp->GetRawXv();
-    const EXMeasLayer &ml = dynamic_cast<const EXMeasLayer &>(hitp->GetMeasLayer());
-    TVector3 xv = ml.HitToXv(*hitp);
-    StepX_rec_m[npt]=xv.X();StepY_rec_m[npt]=xv.Y();StepZ_rec_m[npt]=xv.Z();
-    szPos[npt][0]=xv.X();szPos[npt][1]=xv.Y();szPos[npt][2]=xv.Z();
-
-    npt++;
-    if(npt>=200) break;
-    hitp = dynamic_cast<EXHit *>(next());
-  }
-  HitNum_m=npt;
- 
-  ////////////////////////////////////////////////////////////////////////
-
-  //do the helix fit and store all results into the tree leaves buffer
-  double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2;
-  int fit_to_beamline=1;
-  helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
-    fit_to_beamline);
-
-   /////////////////////////////////////////////////////////////////////
-  //TODO: 
-  //check global helix fit why it return a wrong sign of rho for large curve track
-  
-  //Global helix fit might return the wrong sign, expecially for large curve back tracks
-  //Once it happens, its theta and z are totally wrong, phi is off by PI according to definition 
-  //here I determine the sign  
-  //using dfi_vx2first, since it always less than PI. 
-  //For clock-wise track, dfi_vx2first<0  
-  //the next few lines will get the phi angle on circle system, then do a subtraction
-  double phi_cir_vx = atan2(0-pB,0-pA);
-  double phi_cir_first = atan2(StepY_rec_m[0]-pB,StepX_rec_m[0]-pA);
-  double phi_cir_last = atan2(StepY_rec_m[npt-1]-pB,StepX_rec_m[npt-1]-pA);
-
-  //double dfi_first2last = phi_cir_last - phi_cir_first;
-  //if(dfi_first2last> PI) dfi_first2last-=2*PI;
-  //if(dfi_first2last<-PI) dfi_first2last+=2*PI;
-  
-  double dfi_vx2first = phi_cir_first - phi_cir_vx;
-  if(dfi_vx2first> PI) dfi_vx2first-=2*PI;
-  if(dfi_vx2first<-PI) dfi_vx2first+=2*PI;
-  
-  double dfi_vx2last = phi_cir_last - phi_cir_vx;
-  if(dfi_vx2last> PI) dfi_vx2last-=2*PI;
-  if(dfi_vx2last<-PI) dfi_vx2last+=2*PI;
-  
-  int sign = (dfi_vx2first<0) ? 1 : -1;
-
-#ifdef _ExEventGenDebug_
-  //just for debug
-  if(_ExEventGenDebug_>=5) {
-    cout<<" First_hit=("<<StepX_rec_m[0]<<", "<<StepY_rec_m[0]<<", "<<StepZ_rec_m[0]<<"), ";
-    cout<<"  Last_hit=("<<StepX_rec_m[npt-1]<<", "<<StepY_rec_m[npt-1]<<", "<<StepZ_rec_m[npt-1]<<") \n";
-    cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
-      <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
-      <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
-  } 
-  if(_ExEventGenDebug_>=4) {
-    cout<<"  npt="<<npt<<",  dz_span="<<StepZ_rec_m[npt-1]-StepZ_rec_m[0]
-      <<"cm,  chi2="<<pChi2<<endl;
-  }
-#endif
-  
-  ////////////////////
-  //store global helix result before my correction 
-  R_hel_raw = pRho;
-  Theta_hel_raw = pTheta;
-  Phi_hel_raw = pPhi;
-  A_hel_raw = pA;
-  B_hel_raw = pB;
-  Z_hel_raw = pZ0;
-  
-  ////////////////////
-
-  //make correction for global helix fit result
-  if (sign*pRho<0)  {
-#ifdef _ExEventGenDebug_
-    cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
-    if(_ExEventGenDebug_>=2) {
-      cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
-    }
-#endif
-    pRho *= -1.0;
-    pPhi+=PI;
-    if(pPhi> PI) pPhi-=2*PI;
-    if(pPhi<-PI) pPhi+=2*PI;
-    //todo:  need to get resonable theta and z
-  
-    FitHelixThetaZ(npt,szPos,pRho,pA,pB,pTheta,pZ0);
-#ifdef _ExEventGenDebug_
-    if(_ExEventGenDebug_>=2) {
-      cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
-    }
-#endif
-  }
-  else
-  {
-#ifdef _ExEventGenDebug_
-    //sometimes the global helix return wrong theta, 
-    //want to find out and correct it back
-    double ppTheta=pTheta, ppZ0=pZ0;
-    FitHelixThetaZ(npt,szPos,pRho,pA,pB,ppTheta,ppZ0);
-    if((ppTheta-PI/2)*(pTheta-PI/2)<0) {
-    if(_ExEventGenDebug_>=2) 
-      cout<<"***Before FitHelixThetaZ: Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
-      pTheta=ppTheta; pZ0=ppZ0;
-    if(_ExEventGenDebug_>=2) 
-      cout<<"*** After FitHelixThetaZ: Theta="<<setw(8)<<ppTheta*57.3<<"deg, Z="<<ppZ0<<"cm \n";
-    }
-#endif
-  }
-  
-#ifdef _ExEventGenDebug_
-  //just for debug
-  if(_ExEventGenDebug_>=2) {
-    if(fabs(Theta0_p-pTheta)*57.3>5 )
-    {
-      Pause4Debug();
-    }
-  }
-#endif
-  //////////////////////////////////////
-  //now Fit the circle using Levenberg-Marquardt method
-  //////////////////////////////////////
-  //sometimes this routine return very large values
-  //gLMFitter.DoFit(npt,szPos,pA,pB,pRho);
-
-
-  /////////////////////////////////////////////////////////////////////
-  //Those are G4 tree variables, it is in mm
-  R_rec=fabs(pRho)*10;
-  A_rec=pA*10;
-  B_rec=pB*10;
-  Z_rec=pZ0*10;
-  Theta_rec=pTheta;
-  Phi_rec=pPhi;
-  DCA_rec=pDCA*10;
-  
-  
-
-  //helix center phi angle in the hall
-  double Phi_c = (pRho>0.) ? Phi_rec-PI/2 : Phi_rec+PI/2;
-  //do not use the next line, 
-  //if A_rec or B_rec are close to zero, it will give a wrong sign
-  //Phi_c = atan2(B_rec, A_rec); 
-  if(Phi_c> PI) Phi_c-=2*PI;
-  if(Phi_c<-PI) Phi_c+=2*PI;
-
-  //////////////////////////////////////
-  //now create a THelixTrack
-  //////////////////////////////////////
-
-  const double kGev=1.0e9;
-  const double kLightVelocity=2.99792458e8;
-  Double_t b   = dynamic_cast<const EXKalDetector &>
-    (dynamic_cast<EXMeasLayer *>
-    (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield();
-
-  Double_t dr  = pDCA;
-  Double_t pt  = (pRho/100.)*kLightVelocity*(b/10.) / kGev;
-  Double_t cpa = 1. / pt;
-  Double_t fi0 = (pRho>0)?Phi_c:Phi_c-PI;   //the fi0 of vertex
-  if(fi0> PI) fi0-=2*PI;
-  if(fi0<-PI) fi0+=2*PI;
-  Double_t dz  = 0;
-  Double_t cs  = cos(Theta_rec);
-  Double_t tnl = cs / TMath::Sqrt((1-cs)*(1+cs)); 
-  Double_t x0  = 0;  // can also use pX0;
-  Double_t y0  = 0;  // can also use pY0;
-  Double_t z0  = pZ0;
-
-  
-  //IterDirection=true is farward, return helix state at 1st point
-  //otherwise backward, return helix state at last point
-  double fi0_last = fi0+dfi_vx2last;
-  if(fi0_last> PI) fi0_last-=2*PI;
-  if(fi0_last<-PI) fi0_last+=2*PI;
-
-  double fi0_1st = fi0+dfi_vx2first;
-  if(fi0_1st> PI) fi0_1st-=2*PI;
-  if(fi0_1st<-PI) fi0_1st+=2*PI;
-
-  //this helix track is not ideal, but only fi0, tnl and cpa will be used
-  //by the caller
-  double ret_fi0 = (IterDirection==kIterBackward)?fi0_last:fi0_1st;
-  THelicalTrack aTrack(dr,ret_fi0,cpa,dz,tnl,x0,y0,z0,b);
-
-  this->P0_rec_p=fabs(pt)/sin(pTheta);
-  this->X0_rec_p=pX0*10.;
-  this->Y0_rec_p=pY0*10.;
-  this->Z0_rec_p=pZ0*10;
-  this->Theta0_rec_p=pTheta;
-  this->Phi0_rec_p=pPhi;
-
-
-#ifdef _ExEventGenDebug_
-  //just for debug
-  if(_ExEventGenDebug_>=2) {
-    cout<<"  global Helix:  pt="<<pt
-      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
-      <<", phi_c="<<Phi_c*57.3<<"deg,"
-      <<" fi0_1st="<<fi0_1st*57.3<<"deg "
-      <<" fi0_last="<<fi0_last*57.3<<"deg "<<endl;
-    cout<<"  P_hel="<<P0_rec_p<<", Phi_hel="<<Phi0_rec_p*57.3
-      <<"deg, Theta_hel="<<Theta0_rec_p*57.3<<"deg,  Z_hel="<<pZ0
-      <<", fi0="<<fi0*57.3<<endl;
-  }
-#endif
-
-  return aTrack;
-}
-
+  delete x;
+  delete y;
+  delete z;
+} 
