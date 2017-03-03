@@ -41,13 +41,15 @@ public:
   //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
   //return false if reach the end of file or fail
   //please note that the G4 root tree use unit of mm 
-  bool FillCFHitPoolByG4Track(int ntracks);
+  bool FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHits=true);
 
   //read a track from G4MC_RTPC12 output tree and fill into fKalHits
   bool LoadAG4Track(bool bIncludeCurveBackHits=false);
- 
-  //run ChianFinder and global helix fitter
-  int  RunCFNGHF(int nevents, int ntracks, double space, double min_ang, 
+   
+  //run ChainFinder to search for chains
+  //in each event, read multiple tracks from G4 root tree and store them into hit pool
+  //job := 3, no fit; 4 call GHF; 5 call KF 
+  int  RunCFNFit(int job, int nevents, int ntracks, double space, double min_ang, 
                  double max_ang, double ang_sep);
   
   //run ChianFinder + KalmanFilter
@@ -66,6 +68,7 @@ private:
   void  Tree_Init();
   void  Tree_Fill(TKalTrack &kaltrack);
   void  Tree_Reset();
+  void  Tree_Reset_CF();
 
 public:
 
@@ -83,16 +86,24 @@ private:
   NtReader      *fNtReader;           
 
 private:
-   
-  int fChainFinderNTracks;
   //This part is used to fill the root tree
+  
+  //Chain Finder tree buffer, number of found tracks store at 'ntrack' and also 'CF_ChainNum'
+  int CF_ntrack_read;  //number of tracks that read from g4 tree
+  int CF_ntrack_good;  //number of good tracks that read from g4 tree
+  int CF_HitNum, CF_ChainNum;
+  double CF_X[MAX_HITS_PER_EVENT],CF_Y[MAX_HITS_PER_EVENT],CF_Z[MAX_HITS_PER_EVENT]; 
+  int CF_Status[MAX_HITS_PER_EVENT],CF_ThrownTID[MAX_HITS_PER_EVENT];
+  int CF_ChainInfo[MAX_HITS_PER_EVENT]; 
+  
+  
   //When load G4 track, we also need to load the following thrown parameters and store
   //them into the output tree. in unit of cm.
   //Fix me:
   //the chain finder might not put the track it found in the same order
   //as the original G4 tree, therefore I do not know how to incert these values
-  double X0[MAX_CHAINS_PER_EVENT],Y0[MAX_CHAINS_PER_EVENT], Z0[MAX_CHAINS_PER_EVENT];
-  double Theta0[MAX_CHAINS_PER_EVENT], Phi0[MAX_CHAINS_PER_EVENT], P0[MAX_CHAINS_PER_EVENT];
+  double CF_X0[MAX_CHAINS_PER_EVENT], CF_Y0[MAX_CHAINS_PER_EVENT], CF_Z0[MAX_CHAINS_PER_EVENT];
+  double CF_Theta0[MAX_CHAINS_PER_EVENT], CF_Phi0[MAX_CHAINS_PER_EVENT], CF_P0[MAX_CHAINS_PER_EVENT];
   
   //root variables
   //a lot of vaiable here are redundent, they have been defined in KalRTPC or EventGen

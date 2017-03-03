@@ -393,12 +393,35 @@ void EXKalRTPC::CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
 
 //Do global helix fit and apply my corrections
 //return chi2
-double EXKalRTPC::DoGlobalHelixFit(int npt,double szPos[][3]) 
+double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_, 
+                                   bool bIncludeCurveBackHits) 
 {
-  ////////////////////////////////////////////////////////////////////////
-
+  //////////////////////////////////////////////////////////////////////
+  int npt=0;
+  double szPos[200][3];
+  double tmpR=0.0, tmpRmax=0.0;
+  for(int j=0;j<npt;j++) {
+    //in case you do not want to include curve back hits!!!
+    if(!bIncludeCurveBackHits) {
+      tmpR = sqrt(x[j]*x[j]+y[j]*y[j]);
+      if(tmpR > tmpRmax) tmpRmax = tmpR;  
+      else if( tmpR+0.1 < tmpRmax) continue;
+      //due to resolution, s value of some hits might be a little bit smaller 
+      //than previous hit..
+      //I set the margin here to be 1mm
+    }
+    szPos[npt][0] = x[j];
+    szPos[npt][1] = y[j];
+    szPos[npt][2] = z[j];
+    npt++;
+    if(npt>=200) break; //GHF only fit 200 hits
+  }
+  
+  if(npt<MinHit) return -1.0;
+  //////////////////////////////////////////////////////////////////////
+  
   //do the helix fit and store all results into the tree leaves buffer
-  double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2;
+  double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2=0.0;
   int fit_to_beamline=1;
   helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
     fit_to_beamline);

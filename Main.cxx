@@ -32,17 +32,22 @@ void usage()
 {
   printf("/------------------------------usage start----------------------------------------\\ \n");
   printf("exe [-h] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \\\n");
-  printf("    [-c <ntracks=0> [space_cm=1.1] [min_ang_deg=23.3] [max_ang_deg=30.0] [ang_sep_cm=0.4>]] \\\n");
+  printf("    [-c <ntracks=1> [space_cm=1.1] [min_ang_deg=23.3] [max_ang_deg=30.0] [ang_sep_cm=0.4>]] \\\n");
   printf("    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \\\n");
   printf("    [-t <costh_min=-0.00001> <costh_max=0.00001>] \\\n");
   printf("    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \\\n");  
   printf("    [-i <infile=\"infile.root\">] \n\n");  
   
-  cerr << "--------------------The following old usage also support--------------------------"<<endl;
-  cerr <<"exe <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \\"<<endl 
+  cerr << "-------------------The following old usage is also supported----------------------"<<endl;
+  cerr <<"exe <job=0|1|2|3|4|5> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \\"<<endl 
        <<"   [costh_min=-0.00001] [costh_max=0.00001] [error=0.05] [z_min=0.0] [z_max=0.0] \\"<<endl
        <<"   [infile=infile.root]"<<endl<<endl;
-  cerr << "\t  job: 0 generate helix, 1 loadtrack from geant4 root file, 2 generate circle\n";
+  cerr << "\t  job: 0: run KalmanFilter with generated helix;\n";
+  cerr <<" \t       1: run KalmanFilter with geant4 track;\n";
+  cerr << "\t       2: run KalmanFilter with generated circle;\n";
+  cerr << "\t       3: run ChainFinder only geant4 tracks, need to couple with -c option; \n";
+  cerr << "\t       4: run ChainFinder + Global Helix Fitter with geant4 tracks\n";
+  cerr << "\t       5: run ChainFinder + KalmanFilter with geant4 tracks\n";
   cerr << "\t  nevents: number of events to generate \n";
   cerr << "\t  pt_min_gev and pt_max_gev: specifiy the range of pt in Gev \n";
   cerr << "\t  Note that if pt is negative then anti-clockwise track will be generated \n";
@@ -64,7 +69,7 @@ int main (int argc, char **argv)
   int    job=0;
   int    nevents=10000;
   double error=0.05;
-  int    ntracks=0;  //how many track to dump into hitpool in an event
+  int    ntracks=1;  //how many track to dump into hitpool in an event
   double space=1.1, min_ang=23.3/rad2deg, max_ang=30.0/rad2deg, ang_sep=0.4;
   double pt_min=0.1, pt_max=0.1;
   double costh_min=-0.00001, costh_max=0.00001;
@@ -198,9 +203,10 @@ int main (int argc, char **argv)
   EXKalManager aKalMan;
   aKalMan.SetCovMElement(error);
   aKalMan.SetG4InputFile(infile);
-  if(ntracks>0) {
-    aKalMan.RunCFNKF(nevents,ntracks,space,min_ang,max_ang,ang_sep);
-  } else {
+  if(job>=3 and job<=5 ) {
+    aKalMan.RunCFNFit(job, nevents,ntracks,space,min_ang,max_ang,ang_sep);
+  } 
+  else{
     aKalMan.RunKF(job,nevents,pt_min,pt_max,costh_min,costh_max,z_min,z_max);
   }
 

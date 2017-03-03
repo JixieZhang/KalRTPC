@@ -71,7 +71,7 @@ public:
 
   //Do global helix fit and apply my corrections
   //return chi2
-  double DoGlobalHelixFit(int npt, double szPos[][3]); 
+  double DoGlobalHelixFit(double *x, double *y,double *z, int npt,bool bIncludeCurveBackHits=true); 
 
   void Example(int job, int nevents, double pt_min, double pt_max, double costh_min, 
     double costh_max, double z_min, double z_max);

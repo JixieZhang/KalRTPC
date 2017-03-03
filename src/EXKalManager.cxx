@@ -37,8 +37,6 @@ EXKalManager::EXKalManager()
   fKalHits  = fKalRTPC->fKalHits;     // hit buffer
   fEventGen = fKalRTPC->fEventGen;    // Jixie's track generator   
 
-  fChainFinderNTracks = 0;
-
   _eventtype_ = 0;
   fNtReader = 0;   // will be instanced in BeginOfRun() if (_eventtype_ == 1)
   _index_=0;
@@ -54,8 +52,8 @@ EXKalManager::~EXKalManager()
 
 void EXKalManager::Tree_Init()
 {
-  fFile = new TFile("h.root","RECREATE","Kalman Filter for RTPC track");
-  fTree = new TTree("t", "Kalman Filter for RTPC track");
+  fFile = new TFile("h.root","RECREATE","Chain Finder and Kalman Filter for RTPC12");
+  fTree = new TTree("t", "Chain Finder and Kalman Filter for RTPC12");
 
   TTree *t=fTree;
   t->Branch("index",&_index_,"index/I");
@@ -66,6 +64,20 @@ void EXKalManager::Tree_Init()
   t->Branch("eventid",&eventid,"eventid/I");
   t->Branch("trackid",&trackid,"trackid/I");
   t->Branch("ntrack",&ntrack,"ntrack/I");
+
+
+  // For Chain Finder
+  t->Branch("CF_ntrack_read",&CF_ntrack_read,"CF_ntrack_read/I");
+  t->Branch("CF_ntrack_good",&CF_ntrack_good,"CF_ntrack_good/I");
+  t->Branch("CF_HitNum",&CF_HitNum,"CF_HitNum/I");
+  t->Branch("CF_ChainNum",&CF_ChainNum,"CF_ChainNum/I");
+  t->Branch("CF_X",CF_X,"CF_X[CF_HitNum]/D");
+  t->Branch("CF_Y",CF_Y,"CF_Y[CF_HitNum]/D");
+  t->Branch("CF_Z",CF_Z,"CF_Z[CF_HitNum]/D");
+  t->Branch("CF_Status",CF_Status,"CF_Status[CF_HitNum]/I");
+  t->Branch("CF_ThrownTID",CF_ThrownTID,"CF_ThrownTID[CF_HitNum]/I");
+  t->Branch("CF_ChainInfo",CF_ChainInfo,"CF_ChainInfo[CF_HitNum]/I");
+  
 
   // thrown parameters
   t->Branch("p0",&p0,"p0/D");
@@ -164,8 +176,31 @@ void EXKalManager::Tree_Init()
 
 }
 
+void EXKalManager::Tree_Reset_CF()
+{
+  //Chain Finder tree buffer, number of found tracks store at 'ntrack' and also CF_ChainNum
+  for(int i=0;i<CF_HitNum;i++) {
+   CF_X[i]=CF_Y[i]=CF_Z[i]=0.0; 
+   CF_Status[i]=CF_ThrownTID[i]=CF_ChainInfo[i]=-1; 
+  }
+  
+  for(int i=0;i<CF_ntrack_read;i++) {
+   CF_X0[i]=CF_Y0[i]=CF_Z0[i]=CF_Theta0[i]=CF_Phi0[i]=CF_P0[i]=0.0;
+  }
+  
+  for(int i=0;i<CF_ChainNum;i++) {
+    step_x[i]=step_y[i]=step_z[i]=step_phi[i]=step_s[i]=0.0;
+  }
+ CF_ntrack_read=0;  //number of tracks that read from g4 tree
+ CF_ntrack_good=0;  //number of good tracks that read from g4 tree
+ CF_HitNum=0;
+ CF_ChainNum=0;
+ 
+}
+ 
 void EXKalManager::Tree_Reset()
 {
+  //The following are KF buffer
   p0=pt0=pz0=th0=ph0=_x0_=_y0_=_z0_=0.0;
   
   p_rec=pt_rec=pz_rec=th_rec=ph_rec=x_rec=y_rec=z_rec=0.0;
@@ -225,23 +260,37 @@ void EXKalManager::EndOfRun()
 
 //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
 //please note that the G4 root tree use unit of mm 
-bool EXKalManager::FillCFHitPoolByG4Track(int ntracks)
+bool EXKalManager::FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHits)
 {
   int nhits = 0;
   
   int id[MaxHit],tdc[MaxHit],adc[MaxHit], throwntid[MaxHit];
   double xx[MaxHit],yy[MaxHit],zz[MaxHit];
   
+  CF_ntrack_read=0;
   for(int t=0;t<ntracks;t++) {
     int n = fNtReader->LoadATrack();
     if( n == -1 ) {
       cout<<"Reach the end of input root file \n";
       return false;
     }
+    
     nhits=0;
+    double tmpR=0.0, tmpRmax=0.0;
     for(int i=0;i<fNtReader->HitNum_m;i++) {
       if(fNtReader->StepID_m[i]>0) {
-				//id negative means this hit is invalid
+				//if negative means this hit is invalid
+        
+				//in case you do not want to include curve back hits!!!
+				if(!bIncludeCurveBackHits) {
+					tmpR = fNtReader->StepS_rec_m[i]/10.;
+					if(tmpR > tmpRmax) tmpRmax = tmpR;  
+					else if( tmpR+0.1 < tmpRmax) continue;
+					//due to resolution, s value of some hits might be a little bit smaller 
+					//than previous hit..
+					//I set the margin here to be 1mm
+				}
+        
 			  id[nhits] = fNtReader->StepID_m[i];
 			  tdc[nhits]= fNtReader->StepTDC_m[i];
 			  adc[nhits]= fNtReader->StepADC_m[i];
@@ -254,6 +303,9 @@ bool EXKalManager::FillCFHitPoolByG4Track(int ntracks)
       }
     }
     if(nhits==0) continue;
+    
+    CF_ntrack_read++;
+    if(nhits>=MinHit) CF_ntrack_good++;
    
     //append this track into the hit pool
     int append=1;
@@ -284,13 +336,12 @@ bool EXKalManager::FillCFHitPoolByG4Track(int ntracks)
     //Fix me:
     //the chain finder might not put the track it found in the same order
     //as the original G4 tree, therefore I do not know how to incert these values
-    X0[t]=fNtReader->X0/10.;
-    Y0[t]=fNtReader->Y0/10.;
-    Z0[t]=fNtReader->Z0/10.;
-    Theta0[t]=fNtReader->Theta0_p;
-    Phi0[t]=fNtReader->Phi0_p ;
-    P0[t]=fNtReader->P0_p;
-
+    CF_X0[t]=fNtReader->X0/10.;
+    CF_Y0[t]=fNtReader->Y0/10.;
+    CF_Z0[t]=fNtReader->Z0/10.;
+    CF_Theta0[t]=fNtReader->Theta0_p;
+    CF_Phi0[t]=fNtReader->Phi0_p ;
+    CF_P0[t]=fNtReader->P0_p;
   }
   
   if(fChainFinder->fHitNum > MinHit)  return true;
@@ -318,7 +369,7 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
 				//By Jixie @ 20160914:  do not include curve back hits!!!
 				if(!bIncludeCurveBackHits) {
 					tmpR = fNtReader->StepS_rec_m[i]/10.;
-					if(tmpR >= tmpRmax) tmpRmax = tmpR;  
+					if(tmpR > tmpRmax) tmpRmax = tmpR;  
 					else if( tmpR+0.1 < tmpRmax) continue;
 					//due to resolution, s value of some hits might be a little bit smaller 
 					//than previous hit..
@@ -368,16 +419,23 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
   return true;
 }
 
-//these tracks are read from G4 RTPC root tree 
-int EXKalManager::RunCFNGHF(int nevents, int ntracks, double space, double min_ang, 
+
+//run ChainFinder to search for chains
+//in each event, read multiple tracks from G4 root tree and store them into hit pool
+//job := 3, no fit; 4 call GHF; 5 call KF 
+int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, double min_ang, 
                             double max_ang, double ang_sep)
 {
-  int npt=0;
-  double szPos[MAX_HITS_PER_CHAIN][3];
+  double xx[MAX_HITS_PER_CHAIN],yy[MAX_HITS_PER_CHAIN],zz[MAX_HITS_PER_CHAIN];
+  //note that chain finder does not sort the found chain yet, 
+  //we should always include all hits
+  bool bIncludeCurveBackHits=true;
   
-  fChainFinderNTracks=ntracks;
-  fChainFinder->SetParameters(space, min_ang, max_ang, ang_sep);
+  _eventtype_= job;
+  
   BeginOfRun();
+  
+  fChainFinder->SetParameters(space, min_ang, max_ang, ang_sep);
 
   // ===================================================================
   //  Event loop
@@ -388,38 +446,87 @@ int EXKalManager::RunCFNGHF(int nevents, int ntracks, double space, double min_a
 #ifdef _EXKalManDebug_
     cerr << "\n------ Event " << eventno << " ------" << endl;
 #endif
+    eventid = eventno;
     
+    // ============================================================
+    //  Reset the buffer
+    Tree_Reset_CF();
+    Tree_Reset();
+    fKalRTPC->Reset();
+    
+    // ===================================================================
     //execute Chain Finder
     fChainFinder->Reset();
-    FillCFHitPoolByG4Track(ntracks);
+    bool ret=FillChainFinderHitPool(ntracks,bIncludeCurveBackHits);    
+    if(!ret) continue;
     fChainFinder->RemoveBadHits();
+    if(fChainFinder->fHitNum < MinHit) continue;
     fChainFinder->SearchChains();
     
-    //now call GHF to do fitting
-    for(int i=0;i<fChainFinder->fChainNum;i++) {
-      //extract the hits in the found chain
-      npt = fChainFinder->fChainBuf[i].HitNum;
-      if(npt<MinHit) continue;
-      
-      for(int j=0;j<npt;j++) {
-        szPos[j][0] = fChainFinder->fChainBuf[i].Hits[j]->X;
-        szPos[j][1] = fChainFinder->fChainBuf[i].Hits[j]->Y;
-        szPos[j][2] = fChainFinder->fChainBuf[i].Hits[j]->Z;
+    //This block can be moved into Tree_Fill()
+    //store for tree
+    CF_HitNum = fChainFinder->fHitNum;
+    ntrack = fChainFinder->fChainNum;
+    CF_ChainNum = fChainFinder->fChainNum;
+    for(int i=0;i<CF_HitNum;i++) {
+     CF_X[i]=fChainFinder->fHitPool[i].X;
+     CF_Y[i]=fChainFinder->fHitPool[i].Y;
+     CF_Z[i]=fChainFinder->fHitPool[i].Z;
+     CF_Status[i]=fChainFinder->fHitPool[i].Status;
+     CF_ThrownTID[i]=fChainFinder->fHitPool[i].ThrownTID;
+     CF_ChainInfo[i]=fChainFinder->fHitPool[i].ChainInfo;
+    }
+  
+    // ===================================================================
+    //judge if to do fitting to the found chains
+    if(job==3) {
+        Tree_Fill(*(fKalRTPC->fKalTrack));
+        continue;
+    } else {
+    // ===================================================================
+      //now call GHF or KF to do fitting
+      int CF_npt = 0;  //number of hit in this chain
+      for(int i=0;i<fChainFinder->fChainNum;i++) {
+        //extract the hits in the found chain
+        CF_npt = fChainFinder->fChainBuf[i].HitNum;
+        for(int j=0;j<CF_npt;j++) {
+          xx[j] = fChainFinder->fChainBuf[i].Hits[j]->X;
+          yy[j] = fChainFinder->fChainBuf[i].Hits[j]->Y;
+          zz[j] = fChainFinder->fChainBuf[i].Hits[j]->Z;
+        }
+         
+        
+        if(job==4) {
+          // ============================================================
+          //  call global helix fit
+          fKalRTPC->DoGlobalHelixFit(xx,yy,zz,CF_npt,bIncludeCurveBackHits);       
+        } else if(job==5) {
+          // ============================================================
+          //  call KalmanFilter
+        
+          //  Generate a partcle and Swim the particle in fDetector
+          bool bTrackReady = false;
+          bool smearing = false; 
+          bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz,CF_npt,smearing,bIncludeCurveBackHits);
+          if(!bTrackReady) continue;
+
+          //Remove backward hits also judge whether or not need 2nd iteration
+          bool bRemoveBackwardHits=false;
+          bool bNeed2Iter = fKalRTPC->JudgeFor2ndIteration(bRemoveBackwardHits);
+          if(fKalRTPC->fKalHits_Forward->GetEntriesFast()<MinHit) continue;
+
+          //Do KalmanFilter
+          fKalRTPC->DoFitAndFilter(bNeed2Iter);
+        }
+        
+        // ============================================================
+        //fill output tree
+        Tree_Fill(*(fKalRTPC->fKalTrack));
+        // ============================================================
+        //  Reset the buffer
+        fKalRTPC->Reset();
+        Tree_Reset();
       }
-       
-      // ============================================================
-      //  Reset the buffer
-      fKalRTPC->Reset();
-      Tree_Reset();
-      
-      // ============================================================
-      //call GHF, result already store inside EXKalRTPC
-      //double EXKalRTPC::DoGlobalHelixFit(int npt,double szPos[][3]); 
-      fKalRTPC->DoGlobalHelixFit(npt,szPos); 
-      
-      // ============================================================
-      //fill output tree
-      Tree_Fill(*(fKalRTPC->fKalTrack));
     }
   }
   
@@ -428,96 +535,6 @@ int EXKalManager::RunCFNGHF(int nevents, int ntracks, double space, double min_a
   return 1;
 }
 
-
-//ntracks indicates how many tracks will be filled into ChainFinder fHitsPool.
-//these tracks are read from G4 RTPC root tree 
-int EXKalManager::RunCFNKF(int nevents, int ntracks, double space, double min_ang, 
-                           double max_ang, double ang_sep)
-{
-  int npt=0;
-  double xx[MAX_HITS_PER_CHAIN],yy[MAX_HITS_PER_CHAIN],zz[MAX_HITS_PER_CHAIN];
-  
-  fChainFinderNTracks=ntracks;
-  fChainFinder->SetParameters(space, min_ang, max_ang, ang_sep);
-  BeginOfRun();
-
-  // ===================================================================
-  //  Event loop
-  // ===================================================================
-
-  for (Int_t eventno = 0; eventno < nevents; eventno++) { 
-    
-#ifdef _EXKalManDebug_
-    cerr << "\n------ Event " << eventno << " ------" << endl;
-#endif
-
-    //execute Chain Finder
-    fChainFinder->Reset();
-    FillCFHitPoolByG4Track(ntracks);
-    fChainFinder->RemoveBadHits();
-    fChainFinder->SearchChains();
-    
-    eventid=eventno;
-    ntrack=fChainFinder->fChainNum;
-    
-    //now call KF to do fitting
-    for(int i=0;i<fChainFinder->fChainNum;i++) {
-      trackid=i;
-      //extract the hits in the found chain
-      npt = fChainFinder->fChainBuf[i].HitNum;
-      if(npt<MinHit) continue;
-      
-      for(int j=0;j<npt;j++) {
-        xx[j] = fChainFinder->fChainBuf[i].Hits[j]->X;
-        yy[j] = fChainFinder->fChainBuf[i].Hits[j]->Y;
-        zz[j] = fChainFinder->fChainBuf[i].Hits[j]->Z;
-      }
-      
-      // ============================================================
-      //  Reset the buffer
-      // ============================================================
-      fKalRTPC->Reset();
-      Tree_Reset();
-      
-      // ============================================================
-      //  Generate a partcle and Swim the particle in fDetector
-      // ============================================================
-      bool bTrackReady = false;
-      bool smearing = false;
-      bool bIncludeCurveBackHits = true;  
-      bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz, npt,smearing, bIncludeCurveBackHits);
-      if(!bTrackReady) break;
-    
-      //Remove backward hits also judge whether or not need 2nd iteration
-      bool bRemoveBackwardHits=true;
-      bool bNeed2Iter = fKalRTPC->JudgeFor2ndIteration(bRemoveBackwardHits);
-      if(fKalRTPC->fKalHits_Forward->GetEntriesFast()<MinHit) continue;
-
-      // ============================================================
-      //  Do KalmanFilter
-      // ============================================================
-
-      fKalRTPC->DoFitAndFilter(bNeed2Iter);
-
-
-      // ============================================================
-      //  Fill the KalmanFilter result into the root tree
-      // ============================================================
-      Tree_Fill(*(fKalRTPC->fKalTrack));
-
-  #ifdef _EXKalManDebug_
-      Stop4Debug(_index_);
-  #endif
-    }  //end of for(int i=0;i<fChainFinder->fChainNum;i++) 
-
-  }  //end of for (Int_t eventno = 0; eventno < nevents; eventno++)
-
-  //ROOT Tree will be written and closed inside EndOfRun();
-  EndOfRun();
-  return 1;
-  
-}
-  
   
   
 //test the KF only
@@ -546,12 +563,11 @@ int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, doub
     //I try to mimic one event contains multiple track,
     //currently these value is set in this way. 
     //The user can manipulate them later
-    if(eventid!=eventno/25) {
-      ntrack=0;
-      eventid=eventno/25;
-    }
-    trackid=eventno%25;
-    ntrack++;
+   
+   
+    eventid=eventno;
+    trackid=0;
+    ntrack=1;
 
     // ============================================================
     //  Reset the buffer
@@ -603,6 +619,7 @@ int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, doub
   EndOfRun();
   return 1;
 }
+
 
 //I separate filling the tree into an individual subroutine since 
 //filling the tree will not be necessary when provided to CLAS12 software
