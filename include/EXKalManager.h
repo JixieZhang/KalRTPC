@@ -18,8 +18,16 @@
 #include "EXEventGen.h"
 #include "EXHit.h"
 
+#include "ChainFinder.hh"
 #include "NtReader.h"
+/////////////////////////////////////////////////////////////////
+//Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
+#ifndef MaxHit
 #define MaxHit 200
+#define MinHit 5
+#endif
+/////////////////////////////////////////////////////////////////
+
 
 class EXKalManager {
 
@@ -30,22 +38,25 @@ public:
   void BeginOfRun();
   void EndOfRun();
 
-  //create a track, store everything into fKalHits
-  //prepare a track from xyz array in mm, make sure hits are in increasing time order  
-  bool GenATrackFromArray_mm(double *x_mm, double *y_mm, double *z_mm, int npt,
-    bool smearing=false, bool bIncludeCurveBackHits=true);
-  //prepare a track from xyz array, make sure hits are in increasing time order  
-  bool GenATrackFromArray(double *x_cm, double *y_cm, double *z_cm, int npt,
-    bool smearing=false, bool bIncludeCurveBackHits=true);
-  //read a track from G4MC_RTPC12 output tree;
-  bool LoadAG4Track(bool bIncludeCurveBackHits=false);
-  bool GenAHelixTrack(double pt_min, double pt_max, double costh_min, double costh_max,
-    double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=false);
-  bool GenACircleTrack(double pt_min, double pt_max, double costh_min, double costh_max,
-    double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=false);
+  //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
+  //return false if reach the end of file or fail
+  //please note that the G4 root tree use unit of mm 
+  bool FillCFHitPoolByG4Track(int ntracks);
 
-  int Run(int job, int nevents, double pt_min, double pt_max, 
-    double costh_min, double costh_max, double z_min=0.0, double z_max=0.0);
+  //read a track from G4MC_RTPC12 output tree and fill into fKalHits
+  bool LoadAG4Track(bool bIncludeCurveBackHits=false);
+ 
+  //run ChianFinder and global helix fitter
+  int  RunCFNGHF(int nevents, int ntracks, double space, double min_ang, 
+                 double max_ang, double ang_sep);
+  
+  //run ChianFinder + KalmanFilter
+  int RunCFNKF(int nevents, int ntracks, double space, double min_ang, 
+               double max_ang, double ang_sep);
+  
+  //run KalmanFilter only    
+  int RunKF(int job, int nevents, double pt_min, double pt_max, double costh_min, 
+            double costh_max, double z_min=0.0, double z_max=0.0);
 
   void SetCovMElement(double val) {fKalRTPC->SetCovMElement(val);};
   void SetG4InputFile(const char* val) {sprintf(fG4Inputfile, "%s","infile.root");};
@@ -60,6 +71,7 @@ public:
 
   TFile* fFile;
 
+  ChainFinder   *fChainFinder;// RTPC ChainFinder
   EXKalRTPC     *fKalRTPC;    // RTPC KalmanFilter system
 
 private:
@@ -71,7 +83,17 @@ private:
   NtReader      *fNtReader;           
 
 private:
-
+   
+  int fChainFinderNTracks;
+  //This part is used to fill the root tree
+  //When load G4 track, we also need to load the following thrown parameters and store
+  //them into the output tree. in unit of cm.
+  //Fix me:
+  //the chain finder might not put the track it found in the same order
+  //as the original G4 tree, therefore I do not know how to incert these values
+  double X0[MAX_CHAINS_PER_EVENT],Y0[MAX_CHAINS_PER_EVENT], Z0[MAX_CHAINS_PER_EVENT];
+  double Theta0[MAX_CHAINS_PER_EVENT], Phi0[MAX_CHAINS_PER_EVENT], P0[MAX_CHAINS_PER_EVENT];
+  
   //root variables
   //a lot of vaiable here are redundent, they have been defined in KalRTPC or EventGen
   //I just copy their values in Tree_fill

@@ -180,8 +180,7 @@ void DeltaXXX(const char* infile="h.root",
 		sprintf(hTitle,"%s ;%s",strYName[dd],strYTitle[dd]);
 		sprintf(strTg,"%s",strYVar[dd]);
 
-		//cout<<"Name = "<<hName<<"    var = "<<strTg<<endl;
-		//cout<<"Title = "<<hTitle<<endl;
+		cout<<"Name = "<<hName<<"    var = "<<strTg<<"    Title = "<<hTitle<<endl;
 
 		int UseGivenRange=0;
 		if(UseGivenRange)
@@ -211,7 +210,7 @@ void DeltaXXX(const char* infile="h.root",
 			FitGaus(h1,Mean,Sigma);
 			double pCut=(YSigmaFactor[dd]+1.0)*Sigma;
 			
-			//cout<<hName<<":  Mean="<<Mean<<"  RMS="<<h1->GetRMS()<<"  Sigma="<<Sigma<<endl;
+			cout<<hName<<":  Mean="<<Mean<<"  RMS="<<h1->GetRMS()<<"  Sigma="<<Sigma<<endl;
 			//iteration two, plot again using sigmato get better range 
 			delete h1;
 			sprintf(strTg,"%s >> %s(100,%.5f,%.5f)",strYVar[dd],hName,Mean-pCut,Mean+pCut);
@@ -307,7 +306,7 @@ void DeltaXXX(const char* infile="h.root",
 	{
 		char tmpName[100],tmpTitle[100];
 		sprintf(tmpName,"c33_%s_VS_%s",strYName[dd],strYName[dd+kNDelta]);
-		sprintf(tmpTitle,"%s VS %s",strYName[dd],strYName[dd+kNDelta]);
+		sprintf(tmpTitle,"c33_%s VS %s",strYName[dd],strYName[dd+kNDelta]);
 		TCanvas *c33 = new TCanvas(tmpName,tmpTitle,(1+dd)*30,(1+dd)*30,900,800);
 		int pCol=int(ceil(nVar/3.0));
 		int pRow=int(ceil(double(nVar)/double(pCol)));
@@ -319,8 +318,8 @@ void DeltaXXX(const char* infile="h.root",
 			hSigmaList[dd+kNDelta][vv]->SetMarkerColor(4);
 			hSigmaList[dd+kNDelta][vv]->SetMarkerStyle(20);
 			
-			hSigmaList[dd][vv]->SetYTitle(Form("#sigma_#{%s}",strYName[dd]));
-			hSigmaList[dd+kNDelta][vv]->SetYTitle(Form("#sigma_#{%s}",strYName[dd]));
+			hSigmaList[dd][vv]->SetYTitle(Form("#sigma_{%s}",strYName[dd]));
+			hSigmaList[dd+kNDelta][vv]->SetYTitle(Form("#sigma_{%s}",strYName[dd]));
 			hSigmaList[dd][vv]->SetTitle("KF(red) vs GHF(blue)");
 			hSigmaList[dd+kNDelta][vv]->SetTitle("KF(red) vs GHF(blue)");
 			

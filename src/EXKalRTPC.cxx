@@ -1,8 +1,8 @@
-//This is the kernal class to do Kalman Filter for RTPC12
+//This is the kernel class to do Kalman Filter for RTPC12
 //Note that only fKalHits_Forward will be used by KF
 // 
 // To use this code, user need to do the following
-// 1) Reset the buff using Reset(); 
+// 1) Reset the buffer using Reset(); 
 // 2) Prepare a chain in time increasing order using PrepareATrack(xxx);
 // 3) Determine if it needs 2 iteration KF fitting and copy fKalHits to fKalHits_Forward
 //    using JudgeFor2ndIteration(bool bIncludeCurveBackHits);
@@ -391,6 +391,170 @@ void EXKalRTPC::CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
 }
 
 
+//Do global helix fit and apply my corrections
+//return chi2
+double EXKalRTPC::DoGlobalHelixFit(int npt,double szPos[][3]) 
+{
+  ////////////////////////////////////////////////////////////////////////
+
+  //do the helix fit and store all results into the tree leaves buffer
+  double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2;
+  int fit_to_beamline=1;
+  helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
+    fit_to_beamline);
+
+  //store global helix result before my correction 
+  Phi_hel_raw = pPhi;
+  Theta_hel_raw = pTheta;
+  R_hel_raw = pRho;
+  A_hel_raw = pA;
+  B_hel_raw = pB;
+  Z_hel_raw = pZ0;
+  X_hel_raw = pX0;
+  Y_hel_raw = pY0;
+  DCA_hel_raw = pDCA;
+  Chi2_hel_raw = pChi2;
+
+
+  /////////////////////////////////////////////////////////////////////
+  //check global helix fit if it return a wrong sign of rho for large curve track
+
+  //Global helix fit might return the wrong sign, expecially for large curve back tracks
+  //Once it happens, its theta and z are totally wrong, phi is off by kPi according to definition 
+  //here I determine the sign  
+  //using dfi_vx2first, since it always less than kPi. 
+  //For clock-wise track, dfi_vx2first<0  
+  //the next few lines will get the phi angle on circle system, then do a subtraction
+  double phi_cir_vx = atan2(0-pB,0-pA);
+  double phi_cir_first = atan2(szPos[0][1]-pB,szPos[0][0]-pA);
+  double phi_cir_last = atan2(szPos[npt-1][1]-pB,szPos[npt-1][0]-pA);
+
+  //double dfi_first2last = phi_cir_last - phi_cir_first;
+  //if(dfi_first2last> kPi) dfi_first2last-=2*kPi;
+  //if(dfi_first2last<-kPi) dfi_first2last+=2*kPi;
+
+  double dfi_vx2first = phi_cir_first - phi_cir_vx;
+  if(dfi_vx2first> kPi) dfi_vx2first-=2*kPi;
+  if(dfi_vx2first<-kPi) dfi_vx2first+=2*kPi;
+
+  double dfi_vx2last = phi_cir_last - phi_cir_vx;
+  if(dfi_vx2last> kPi) dfi_vx2last-=2*kPi;
+  if(dfi_vx2last<-kPi) dfi_vx2last+=2*kPi;
+
+  int sign = (dfi_vx2first<0) ? 1 : -1;
+
+#ifdef _EXKalRTPCDebug_
+  //just for debug
+  if(_EXKalRTPCDebug_>=5) {
+    cout<<" First_hit=("<<szPos[0][0]<<", "<<szPos[0][1]<<", "<<szPos[0][2]<<"), ";
+    cout<<"  Last_hit=("<<szPos[npt-1][0]<<", "<<szPos[npt-1][1]<<", "<<szPos[npt-1][2]<<") \n";
+    cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
+      <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
+      <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
+  } 
+  if(_EXKalRTPCDebug_>=4) {
+    cout<<"  npt="<<npt<<",  dz_span="<<szPos[npt-1][2]-szPos[0][2]
+    <<"cm,  chi2="<<pChi2<<endl;
+  }
+#endif
+
+  ////////////////////
+
+  //make correction for global helix fit result if needed
+  if (sign*pRho<0) {
+#ifdef _EXKalRTPCDebug_
+    cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
+    if(_EXKalRTPCDebug_>=2) {
+      cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
+	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+    }
+#endif
+    pRho *= -1.0;
+    pPhi+=kPi;
+    if(pPhi> kPi) pPhi-=2*kPi;
+    if(pPhi<-kPi) pPhi+=2*kPi;
+
+    //Corr theta and z
+    CorrHelixThetaZ(npt,szPos,pRho,pA,pB,pTheta,pZ0);
+    
+#ifdef _EXKalRTPCDebug_
+    if(_EXKalRTPCDebug_>=2) {
+      cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
+	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+    }
+#endif
+
+  } else {
+    //For those events that the sign of rho is right but 
+#ifdef _EXKalRTPCDebug_
+    //sometimes the global helix return wrong theta, 
+    //want to find out and correct it back
+    double ppTheta=pTheta, ppZ0=pZ0;
+    CorrHelixThetaZ(npt,szPos,pRho,pA,pB,ppTheta,ppZ0);
+    if((ppTheta-kPi/2)*(pTheta-kPi/2)<0) {
+      pTheta=ppTheta; pZ0=ppZ0;
+      if(_EXKalRTPCDebug_>=2) {
+	cout<<"***Before CorrHelixThetaZ: Theta="<<setw(8)<<ppTheta*57.3<<"deg, Z="<<ppZ0<<"cm \n";
+	cout<<"*** After CorrHelixThetaZ: Theta="<<setw(8)<<ppTheta*57.3<<"deg, Z="<<ppZ0<<"cm \n";
+      }
+    }
+#endif
+  }
+
+
+  //corr phi and r
+  //This part is missing right now because I found that GHF is already the 
+  //best one in hand, CircleFitter_LM is worse.
+  //you are welcome to develop one!
+
+  //////////////////////////////////////
+  //now Fit the circle using Levenberg-Marquardt method
+  //////////////////////////////////////
+  //sometimes this routine return very large values
+  //gLMFitter.DoFit(npt,szPos,pA,pB,pRho);
+  
+
+  /////////////////////////////////////////////////////////////////////
+  //store global helix result after my correction 
+  Phi_hel = pPhi;
+  Theta_hel = pTheta;
+  R_hel = pRho;
+  A_hel = pA;
+  B_hel = pB;
+  Z_hel = pZ0;
+  X_hel = pX0;
+  Y_hel = pY0;
+  DCA_hel = pDCA;
+  Chi2_hel = pChi2;
+
+  
+  //calculate pt and P_hel
+  //Fix me:  if the field is not uniform this block will not work
+  
+  const double kGev=1.0e9;
+  const double kLightVelocity=2.99792458e8;
+  Double_t b   = dynamic_cast<const EXKalDetector &>
+    (dynamic_cast<EXMeasLayer *>
+    (fCradle->At(0))->GetParent(kFALSE)).GetBfield();
+  Double_t pt  = (pRho/100.)*kLightVelocity*(b/10.) / kGev;
+  
+  P_hel = fabs(pt)/sin(pTheta);
+
+#ifdef _EXKalRTPCDebug_
+  //just for debug
+  if(_EXKalRTPCDebug_>=2) {
+    cout<<"  global Helix:  pt="<<pt
+      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB<<endl;
+    cout<<"  P_hel="<<fabs(pt)/sin(pTheta)<<", Phi_hel="<<Phi_hel*57.3
+      <<"deg, Theta_hel="<<Theta_hel*57.3<<"deg,  Z_hel="<<Z_hel
+      <<", fi0="<<fi0*57.3<<endl;
+  }
+#endif
+
+  return pChi2;
+}
+
+
 //Do global helix fit to get initial parameter for Kalman Filter
 //IterDirection=true is farward, otherwise backward
 THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection) 
@@ -638,6 +802,13 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
 }
 
 
+//prepare a track from xyz array in mm, make sure hits are in increasing time order   
+bool EXKalRTPC::PrepareATrack_mm(double *x_mm, double *y_mm,double *z_mm, 
+  int npt, bool smearing, bool bIncludeCurveBackHits)
+{
+  fEventGen->MakeHitsFromTraj_mm(x_mm,y_mm,z_mm,npt,smearing,bIncludeCurveBackHits);
+  return true;
+}
 
 //prepare a track from xyz array, make sure radii are in increasing order
 bool EXKalRTPC::PrepareATrack(double *x, double *y,double *z, int npt, bool smearing,
@@ -921,6 +1092,7 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
 
 //Do Kalman Filter with given x,y,x array
 //Note that these hits should be in increasing order of time
+//this routine only apply 1 iteration KF fit
 int EXKalRTPC::DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n,
 							  bool bIncludeCurveBackHits)
 {

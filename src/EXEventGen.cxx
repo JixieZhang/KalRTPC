@@ -13,22 +13,6 @@
 
 using namespace std;
 
-//-----------------------------------
-// RTPC Parameters
-//-----------------------------------
-static const double kRTPC_R_GEM1 = 7.0;
-static const double kRTPC_R_Cathode = 3.0;
-//-----------------------------------
-// Track Parameters
-//-----------------------------------
-
-#define __DR__     0.
-#define __FI0__    0.
-#define __DZ__     0.
-#define __X0__     0.
-#define __Y0__     0.
-#define __Z0__     0.
-
 ClassImp(EXEventGen)
 
 //#define _ExEventGenDebug_ 2
@@ -45,16 +29,16 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   //  Generate a helical track
   // ---------------------------
   //Jixie: pivot point is (0,0,z0) this helix happens to go throught (0,0,z0)
-  Double_t dr  = __DR__;
-  Double_t fi0 = __FI0__ + 2*kPi*(gRandom->Uniform()-0.5);
+  Double_t dr  = 0.;
+  Double_t fi0 = 2*kPi*(gRandom->Uniform()-0.5);
   Double_t pt  = gRandom->Uniform(pt_min, pt_max);
   Double_t cpa = 1. / pt;
-  Double_t dz  = __DZ__;
+  Double_t dz  = 0.;
   Double_t cs  = gRandom->Uniform(cosmin, cosmax);
   Double_t tnl = cs / TMath::Sqrt((1-cs)*(1+cs)); 
-  Double_t x0  = __X0__;
-  Double_t y0  = __Y0__;
-  //Double_t z0  = __Z0__;
+  Double_t x0  = 0.;
+  Double_t y0  = 0.;
+  //Double_t z0  = 0.;
   Double_t z0  = gRandom->Uniform(z_min, z_max);
 
   Double_t b   = dynamic_cast<const EXKalDetector &>

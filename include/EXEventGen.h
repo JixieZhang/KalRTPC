@@ -5,8 +5,19 @@
 #include "THelicalTrack.h"
 
 /////////////////////////////////////////////////////////////////
+//-----------------------------------
+// RTPC Parameters
+//-----------------------------------
+static const double kRTPC_R_GEM1 = 7.0;
+static const double kRTPC_R_Cathode = 3.0;
+
 //Maximum Number of Hit in a track 
 #define MaxHit 200
+#define MinHit 5
+//-----------------------------------
+// Track Parameters
+//-----------------------------------
+
 /////////////////////////////////////////////////////////////////
 
 class EXEventGen {

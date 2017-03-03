@@ -28,6 +28,7 @@ EXKalManager::EXKalManager()
   // ===================================================================
   //  Prepare a KalRTPC
   // ===================================================================
+  fChainFinder = new ChainFinder();
   fKalRTPC = new EXKalRTPC();
 
   // ===================================================================
@@ -35,6 +36,8 @@ EXKalManager::EXKalManager()
   // ===================================================================
   fKalHits  = fKalRTPC->fKalHits;     // hit buffer
   fEventGen = fKalRTPC->fEventGen;    // Jixie's track generator   
+
+  fChainFinderNTracks = 0;
 
   _eventtype_ = 0;
   fNtReader = 0;   // will be instanced in BeginOfRun() if (_eventtype_ == 1)
@@ -220,22 +223,82 @@ void EXKalManager::EndOfRun()
   fFile->Write();
 }
 
-//prepare a track from xyz array in mm, make sure hits are in increasing time order   
-bool EXKalManager::GenATrackFromArray_mm(double *x_mm, double *y_mm,double *z_mm, 
-  int npt, bool smearing, bool bIncludeCurveBackHits)
+//read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
+//please note that the G4 root tree use unit of mm 
+bool EXKalManager::FillCFHitPoolByG4Track(int ntracks)
 {
-  fEventGen->MakeHitsFromTraj_mm(x_mm,y_mm,z_mm,npt,smearing,bIncludeCurveBackHits);
-  return true;
+  int nhits = 0;
+  
+  int id[MaxHit],tdc[MaxHit],adc[MaxHit], throwntid[MaxHit];
+  double xx[MaxHit],yy[MaxHit],zz[MaxHit];
+  
+  for(int t=0;t<ntracks;t++) {
+    int n = fNtReader->LoadATrack();
+    if( n == -1 ) {
+      cout<<"Reach the end of input root file \n";
+      return false;
+    }
+    nhits=0;
+    for(int i=0;i<fNtReader->HitNum_m;i++) {
+      if(fNtReader->StepID_m[i]>0) {
+				//id negative means this hit is invalid
+			  id[nhits] = fNtReader->StepID_m[i];
+			  tdc[nhits]= fNtReader->StepTDC_m[i];
+			  adc[nhits]= fNtReader->StepADC_m[i];
+				xx[nhits] = fNtReader->StepX_rec_m[i]/10.;
+				yy[nhits] = fNtReader->StepY_rec_m[i]/10.;
+				zz[nhits] = fNtReader->StepZ_rec_m[i]/10.;
+			  throwntid[nhits] = t*1000+i;
+				nhits++;
+				if(nhits >= MaxHit) break;
+      }
+    }
+    if(nhits==0) continue;
+   
+    //append this track into the hit pool
+    int append=1;
+    fChainFinder->PrepareHitPool_mm(id, tdc, adc, xx, yy, zz, nhits, throwntid, append);
+   
+
+#ifdef _EXKalManDebug_
+  //just for debug
+  if(_EXKalManDebug_>=3) {
+    cout<<"\nNtuple Event "<<setw(5)<<fNtReader->Index<<":  HitNum_m="<<setw(2)<<fNtReader->HitNum_m
+      <<",  Smax="<<setw(8)<<fNtReader->Smax<<",  Smin="<<setw(8)<<fNtReader->Smin<<endl
+      <<"  P0="<<fNtReader->P0_p<<",  Pt="<<fNtReader->P0_p*sin(fNtReader->Theta0_p)<<", Theta0="
+      <<fNtReader->Theta0_p*57.3<<", Phi0="<<fNtReader->Phi0_p*57.3<<"  Z0="<<fNtReader->Z0/10.<<"cm"<<endl;
+  }
+  if(_EXKalManDebug_>=4) {
+    for(int i=0;i<fNtReader->HitNum_m;i++) {
+      cout<<"Hit "<<setw(2)<<i<<"("<<setw(8)<<fNtReader->StepX_rec_m[i]<<", "
+				<<setw(8)<<fNtReader->StepY_rec_m[i]<<", "
+				<<setw(8)<<fNtReader->StepZ_rec_m[i]<<") ==>  S="<<setw(8)<<fNtReader->StepS_rec_m[i]
+				<<" mm  Phi="<<setw(8)<<fNtReader->StepPhi_rec_m[i]*57.3<<" deg"<<endl;
+    }
+  }
+#endif
+
+    //This part is used to fill the root tree
+    //When load G4 track, we also need to load some thrown parameters and store
+    //them into fEXEventGen. Note that G4 tree use unit of mm
+    //Fix me:
+    //the chain finder might not put the track it found in the same order
+    //as the original G4 tree, therefore I do not know how to incert these values
+    X0[t]=fNtReader->X0/10.;
+    Y0[t]=fNtReader->Y0/10.;
+    Z0[t]=fNtReader->Z0/10.;
+    Theta0[t]=fNtReader->Theta0_p;
+    Phi0[t]=fNtReader->Phi0_p ;
+    P0[t]=fNtReader->P0_p;
+
+  }
+  
+  if(fChainFinder->fHitNum > MinHit)  return true;
+  else return false;
+  
 }
 
-//prepare a track from xyz array in cm, make sure hits are in increasing time order  
-bool EXKalManager::GenATrackFromArray(double *x_cm, double *y_cm,double *z_cm, 
-  int npt, bool smearing, bool bIncludeCurveBackHits)
-{
-  fEventGen->MakeHitsFromTraj(x_cm,y_cm,z_cm,npt,smearing,bIncludeCurveBackHits);
-  return true;
-}
-
+  
 //read a track from G4MC_RTPC12 output tree, require at least 5 hits
 //please note that the G4 root tree use unit of mm 
 bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
@@ -258,7 +321,7 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
 					if(tmpR >= tmpRmax) tmpRmax = tmpR;  
 					else if( tmpR+0.1 < tmpRmax) continue;
 					//due to resolution, s value of some hits might be a little bit smaller 
-					//than previous hit.
+					//than previous hit..
 					//I set the margin here to be 1mm
 				}
 				xx[nhits] = fNtReader->StepX_rec_m[i]/10.;
@@ -305,62 +368,165 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
   return true;
 }
 
-
-bool EXKalManager::GenACircleTrack(double pt_min, double pt_max, double costh_min, double costh_max,
-  double z_min, double z_max, bool bIncludeCurveBackHits)
+//these tracks are read from G4 RTPC root tree 
+int EXKalManager::RunCFNGHF(int nevents, int ntracks, double space, double min_ang, 
+                            double max_ang, double ang_sep)
 {
-  //sometimes the user will provide too small pt_min, which will cause some
-  //events have no hits, I have to avoid this situation
-  //Here I set a maximum number of throw as 1000, if it fails then quit 
-  int pCounter=0,pMaxThrow=1000;
-  while(pCounter<pMaxThrow) {
-    fEventGen->GenerateCircle(pt_min,pt_max,costh_min,costh_max,z_min,z_max,bIncludeCurveBackHits);
-    if(fKalHits->GetEntriesFast()>=MinHit) break;
-    else fKalHits->Delete();
-    pCounter++;
+  int npt=0;
+  double szPos[MAX_HITS_PER_CHAIN][3];
+  
+  fChainFinderNTracks=ntracks;
+  fChainFinder->SetParameters(space, min_ang, max_ang, ang_sep);
+  BeginOfRun();
+
+  // ===================================================================
+  //  Event loop
+  // ===================================================================
+
+  for (Int_t eventno = 0; eventno < nevents; eventno++) { 
+
+#ifdef _EXKalManDebug_
+    cerr << "\n------ Event " << eventno << " ------" << endl;
+#endif
+    
+    //execute Chain Finder
+    fChainFinder->Reset();
+    FillCFHitPoolByG4Track(ntracks);
+    fChainFinder->RemoveBadHits();
+    fChainFinder->SearchChains();
+    
+    //now call GHF to do fitting
+    for(int i=0;i<fChainFinder->fChainNum;i++) {
+      //extract the hits in the found chain
+      npt = fChainFinder->fChainBuf[i].HitNum;
+      if(npt<MinHit) continue;
+      
+      for(int j=0;j<npt;j++) {
+        szPos[j][0] = fChainFinder->fChainBuf[i].Hits[j]->X;
+        szPos[j][1] = fChainFinder->fChainBuf[i].Hits[j]->Y;
+        szPos[j][2] = fChainFinder->fChainBuf[i].Hits[j]->Z;
+      }
+       
+      // ============================================================
+      //  Reset the buffer
+      fKalRTPC->Reset();
+      Tree_Reset();
+      
+      // ============================================================
+      //call GHF, result already store inside EXKalRTPC
+      //double EXKalRTPC::DoGlobalHelixFit(int npt,double szPos[][3]); 
+      fKalRTPC->DoGlobalHelixFit(npt,szPos); 
+      
+      // ============================================================
+      //fill output tree
+      Tree_Fill(*(fKalRTPC->fKalTrack));
+    }
   }
-  if(pCounter>=pMaxThrow) return false;
-  else return true;
+  
+  //ROOT Tree will be written and closed inside EndOfRun();
+  EndOfRun();
+  return 1;
 }
 
-//Let the event generator to generate a track
-//job ==   0: helix; non-zero: circle
-//
-bool EXKalManager::GenAHelixTrack(double pt_min, double pt_max, double costh_min, 
-  double costh_max, double z_min, double z_max, bool bIncludeCurveBackHits)
-{
-  //sometimes the user will provide too small pt_min, which will cause some
-  //events have no hits, I have to avoid this situation
-  //Here I set a maximum number of throw as 1000, if it fails then quit 
-  int pCounter=0,pMaxThrow=1000;
-  while(pCounter<pMaxThrow) {
-    THelicalTrack hel = fEventGen->GenerateHelix(pt_min,pt_max,costh_min,costh_max,z_min,z_max);
-#ifdef _EXKalManDebug_
-    if(Global_Debug_Level >= 5) {
-      EXEventGen::PrintHelix(&hel, "KalRTPC(backward): thrown helix at vertex:");  
-    }
-#endif
-    //swim() will take care of MSC and ELoss, need to give mass here 
-    fEventGen->Swim(hel,bIncludeCurveBackHits,kMpr);
-#ifdef _EXKalManDebug_
-    if(Global_Debug_Level >= 5) {
-      EXEventGen::PrintHelix(&hel, "KalRTPC(backward): thrown helix at last point:");  
-    }
-#endif
-    if(fKalHits->GetEntriesFast()>=MinHit) break;
-    else fKalHits->Delete();
-    pCounter++;
-  }
-  if(pCounter>=pMaxThrow) return false;
-  else return true;
-}
 
+//ntracks indicates how many tracks will be filled into ChainFinder fHitsPool.
+//these tracks are read from G4 RTPC root tree 
+int EXKalManager::RunCFNKF(int nevents, int ntracks, double space, double min_ang, 
+                           double max_ang, double ang_sep)
+{
+  int npt=0;
+  double xx[MAX_HITS_PER_CHAIN],yy[MAX_HITS_PER_CHAIN],zz[MAX_HITS_PER_CHAIN];
+  
+  fChainFinderNTracks=ntracks;
+  fChainFinder->SetParameters(space, min_ang, max_ang, ang_sep);
+  BeginOfRun();
+
+  // ===================================================================
+  //  Event loop
+  // ===================================================================
+
+  for (Int_t eventno = 0; eventno < nevents; eventno++) { 
+    
+#ifdef _EXKalManDebug_
+    cerr << "\n------ Event " << eventno << " ------" << endl;
+#endif
+
+    //execute Chain Finder
+    fChainFinder->Reset();
+    FillCFHitPoolByG4Track(ntracks);
+    fChainFinder->RemoveBadHits();
+    fChainFinder->SearchChains();
+    
+    eventid=eventno;
+    ntrack=fChainFinder->fChainNum;
+    
+    //now call KF to do fitting
+    for(int i=0;i<fChainFinder->fChainNum;i++) {
+      trackid=i;
+      //extract the hits in the found chain
+      npt = fChainFinder->fChainBuf[i].HitNum;
+      if(npt<MinHit) continue;
+      
+      for(int j=0;j<npt;j++) {
+        xx[j] = fChainFinder->fChainBuf[i].Hits[j]->X;
+        yy[j] = fChainFinder->fChainBuf[i].Hits[j]->Y;
+        zz[j] = fChainFinder->fChainBuf[i].Hits[j]->Z;
+      }
+      
+      // ============================================================
+      //  Reset the buffer
+      // ============================================================
+      fKalRTPC->Reset();
+      Tree_Reset();
+      
+      // ============================================================
+      //  Generate a partcle and Swim the particle in fDetector
+      // ============================================================
+      bool bTrackReady = false;
+      bool smearing = false;
+      bool bIncludeCurveBackHits = true;  
+      bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz, npt,smearing, bIncludeCurveBackHits);
+      if(!bTrackReady) break;
+    
+      //Remove backward hits also judge whether or not need 2nd iteration
+      bool bRemoveBackwardHits=true;
+      bool bNeed2Iter = fKalRTPC->JudgeFor2ndIteration(bRemoveBackwardHits);
+      if(fKalRTPC->fKalHits_Forward->GetEntriesFast()<MinHit) continue;
+
+      // ============================================================
+      //  Do KalmanFilter
+      // ============================================================
+
+      fKalRTPC->DoFitAndFilter(bNeed2Iter);
+
+
+      // ============================================================
+      //  Fill the KalmanFilter result into the root tree
+      // ============================================================
+      Tree_Fill(*(fKalRTPC->fKalTrack));
+
+  #ifdef _EXKalManDebug_
+      Stop4Debug(_index_);
+  #endif
+    }  //end of for(int i=0;i<fChainFinder->fChainNum;i++) 
+
+  }  //end of for (Int_t eventno = 0; eventno < nevents; eventno++)
+
+  //ROOT Tree will be written and closed inside EndOfRun();
+  EndOfRun();
+  return 1;
+  
+}
+  
+  
+  
+//test the KF only
 //cerr << "Usage: "<<argv[0] <<" <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1]" << endl;
 //cerr << "\t  job: 0 generate helix, 1 loadtrack from geant4 root file, 2 generate circle\n";
 //cerr << "\t  nevents: number of events to generate \n";
 //cerr << "\t  pt_min_gev and pt_max_gev: specifiy the range of pt in Gev \n";
 //cerr << "\t  Note that if pt is negative then anti-clockwise track will be generated \n";
-int EXKalManager::Run(int job, int nevents, double pt_min, double pt_max, double costh_min, 
+int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, double costh_min, 
   double costh_max, double z_min, double z_max)
 {
   //User will fill BeginOfRun() and EndOfRun();
@@ -399,12 +565,11 @@ int EXKalManager::Run(int job, int nevents, double pt_min, double pt_max, double
     bool bTrackReady = false;
     bool bIncludeCurveBackHits = true;  //this only work for EXEventGen
 
-    if(_eventtype_ == 0)
-      bTrackReady=GenAHelixTrack(pt_min, pt_max, costh_min, costh_max, z_min, z_max, bIncludeCurveBackHits);
+    if(_eventtype_ == 0 || _eventtype_ == 2)
+      bTrackReady = fKalRTPC->PrepareATrack(_eventtype_, pt_min, pt_max, costh_min, 
+                                            costh_max, z_min, z_max, bIncludeCurveBackHits);
     else if(_eventtype_ == 1)
       bTrackReady=LoadAG4Track(bIncludeCurveBackHits);
-    else if(_eventtype_ == 2)
-      bTrackReady=GenACircleTrack(pt_min, pt_max, costh_min, costh_max, z_min, z_max, bIncludeCurveBackHits);
     else {
       cout<<"This _eventtype_("<<_eventtype_<<") is not yet supported! I quit..."<<endl;
       exit(-3);

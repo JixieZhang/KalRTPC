@@ -21,8 +21,8 @@
 //Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
 #ifndef MaxHit
 #define MaxHit 200
-#endif
 #define MinHit 5
+#endif
 /////////////////////////////////////////////////////////////////
 
 static const double kMpr = 0.938272013;
@@ -35,11 +35,15 @@ public:
   virtual ~EXKalRTPC();
 
   //create a track, store everything into fKalHits
-  //prepare a track from xyz array, make sure radii are in increasing order  
+  //prepare a track from xyz array, make sure in time increasing order  
+  
+  bool PrepareATrack_mm(double *x_mm, double *y_mm, double *z_mm, int npt,
+                        bool smearing=false, bool bIncludeCurveBackHits=true);
   bool PrepareATrack(double *x, double *y,double *z, int npt, bool smearing=false,
-		bool bIncludeCurveBackHits=true);
+                     bool bIncludeCurveBackHits=true);
   bool PrepareATrack(int job, double pt_min, double pt_max, double costh_min,
-    double costh_max, double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=true);
+                     double costh_max, double z_min=0.0, double z_max=0.0, 
+                     bool bIncludeCurveBackHits=true);
 
 
 	//Provide suggestion if need to apply 2nd iteration kalman filter
@@ -49,8 +53,11 @@ public:
 	//Note that the hit buffer must be sorted by time in increasing order
   bool JudgeFor2ndIteration(bool bIncludeCurveBackHits=false);
 
+  //this routine only apply 1 iteration KF fit
   int  DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n, 
 											bool bIncludeCurveBackHits=false);
+                      
+  //this routine allow to apply 2 iteration KF fit
   int  DoFitAndFilter(bool bApply2Iter=false);
 
   //Use the last site to swim back to the beam line
@@ -61,6 +68,10 @@ public:
   void SetCovMElement(double val) {fCovMElement=val;};
   
   void  Reset();
+
+  //Do global helix fit and apply my corrections
+  //return chi2
+  double DoGlobalHelixFit(int npt, double szPos[][3]); 
 
   void Example(int job, int nevents, double pt_min, double pt_max, double costh_min, 
     double costh_max, double z_min, double z_max);

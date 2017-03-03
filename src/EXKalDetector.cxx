@@ -6,6 +6,7 @@
 #include "TRandom.h" // from ROOT
 //By jixie: the system think the particle carry negative charge by default
 //It doesnot allow me to give it negative field
+//Need to spend time to figure out why and solve it!
 Double_t EXKalDetector::fgBfield = 50.;
 
 const int    kNDetDummyLayer = 6;
