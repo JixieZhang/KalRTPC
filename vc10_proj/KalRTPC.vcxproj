@@ -122,6 +122,7 @@
     </ClCompile>
     <ClCompile Include="..\src\BField_Helm.cc" />
     <ClCompile Include="..\src\BonusHelixFit.cc" />
+    <ClCompile Include="..\src\ChainFinder.cc" />
     <ClCompile Include="..\src\CircleFitter_LM.cc" />
     <ClCompile Include="..\src\ConfigManager.cc" />
     <ClCompile Include="..\src\EXEventGen.cxx" />
@@ -153,6 +154,7 @@
   <ItemGroup>
     <None Include="..\include\BField_Helm.hh" />
     <None Include="..\include\BonusHelixFit.hh" />
+    <None Include="..\include\ChainFinder.hh" />
     <None Include="..\include\ConfigManager.hh" />
     <None Include="..\include\GlobalDebuger.hh" />
     <None Include="..\Makefile" />

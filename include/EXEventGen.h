@@ -21,37 +21,37 @@ static const double kRTPC_R_Cathode = 3.0;
 /////////////////////////////////////////////////////////////////
 
 class EXEventGen {
-public:
-  EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
-    : fCradlePtr(&cradle), fHitBufPtr(&kalhits) {}
+ public:
+ EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
+   : fCradlePtr(&cradle), fHitBufPtr(&kalhits) {}
   virtual ~EXEventGen() {}
 
   THelicalTrack GenerateHelix(double pt_min, double pt_max, double cosmin=0.0, 
-    double cosmax=0.0, double z_min=0.0, double z_max=0.0);
+			      double cosmax=0.0, double z_min=0.0, double z_max=0.0);
 
   void Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, double mass);
 
   int  GenerateCircle(double pt_min, double pt_max, double cosmin=0.0, double cosmax=0.0, 
-    double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=true);
+		      double z_min=0.0, double z_max=0.0, bool bIncludeCurveBackHits=true);
 
   //input: x y z in cm and in increasing time order 
   void MakeHitsFromTraj(double *x_cm, double *y_cm, double *z_cm, int npt, bool smearing=false,
-		bool bIncludeCurveBackHits=true);
+			bool bIncludeCurveBackHits=true);
   void MakeHitsFromTraj_mm(double *x_mm, double *y_mm, double *z_mm, int npt, bool smearing=false,
-		bool bIncludeCurveBackHits=true);
+			   bool bIncludeCurveBackHits=true);
 
   static void     SetT0(Double_t t0) { fgT0 = t0;   }
   static Double_t GetT0()            { return fgT0; }
 
   static void PrintHelix(THelicalTrack *aTrack, const char *title="helix");
 
-private:
+ private:
   TKalDetCradle *fCradlePtr;     // pointer to detector system
   TObjArray     *fHitBufPtr;     // pointer to hit array
 
   static Double_t  fgT0;         // t0
 
-public:
+ public:
 
   //some buff to hold some thrown variables, they will be used to fill root tree
   double X0,Y0,Z0;               //at vertex
@@ -67,6 +67,7 @@ public:
   double Rho_last, TanLambda_last, Phi0_last;
 
   ClassDef(EXEventGen,1)   // Event Generator
+    
 };
 
 #endif

@@ -30,7 +30,7 @@ static const double kPi = atan(1.0)*4;
 
 class EXKalRTPC {
 
-public:
+ public:
   EXKalRTPC();
   virtual ~EXKalRTPC();
 
@@ -46,24 +46,24 @@ public:
                      bool bIncludeCurveBackHits=true);
 
 
-	//Provide suggestion if need to apply 2nd iteration kalman filter
-	//if bIncludeCurveBackHits==false,  it will remove backward hits, otherwise just 
-	//copy all hits pointer into fKalHits_Forward
-	//It will also fill the smeared hit position array
-	//Note that the hit buffer must be sorted by time in increasing order
+  //Provide suggestion if need to apply 2nd iteration kalman filter
+  //if bIncludeCurveBackHits==false,  it will remove backward hits, otherwise just 
+  //copy all hits pointer into fKalHits_Forward
+  //It will also fill the smeared hit position array
+  //Note that the hit buffer must be sorted by time in increasing order
   bool JudgeFor2ndIteration(bool bIncludeCurveBackHits=false);
 
   //this routine only apply 1 iteration KF fit
   int  DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n, 
-											bool bIncludeCurveBackHits=false);
+		      bool bIncludeCurveBackHits=false);
                       
   //this routine allow to apply 2 iteration KF fit
   int  DoFitAndFilter(bool bApply2Iter=false);
 
   //Use the last site to swim back to the beam line
   void ReconVertex(TVKalState &state, double &p, double &pt, double &pz, 
-    double &th, double &ph, double &x, double &y, double &z, 
-    double &r_rec, double &a_rec, double &b_rec);
+		   double &th, double &ph, double &x, double &y, double &z, 
+		   double &r_rec, double &a_rec, double &b_rec);
 
   void SetCovMElement(double val) {fCovMElement=val;};
   
@@ -74,18 +74,18 @@ public:
   double DoGlobalHelixFit(double *x, double *y,double *z, int npt,bool bIncludeCurveBackHits=true); 
 
   void Example(int job, int nevents, double pt_min, double pt_max, double costh_min, 
-    double costh_max, double z_min, double z_max);
+	       double costh_max, double z_min, double z_max);
 
-private:
+ private:
 
 
   //Get vertex by finding TCylinder crossing point
   int GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
-    TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
+		TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
 
   //get vertex by finding dca to bpm point
   int GetVextex2(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm, 
-    TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
+		 TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec);
 
   //Create a helix from 3 points to get initial parameter for Kalman Filter
   //IterDirection=true is farward, otherwise backward
@@ -96,12 +96,12 @@ private:
   THelicalTrack GetIniHelixByGHF(bool IterDirection=false);
   //Apply linear regression to "Rho*dPhi vs dZ" to determine theta and z of a helix
   void CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
-    double& Theta0, double& Z0);
+		       double& Theta0, double& Z0);
 
   void FitForward4InitHelix(THelicalTrack &Hel_last,TKalMatrix &C_last);
   void FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st);
 
-public:
+ public:
 
   TFile* fFile;
 
@@ -113,10 +113,10 @@ public:
   EXEventGen    *fEventGen;   // enevt generator
 
 
-private:
+ private:
   double fCovMElement;
 
-public:
+ public:
   //root variables, will be stored into root tree by manager
 
   //store kalman filter resonstriction result
@@ -146,6 +146,8 @@ public:
   double P_hel, Phi_hel,Theta_hel,R_hel,A_hel,B_hel,Z_hel;
   double X_hel, Y_hel, DCA_hel, Chi2_hel;
 
+  ClassDef(EXKalRTPC,1)   // KalRTPC kelnel module
+    
 };
 
 #endif

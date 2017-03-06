@@ -66,6 +66,9 @@
     <ClCompile Include="..\src\EXKalManager.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ChainFinder.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\EXEventGen.h">
@@ -116,6 +119,9 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="..\include\ConfigManager.hh">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="..\include\ChainFinder.hh">
       <Filter>Header Files</Filter>
     </None>
   </ItemGroup>

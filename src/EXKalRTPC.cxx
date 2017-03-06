@@ -19,6 +19,8 @@
 #include <iostream>
 using namespace std;
 
+ClassImp(EXKalRTPC)
+
 ///////////////////////////////////////////////////////////////////////
 //#define _EXKalRTPCDebug_ 0
 
@@ -71,7 +73,7 @@ EXKalRTPC::~EXKalRTPC()
 }
 
 int EXKalRTPC::GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm,
-  TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec)
+			 TVector3 &xx,  Double_t &dfi, double &r_rec, double &a_rec, double &b_rec)
 {
   r_rec = fabs(hel.GetRho());
   a_rec = hel.GetXc();
@@ -93,7 +95,7 @@ int EXKalRTPC::GetVextex(THelicalTrack &hel, Double_t x_bpm, Double_t y_bpm,
 
 
 int EXKalRTPC::GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm,
-  TVector3 &xx,  double &dfi, double &r_rec, double &a_rec, double &b_rec)
+			  TVector3 &xx,  double &dfi, double &r_rec, double &a_rec, double &b_rec)
 {
   TVector3 X0  = hel.GetPivot();
   r_rec = fabs(hel.GetRho());
@@ -107,15 +109,15 @@ int EXKalRTPC::GetVextex2(THelicalTrack &hel, double x_bpm, double y_bpm,
   xx = hel.CalcXAt(dfi);
 #ifdef _EXKalRTPCDebug_
   if(Global_Debug_Level >= 1)
-	cout<<"GetVextex2(): dfi="<<dfi*57.3<<"deg,   xx=("<<xx.X()<<", "<<xx.y()<<", "<<xx.Z()<<")"<<endl;
+    cout<<"GetVextex2(): dfi="<<dfi*57.3<<"deg,   xx=("<<xx.X()<<", "<<xx.y()<<", "<<xx.Z()<<")"<<endl;
 #endif
   return 1;
 }
 
 //Use the last site to swim back to the beam line
 void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz,
-  double &th, double &ph, double &x, double &y, double &z,
-  double &r_rec, double &a_rec, double &b_rec )
+			    double &th, double &ph, double &x, double &y, double &z,
+			    double &r_rec, double &a_rec, double &b_rec )
 {
   TVector3 xv(-99,-99,-99);
   Double_t dfi=0;
@@ -159,11 +161,11 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
     TVector3 xv=hel.GetPivot();
     TVector3 x_fil=hel.CalcXAt(0.0);
     cout<<"   LastHit=("<<xv.X()<<", "<<xv.y()<<", "<<xv.Z()<<")"
-      <<"   LastHit_fil=("<<x_fil.X()<<", "<<x_fil.y()<<", "<<x_fil.Z()<<")"
-      <<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
+	<<"   LastHit_fil=("<<x_fil.X()<<", "<<x_fil.y()<<", "<<x_fil.Z()<<")"
+	<<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
 
     cout<<"Rec. to Vextex: p="<<p<<" ph="<<ph*57.3<<", th="<<th*57.3
-      <<", rho="<<rho<<", fi0="<<fi0*57.3<<"deg,  fi0_vx="<<fi0_vx*57.3<<"deg"<<endl;
+	<<", rho="<<rho<<", fi0="<<fi0*57.3<<"deg,  fi0_vx="<<fi0_vx*57.3<<"deg"<<endl;
   }
 #endif
 }
@@ -171,8 +173,8 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
 
 void EXKalRTPC::Reset()
 {
-	//clear will only remove the pointer if it does own the object
-	//the obj will stay
+  //clear will only remove the pointer if it does own the object
+  //the obj will stay
   fKalHits_Forward->Clear();
   fKalHits->Delete();
   
@@ -207,11 +209,11 @@ void EXKalRTPC::Reset()
 //Note that the hit buffer must be sorted by time in increasing order
 bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
 {
-	//since the hits obj already exist in fKalHits, I simplely add their
-	//pointers into fKalHits_Forward
-	//the next line just make a copy for all the pointer, but not change ownership 
-	//*fKalHits_Forward = *fKalHits;     
-	//return false;
+  //since the hits obj already exist in fKalHits, I simplely add their
+  //pointers into fKalHits_Forward
+  //the next line just make a copy for all the pointer, but not change ownership 
+  //*fKalHits_Forward = *fKalHits;     
+  //return false;
 	
   bool bNeed2ndIter=false;
   TIter next(fKalHits, kIterForward);   
@@ -229,22 +231,22 @@ bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
     StepPhi_rec[npt]=xv.Phi();StepS_rec[npt]=xv.Perp();
     tmpS=xv.Perp();
     if(tmpS+0.1 < Smax) {
-		bNeed2ndIter=true;
-		if(bIncludeCurveBackHits) {			
-			fKalHits_Forward->Add(hitp); npt++;
-		} else {
+      bNeed2ndIter=true;
+      if(bIncludeCurveBackHits) {			
+	fKalHits_Forward->Add(hitp); npt++;
+      } else {
 #ifdef _EXKalRTPCDebug_	
-			if(Global_Debug_Level>=7) 
-				cout<<"Hit "<<setw(3)<<idx<<" removed! tmpS="<<tmpS<<"  Smax="<<Smax<<"\n";
+	if(Global_Debug_Level>=7) 
+	  cout<<"Hit "<<setw(3)<<idx<<" removed! tmpS="<<tmpS<<"  Smax="<<Smax<<"\n";
 #endif		
-		}
-	} else {
-		if(tmpS>Smax) Smax=tmpS;
-		fKalHits_Forward->Add(hitp); npt++;
-	}
-	if(npt>=MaxHit) break;
+      }
+    } else {
+      if(tmpS>Smax) Smax=tmpS;
+      fKalHits_Forward->Add(hitp); npt++;
+    }
+    if(npt>=MaxHit) break;
     hitp = dynamic_cast<EXHit *>(next());
-	idx++;
+    idx++;
   }
   HitNum=npt;
 
@@ -296,8 +298,8 @@ THelicalTrack EXKalRTPC::GetIniHelixBy3Pts(bool IterDirection)
 
   if(_EXKalRTPCDebug_>=2) {
     cout<<" 3-point Helix:  pt="<<Pt_3pt
-      <<"  Rho="<<pRho<<", A="<<A_3pt<<", B="<<B_3pt
-      <<", phi_c="<<pPhi_c*57.3<<"deg, fi0_last="<<pFi0*57.3<<"deg "<<endl;   
+	<<"  Rho="<<pRho<<", A="<<A_3pt<<", B="<<B_3pt
+	<<", phi_c="<<pPhi_c*57.3<<"deg, fi0_last="<<pFi0*57.3<<"deg "<<endl;   
     cout<<"  P_3pt="<<P_3pt<<", Theta_3pt="<<Theta_3pt*57.3<<"deg"<<endl;
   }
 #endif
@@ -317,7 +319,7 @@ THelicalTrack EXKalRTPC::GetIniHelixBy3Pts(bool IterDirection)
 //http://www.datagenetics.com/blog/august12013/index.html
 //
 void EXKalRTPC::CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A, double B,
-  double& Theta0, double& Z0)
+				double& Theta0, double& Z0)
 {
   ///////////////////////////////////////////////////////////////////////    
   double rhodfi[200],dfi[200],dz[200];
@@ -348,7 +350,7 @@ void EXKalRTPC::CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
 #ifdef _EXKalRTPCDebug_
   if(_EXKalRTPCDebug_>=2) {
     cout<<"CorrHelixThetaZ():  dfi_span="<<dfi[n-1]<<"rad, z_span="<<dz[n-1]<<"cm"
-      <<",  <rhodfi>="<<sumY/n<<",  <dz>="<<sumX/n<<endl; 
+	<<",  <rhodfi>="<<sumY/n<<",  <dz>="<<sumX/n<<endl; 
   }
 #endif
   if(fabs(dz[n-1])<0.4 && fabs(sumX/n)<0.2) {
@@ -375,8 +377,8 @@ void EXKalRTPC::CorrHelixThetaZ(int npt,double szPos[][3], double Rho, double A,
     }
     if(_EXKalRTPCDebug_>=2) {
       for(int j=0;j<n;j++) {
-		cout<<"point "<<setw(3)<<j<<":  rhodfi="<<setw(10)<<rhodfi[j]<<",  dfi="
-		  <<setw(10)<<dfi[j]<<",  dz="<<setw(10)<<dz[j]<<endl; 
+	cout<<"point "<<setw(3)<<j<<":  rhodfi="<<setw(10)<<rhodfi[j]<<",  dfi="
+	    <<setw(10)<<dfi[j]<<",  dz="<<setw(10)<<dz[j]<<endl; 
       }
     }
 #endif
@@ -424,7 +426,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
   double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2=0.0;
   int fit_to_beamline=1;
   helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
-    fit_to_beamline);
+	    fit_to_beamline);
 
   //store global helix result before my correction 
   Phi_hel_raw = pPhi;
@@ -472,12 +474,12 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
     cout<<" First_hit=("<<szPos[0][0]<<", "<<szPos[0][1]<<", "<<szPos[0][2]<<"), ";
     cout<<"  Last_hit=("<<szPos[npt-1][0]<<", "<<szPos[npt-1][1]<<", "<<szPos[npt-1][2]<<") \n";
     cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
-      <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
-      <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
+	<<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
+	<<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
   } 
   if(_EXKalRTPCDebug_>=4) {
     cout<<"  npt="<<npt<<",  dz_span="<<szPos[npt-1][2]-szPos[0][2]
-    <<"cm,  chi2="<<pChi2<<endl;
+	<<"cm,  chi2="<<pChi2<<endl;
   }
 #endif
 
@@ -489,7 +491,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
     cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
     if(_EXKalRTPCDebug_>=2) {
       cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+	  <<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
 #endif
     pRho *= -1.0;
@@ -503,7 +505,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
 #ifdef _EXKalRTPCDebug_
     if(_EXKalRTPCDebug_>=2) {
       cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+	  <<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
 #endif
 
@@ -558,7 +560,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
   const double kLightVelocity=2.99792458e8;
   Double_t b   = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
-    (fCradle->At(0))->GetParent(kFALSE)).GetBfield();
+     (fCradle->At(0))->GetParent(kFALSE)).GetBfield();
   Double_t pt  = (pRho/100.)*kLightVelocity*(b/10.) / kGev;
   
   P_hel = fabs(pt)/sin(pTheta);
@@ -567,10 +569,10 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
   //just for debug
   if(_EXKalRTPCDebug_>=2) {
     cout<<"  global Helix:  pt="<<pt
-      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB<<endl;
+	<<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB<<endl;
     cout<<"  P_hel="<<fabs(pt)/sin(pTheta)<<", Phi_hel="<<Phi_hel*57.3
-      <<"deg, Theta_hel="<<Theta_hel*57.3<<"deg,  Z_hel="<<Z_hel
-      <<", fi0="<<fi0*57.3<<endl;
+	<<"deg, Theta_hel="<<Theta_hel*57.3<<"deg,  Z_hel="<<Z_hel
+	<<", fi0="<<fi0*57.3<<endl;
   }
 #endif
 
@@ -610,7 +612,7 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
   double pRho, pA, pB, pPhi, pTheta, pX0, pY0, pZ0, pDCA, pChi2;
   int fit_to_beamline=1;
   helix_fit(npt,szPos,pRho,pA,pB,pPhi,pTheta,pX0,pY0,pZ0,pDCA,pChi2,
-    fit_to_beamline);
+	    fit_to_beamline);
 
   //store global helix result before my correction 
   Phi_hel_raw = pPhi;
@@ -658,12 +660,12 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
     cout<<" First_hit=("<<szPos[0][0]<<", "<<szPos[0][1]<<", "<<szPos[0][2]<<"), ";
     cout<<"  Last_hit=("<<szPos[npt-1][0]<<", "<<szPos[npt-1][1]<<", "<<szPos[npt-1][2]<<") \n";
     cout<<"  phi_cir_vx="<<phi_cir_vx*57.3<<"  phi_cir_first="<<phi_cir_first*57.3
-      <<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
-      <<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
+	<<"  phi_cir_last="<<phi_cir_last*57.3<<"  dfi_vx2first="<<dfi_vx2first*57.3
+	<<"  dfi_vx2last="<<dfi_vx2last*57.3<<endl;
   } 
   if(_EXKalRTPCDebug_>=4) {
     cout<<"  npt="<<npt<<",  dz_span="<<szPos[npt-1][2]-szPos[0][2]
-    <<"cm,  chi2="<<pChi2<<endl;
+	<<"cm,  chi2="<<pChi2<<endl;
   }
 #endif
 
@@ -675,7 +677,7 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
     cout<<"***Warning: global helix fit return wrong sign! Correct it back! \n";
     if(_EXKalRTPCDebug_>=2) {
       cout<<"***Before correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+	  <<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
 #endif
     pRho *= -1.0;
@@ -689,7 +691,7 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
 #ifdef _EXKalRTPCDebug_
     if(_EXKalRTPCDebug_>=2) {
       cout<<"*** After correction: Rho="<<setw(8)<<pRho<<", Phi="<<setw(8)<<pPhi*57.3
-	<<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
+	  <<"deg, Theta="<<setw(8)<<pTheta*57.3<<"deg, Z="<<pZ0<<"cm \n";
     }
 #endif
 
@@ -753,7 +755,7 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
   const double kLightVelocity=2.99792458e8;
   Double_t b   = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
-    (fCradle->At(0))->GetParent(kFALSE)).GetBfield();
+     (fCradle->At(0))->GetParent(kFALSE)).GetBfield();
 
   Double_t dr  = pDCA;
   Double_t pt  = (pRho/100.)*kLightVelocity*(b/10.) / kGev;
@@ -784,22 +786,22 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
   //Fix me:
   //The helix center of this helix provide wrong A and B. (these 2 values are not used) 
   //Here is one example: 
-/*  
+  /*  
   //Circle Event:  pt=-0.1  Rho=-6.66667, A=6.30317, B=-2.17129, phi_c=341.018deg, fi0=161.004deg 
   //P0_p=0.11547, Phi0_p=-109.016deg, Theta0_p=120.009deg  Z0=0
-+---------------------------------------------------------------------+
+  +---------------------------------------------------------------------+
   title=GHF(backward): aTrack:
   Kappa=-10.1061, tanLambda=-0.62661
   Rho=-6.60124, A=4.74389, B=4.59041, phi_c=44.0612deg, fi0=-135.952deg 
   pt=0.0989501  P_p=0.116771, Phi_p=-45.9454deg, Theta_p=122.081
-+---------------------------------------------------------------------+
-+---------------------------------------------------------------------+
+  +---------------------------------------------------------------------+
+  +---------------------------------------------------------------------+
   title=KalRTPC(backward): 3-point helix at last point:
   Kappa=-10.1552, tanLambda=-0.670794
   Rho=-6.56935, A=6.21079, B=-2.23221, phi_c=43.5931deg, fi0=-136.42deg 
   pt=0.098472  P_p=0.118575, Phi_p=-46.4135deg, Theta_p=123.863
-+---------------------------------------------------------------------+
-*/
+  +---------------------------------------------------------------------+
+  */
 
   double ret_fi0 = (IterDirection==kIterBackward)?fi0_last:fi0_1st;
   THelicalTrack aTrack(dr,ret_fi0,cpa,dz,tnl,x0,y0,z0,b);
@@ -811,13 +813,13 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
   //just for debug
   if(_EXKalRTPCDebug_>=2) {
     cout<<"  global Helix:  pt="<<pt
-      <<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
-      <<", phi_c="<<Phi_c*57.3<<"deg,"
-      <<" fi0_1st="<<fi0_1st*57.3<<"deg "
-      <<" fi0_last="<<fi0_last*57.3<<"deg "<<endl;
+	<<"  Rho="<<pRho<<", A="<<pA<<", B="<<pB
+	<<", phi_c="<<Phi_c*57.3<<"deg,"
+	<<" fi0_1st="<<fi0_1st*57.3<<"deg "
+	<<" fi0_last="<<fi0_last*57.3<<"deg "<<endl;
     cout<<"  P_hel="<<fabs(pt)/sin(pTheta)<<", Phi_hel="<<Phi_hel*57.3
-      <<"deg, Theta_hel="<<Theta_hel*57.3<<"deg,  Z_hel="<<Z_hel
-      <<", fi0="<<fi0*57.3<<endl;
+	<<"deg, Theta_hel="<<Theta_hel*57.3<<"deg,  Z_hel="<<Z_hel
+	<<", fi0="<<fi0*57.3<<endl;
   }
 #endif
 
@@ -827,7 +829,7 @@ THelicalTrack EXKalRTPC::GetIniHelixByGHF(bool IterDirection)
 
 //prepare a track from xyz array in mm, make sure hits are in increasing time order   
 bool EXKalRTPC::PrepareATrack_mm(double *x_mm, double *y_mm,double *z_mm, 
-  int npt, bool smearing, bool bIncludeCurveBackHits)
+				 int npt, bool smearing, bool bIncludeCurveBackHits)
 {
   fEventGen->MakeHitsFromTraj_mm(x_mm,y_mm,z_mm,npt,smearing,bIncludeCurveBackHits);
   return true;
@@ -835,7 +837,7 @@ bool EXKalRTPC::PrepareATrack_mm(double *x_mm, double *y_mm,double *z_mm,
 
 //prepare a track from xyz array, make sure radii are in increasing order
 bool EXKalRTPC::PrepareATrack(double *x, double *y,double *z, int npt, bool smearing,
-	bool bIncludeCurveBackHits)
+			      bool bIncludeCurveBackHits)
 {
   fEventGen->MakeHitsFromTraj(x,y,z,npt,smearing,bIncludeCurveBackHits);
   return true;
@@ -843,7 +845,7 @@ bool EXKalRTPC::PrepareATrack(double *x, double *y,double *z, int npt, bool smea
 
 //Use the event generator to generate a track
 bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double costh_min,
-  double costh_max, double z_min, double z_max, bool bIncludeCurveBackHits)
+			      double costh_max, double z_min, double z_max, bool bIncludeCurveBackHits)
 {
   //sometimes the user will provide too small pt_min, which will cause some
   //events have no hits, I have to avoid this situation
@@ -980,12 +982,12 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
     C = C_start;
   }
   else
-  {
-    for (Int_t i=0; i<kSdim; i++) {
-      //C(i,i) = 0.05;         // dummy error matrix
-      C(i,i) = fCovMElement;   // dummy error matrix
+    {
+      for (Int_t i=0; i<kSdim; i++) {
+	//C(i,i) = 0.05;         // dummy error matrix
+	C(i,i) = fCovMElement;   // dummy error matrix
+      }
     }
-  }
 
   sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kPredicted));
   sited.Add(new TKalTrackState(svd,C,sited,TVKalSite::kFiltered));
@@ -1024,11 +1026,11 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
 
     if(Global_Debug_Level >= 5) {
       cerr << "MeasLayer "<<setw(2)<<ml.GetIndex()
-		<<": R="<<setw(6)<<ml.GetR()<<": ";
-		  cerr << "xraw=("<<setw(8)<<xraw.X()<<",  "<<setw(8)<<xraw.Y()
-		<<", "<<setw(8)<<xraw.Z()<<"): ";
-		  cerr << "xv=("<<setw(8)<<xv.X()<<",  "<<setw(8)<<xv.Y()
-		<<", "<<setw(8)<<xv.Z()<<"): \n";
+	   <<": R="<<setw(6)<<ml.GetR()<<": ";
+      cerr << "xraw=("<<setw(8)<<xraw.X()<<",  "<<setw(8)<<xraw.Y()
+	   <<", "<<setw(8)<<xraw.Z()<<"): ";
+      cerr << "xv=("<<setw(8)<<xv.X()<<",  "<<setw(8)<<xv.Y()
+	   <<", "<<setw(8)<<xv.Z()<<"): \n";
     }
 #endif
 
@@ -1039,9 +1041,9 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
       
 #ifdef _EXKalRTPCDebug_
       cerr << "Fitter: site "<<npt<<" discarded: "
-			<<" xv=("<< xv.X()<<", "<<xv.Y()<<", "<<xv.Z()<<"), Phi="
-			<<xv.Phi()*57.3 <<"deg, S="<<xv.Perp()<<"cm"<< endl;
-	  Pause4Debug();
+	   <<" xv=("<< xv.X()<<", "<<xv.Y()<<", "<<xv.Z()<<"), Phi="
+	   <<xv.Phi()*57.3 <<"deg, S="<<xv.Perp()<<"cm"<< endl;
+      Pause4Debug();
 #endif
     } else {
 #ifdef _EXKalRTPCDebug_
@@ -1051,20 +1053,20 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
       //TVKalState *state_fil2 = &fKalTrack->GetState(TVKalSite::kFiltered);
 
       if(Global_Debug_Level >= 7) {
-		TVKalState *state_fil = (TVKalState*) &(site.GetCurState());
-		THelicalTrack hel_fil = (dynamic_cast<TKalTrackState *>(state_fil))->GetHelix();
-		TVector3 x_fil=hel_fil.CalcXAt(0.0);
+	TVKalState *state_fil = (TVKalState*) &(site.GetCurState());
+	THelicalTrack hel_fil = (dynamic_cast<TKalTrackState *>(state_fil))->GetHelix();
+	TVector3 x_fil=hel_fil.CalcXAt(0.0);
 
-		TVKalState *state_exp = &site.GetState(TVKalSite::kPredicted);
-		THelicalTrack hel_exp = (dynamic_cast<TKalTrackState *>(state_exp))->GetHelix();
-		TVector3 x_exp=hel_exp.CalcXAt(0.0);
+	TVKalState *state_exp = &site.GetState(TVKalSite::kPredicted);
+	THelicalTrack hel_exp = (dynamic_cast<TKalTrackState *>(state_exp))->GetHelix();
+	TVector3 x_exp=hel_exp.CalcXAt(0.0);
 
-		//debug: comparing the expected and filtered points
-		cerr << "Event "<<"XXXX"<<": site "<<npt<<endl;
-		cerr << "\t xraw =("<< xraw.X()<<",  "<<xraw.Y()<<", "<<xraw.Z()<<"): \n";
-		cerr << "\t xv   =("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<"): \n";
-		cerr << "\t x_exp=("<< x_exp.X()<<",  "<<x_exp.Y()<<", "<<x_exp.Z()<<"): \n";
-		cerr << "\t x_fil=("<< x_fil.X()<<",  "<<x_fil.Y()<<", "<<x_fil.Z()<<"): \n";
+	//debug: comparing the expected and filtered points
+	cerr << "Event "<<"XXXX"<<": site "<<npt<<endl;
+	cerr << "\t xraw =("<< xraw.X()<<",  "<<xraw.Y()<<", "<<xraw.Z()<<"): \n";
+	cerr << "\t xv   =("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<"): \n";
+	cerr << "\t x_exp=("<< x_exp.X()<<",  "<<x_exp.Y()<<", "<<x_exp.Z()<<"): \n";
+	cerr << "\t x_fil=("<< x_fil.X()<<",  "<<x_fil.Y()<<", "<<x_fil.Z()<<"): \n";
       }
 #endif
     }
@@ -1088,7 +1090,7 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
 
   TVKalState *theLastState = (TVKalState*) &(fKalTrack->GetCurSite().GetCurState());
   ReconVertex(*theLastState, P_rec, Pt_rec, Pz_rec, Theta_rec, Phi_rec,
-    X_rec, Y_rec, Z_rec, R_rec, A_rec, B_rec );
+	      X_rec, Y_rec, Z_rec, R_rec, A_rec, B_rec );
 
 #ifdef _EXKalRTPCDebug_
   if(Global_Debug_Level >= 4) {
@@ -1117,7 +1119,7 @@ int EXKalRTPC::DoFitAndFilter(bool bApply2Iter)
 //Note that these hits should be in increasing order of time
 //this routine only apply 1 iteration KF fit
 int EXKalRTPC::DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n,
-							  bool bIncludeCurveBackHits)
+			      bool bIncludeCurveBackHits)
 {
   if(n<5) return 0;
 
@@ -1218,7 +1220,7 @@ int EXKalRTPC::DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n,
       const EXMeasLayer &ml = dynamic_cast<const EXMeasLayer &>(hitp->GetMeasLayer());
       TVector3 xv = ml.HitToXv(*hitp);
       cerr << "Fitter: site "<<npt<<" discarded: "
-	<< " xv=("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<")"<< endl;
+	   << " xv=("<< xv.X()<<",  "<<xv.Y()<<", "<<xv.Z()<<")"<< endl;
 #endif
     }
     npt++;
@@ -1235,7 +1237,7 @@ int EXKalRTPC::DoFitAndFilter(double *x_cm, double *y_cm, double *z_cm, int n,
 
   TVKalState *theLastState = (TVKalState*) &(fKalTrack->GetCurSite().GetCurState());
   ReconVertex(*theLastState, P_rec, Pt_rec, Pz_rec, Theta_rec, Phi_rec,
-    X_rec, Y_rec, Z_rec, R_rec, A_rec, B_rec );
+	      X_rec, Y_rec, Z_rec, R_rec, A_rec, B_rec );
   
   NDF  = fKalTrack->GetNDF();
   Chi2 = fKalTrack->GetChi2();
@@ -1457,7 +1459,7 @@ void EXKalRTPC::FitBackward4InitHelix(THelicalTrack &Hel_1st,TKalMatrix &C_1st)
 
 //this is just an example to illustrate how to use this code
 void EXKalRTPC::Example(int job, int nevents, double pt_min, double pt_max, double costh_min, 
-  double costh_max, double z_min, double z_max)
+			double costh_max, double z_min, double z_max)
 {
 	
   // setup input|output root tree here 	

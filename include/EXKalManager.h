@@ -31,11 +31,11 @@
 
 class EXKalManager {
 
-public:
+ public:
   EXKalManager();
   virtual ~EXKalManager();
 
-  void BeginOfRun();
+  void BeginOfRun(int eventtype);
   void EndOfRun();
 
   //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
@@ -45,39 +45,36 @@ public:
 
   //read a track from G4MC_RTPC12 output tree and fill into fKalHits
   bool LoadAG4Track(bool bIncludeCurveBackHits=false);
-   
+
   //run ChainFinder to search for chains
   //in each event, read multiple tracks from G4 root tree and store them into hit pool
   //job := 3, no fit; 4 call GHF; 5 call KF 
   int  RunCFNFit(int job, int nevents, int ntracks, double space, double min_ang, 
-                 double max_ang, double ang_sep);
-  
-  //run ChianFinder + KalmanFilter
-  int RunCFNKF(int nevents, int ntracks, double space, double min_ang, 
-               double max_ang, double ang_sep);
-  
+		 double max_ang, double ang_sep);
+
+
   //run KalmanFilter only    
   int RunKF(int job, int nevents, double pt_min, double pt_max, double costh_min, 
-            double costh_max, double z_min=0.0, double z_max=0.0);
+	    double costh_max, double z_min=0.0, double z_max=0.0);
 
   void SetCovMElement(double val) {fKalRTPC->SetCovMElement(val);};
   void SetG4InputFile(const char* val) {sprintf(fG4Inputfile, "%s","infile.root");};
 
-private:
+ private:
 
   void  Tree_Init();
   void  Tree_Fill(TKalTrack &kaltrack);
   void  Tree_Reset();
   void  Tree_Reset_CF();
 
-public:
+ public:
 
   TFile* fFile;
 
   ChainFinder   *fChainFinder;// RTPC ChainFinder
   EXKalRTPC     *fKalRTPC;    // RTPC KalmanFilter system
 
-private:
+ private:
 
   TObjArray     *fKalHits;    // hit buffer
   EXEventGen    *fEventGen;   // enevt generator
@@ -85,9 +82,9 @@ private:
   char          fG4Inputfile[255];
   NtReader      *fNtReader;           
 
-private:
+ private:
   //This part is used to fill the root tree
-  
+
   //Chain Finder tree buffer, number of found tracks store at 'ntrack' and also 'CF_ChainNum'
   int CF_ntrack_read;  //number of tracks that read from g4 tree
   int CF_ntrack_good;  //number of good tracks that read from g4 tree
@@ -95,8 +92,8 @@ private:
   double CF_X[MAX_HITS_PER_EVENT],CF_Y[MAX_HITS_PER_EVENT],CF_Z[MAX_HITS_PER_EVENT]; 
   int CF_Status[MAX_HITS_PER_EVENT],CF_ThrownTID[MAX_HITS_PER_EVENT];
   int CF_ChainInfo[MAX_HITS_PER_EVENT]; 
-  
-  
+
+
   //When load G4 track, we also need to load the following thrown parameters and store
   //them into the output tree. in unit of cm.
   //Fix me:
@@ -104,7 +101,7 @@ private:
   //as the original G4 tree, therefore I do not know how to incert these values
   double CF_X0[MAX_CHAINS_PER_EVENT], CF_Y0[MAX_CHAINS_PER_EVENT], CF_Z0[MAX_CHAINS_PER_EVENT];
   double CF_Theta0[MAX_CHAINS_PER_EVENT], CF_Phi0[MAX_CHAINS_PER_EVENT], CF_P0[MAX_CHAINS_PER_EVENT];
-  
+
   //root variables
   //a lot of vaiable here are redundent, they have been defined in KalRTPC or EventGen
   //I just copy their values in Tree_fill
@@ -128,7 +125,7 @@ private:
   //original hits info
   int npt0;   	   //npt0 is to store number of original hits 
   double step_x[MaxHit],step_y[MaxHit],step_z[MaxHit],step_phi[MaxHit],step_s[MaxHit];  
-  
+
   //smeared or reconstructed hits info
   int npt;         //npt is to store number of used hits by kalman filter 
   int step_status[MaxHit];
@@ -151,6 +148,8 @@ private:
   double rho_1st, tnl_1st, phi0_1st;
   double rho_last, tnl_last, phi0_last;
   double rho_kal_ini, tnl_kal_ini, phi0_kal_ini;
+
+  ClassDef(EXKalManager,1)   // KalRTPC manager module
 };
 
 #endif

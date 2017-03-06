@@ -22,7 +22,8 @@ Double_t EXEventGen::fgT0 = 14.; // [nsec]
 //This routine will create parameters for a THelicalTrack,
 //There are no hits inside, just a abstract track 
 THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
-  double cosmin, double cosmax, double z_min, double z_max)
+					double cosmin, double cosmax, 
+					double z_min, double z_max)
 {
   const double kPi=acos(0.0)*2;
   // ---------------------------
@@ -43,7 +44,7 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
 
   Double_t b   = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
-    (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield();
+     (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield();
 
   THelicalTrack aTrack(dr,fi0,cpa,dz,tnl,x0,y0,z0,b);
 
@@ -69,10 +70,10 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   //just for debug
   if(_ExEventGenDebug_>=1) {
     cout<<"\n Helix Event:  pt="<<pt<<"  Rho="<<aTrack.GetRho()
-      <<", A="<<aTrack.GetXc()<<", B="<<aTrack.GetYc()
-      <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
+	<<", A="<<aTrack.GetXc()<<", B="<<aTrack.GetYc()
+	<<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0<<", Phi0_p="<<Phi0*57.3
-      <<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<z0<<endl;
+	<<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<z0<<endl;
   }
 #endif
 
@@ -157,10 +158,10 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
     //TCylinder, if it has, it will store the most closed crossing point into xx
     //and also the deflection angle dfi into phi
     if (!ms.CalcXingPointWith(heltrk,xx,dfi,1)
-      || TMath::Abs(dfi) > TMath::Pi()
-      || TMath::Abs(dfi + dfisum) > TMath::TwoPi()) {
-	dfi = dfis;
-	continue;
+	|| TMath::Abs(dfi) > TMath::Pi()
+	|| TMath::Abs(dfi + dfisum) > TMath::TwoPi()) {
+      dfi = dfis;
+      continue;
     }
     // should use the material behind the surface since dfi is measured 
     // from the last point to the current surface
@@ -187,10 +188,10 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
 #endif
       // recalculate crossing point
       if (!ms.CalcXingPointWith(heltrk,xx,dfi,1)
-	|| TMath::Abs(dfi) > TMath::Pi()
-	|| TMath::Abs(dfi + dfisum) > TMath::TwoPi()) {
-	  dfi = dfis;
-	  continue;
+	  || TMath::Abs(dfi) > TMath::Pi()
+	  || TMath::Abs(dfi + dfisum) > TMath::TwoPi()) {
+	dfi = dfis;
+	continue;
       }
       dfis += dfi;
     }
@@ -210,7 +211,7 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
       StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
       StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
       StepNum++;
-			if(StepNum>=MaxHit) break;
+      if(StepNum>=MaxHit) break;
 
       //here I try to store rho, tanLambda and fi0 for the 1st and last hit
       //But I can not tell when the track reach the last step.
@@ -219,15 +220,15 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
       //I use 'fabs(tmpRho)>0.01' to tell tmpRho is NAN or not
       double tmpRho=heltrk.GetRho();
       if(fabs(Rho_1st)<0.01 && fabs(tmpRho)>0.01) {
-				Rho_1st = tmpRho;
-				TanLambda_1st = heltrk.GetTanLambda();
-				Phi0_1st = heltrk.GetPhi0(); 
+	Rho_1st = tmpRho;
+	TanLambda_1st = heltrk.GetTanLambda();
+	Phi0_1st = heltrk.GetPhi0(); 
       }
 
       if(fabs(tmpRho)>0.01) {
-				Rho_last = tmpRho;
-				TanLambda_last = heltrk.GetTanLambda();
-				Phi0_last = heltrk.GetPhi0(); 
+	Rho_last = tmpRho;
+	TanLambda_last = heltrk.GetTanLambda();
+	Phi0_last = heltrk.GetPhi0(); 
       }
     }
     if (lyr == nlayers - 1) break;
@@ -243,12 +244,12 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
 //without energy loss or MSC, from (0,0,z0=0)
 //One could use random z0 too 
 int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, double costh_max,
-  double z_min, double z_max, bool bIncludeCurveBackHits)
+				double z_min, double z_max, bool bIncludeCurveBackHits)
 {
   const double kPi = atan(1.)*4;
   double bfield_tesla = dynamic_cast<const EXKalDetector &>
     (dynamic_cast<EXMeasLayer *>
-    (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield()/10;
+     (fCradlePtr->At(0))->GetParent(kFALSE)).GetBfield()/10;
 
   // r_m = pt_gev/(0.3*Bz_tesla);
   double pt = gRandom->Uniform(pt_min, pt_max);  //in gev
@@ -309,18 +310,18 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
   if(bIncludeCurveBackHits) {
     if(kRTPC_R_GEM1>2.*r) {
       for(int i=0;i<kNDetLayer;i++) {
-				if (kDetLayerRList[i]>2.*r) continue;   //no hit
-				double dfi = 2*kPi-asin(kDetLayerRList[i]/2./r)*2;
-				if(pt>0) dfi*=-1; //from definition
-				phi_cir = fi0+dfi;
+	if (kDetLayerRList[i]>2.*r) continue;   //no hit
+	double dfi = 2*kPi-asin(kDetLayerRList[i]/2./r)*2;
+	if(pt>0) dfi*=-1; //from definition
+	phi_cir = fi0+dfi;
 
-				StepX[StepNum]=-rho*cos(phi_cir)+a;	    //in cm
-				StepY[StepNum]=-rho*sin(phi_cir)+b;	    //in cm
-				StepZ[StepNum]=z0-rho*tanlambda*dfi;	  //in cm
-				StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
-				StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
-				StepNum++;
-				if(StepNum>=MaxHit) break;
+	StepX[StepNum]=-rho*cos(phi_cir)+a;	    //in cm
+	StepY[StepNum]=-rho*sin(phi_cir)+b;	    //in cm
+	StepZ[StepNum]=z0-rho*tanlambda*dfi;	  //in cm
+	StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
+	StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
+	StepNum++;
+	if(StepNum>=MaxHit) break;
       }
     }
   }
@@ -337,16 +338,16 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
   //just for debug
   if(_ExEventGenDebug_>=1) {
     cout<<"\nCircle Event:  pt="<<pt<<"  Rho="<<rho<<", A="<<a<<", B="<<b
-      <<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
+	<<", phi_c="<<phi_c*57.3<<"deg, fi0="<<fi0*57.3<<"deg "<<endl;
     cout<<"  P0_p="<<P0<<", Phi0_p="<<Phi0*57.3
-      <<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<Z0<<endl;  
+	<<"deg, Theta0_p="<<Theta0*57.3<<"deg  Z0="<<Z0<<endl;  
   }
   if(_ExEventGenDebug_>=4) {
     for(int i=0;i<StepNum;i++) {
       cout<<"Hit "<<setw(2)<<i<<"("<<setw(8)<<StepX[i]<<", "
-	<<setw(8)<<StepY[i]<<", "
-	<<setw(8)<<StepZ[i]<<") ==>  S="<<setw(8)<<StepS[i]
-      <<" mm  Phi="<<setw(8)<<StepPhi[i]*57.3<<" deg"<<endl;
+	  <<setw(8)<<StepY[i]<<", "
+	  <<setw(8)<<StepZ[i]<<") ==>  S="<<setw(8)<<StepS[i]
+	  <<" mm  Phi="<<setw(8)<<StepPhi[i]*57.3<<" deg"<<endl;
     }
   }
 #endif
@@ -358,7 +359,7 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
 
 //x y z in cm and in increasing time order 
 void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
- bool smearing, bool bIncludeCurveBackHits)
+				  bool smearing, bool bIncludeCurveBackHits)
 {
   // ------------------------------------------------------
   //  use given track to make hits
@@ -366,20 +367,20 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
   int npt=0;
   
   if(!bIncludeCurveBackHits) { 
-		//Do this block if you only keep forward going points
-		double tmpR=0.0,tmpRmax=0.0;
-		for (int jj=0; jj<_npt_; jj++) { 
-			tmpR = sqrt(pow(x[jj],2)+pow(y[jj],2));
-			//use 1 mm margin to determine if the track curve back or not
-			if (tmpR+0.1 < tmpRmax) break; 
-			if (tmpR>tmpRmax) tmpRmax=tmpR;
-			npt++;
-		}
+    //Do this block if you only keep forward going points
+    double tmpR=0.0,tmpRmax=0.0;
+    for (int jj=0; jj<_npt_; jj++) { 
+      tmpR = sqrt(pow(x[jj],2)+pow(y[jj],2));
+      //use 1 mm margin to determine if the track curve back or not
+      if (tmpR+0.1 < tmpRmax) break; 
+      if (tmpR>tmpRmax) tmpRmax=tmpR;
+      npt++;
+    }
   } else {
-		npt = _npt_;
-	}
+    npt = _npt_;
+  }
 	
-	StepNum=0;
+  StepNum=0;
   TVector3 xx; 
   for (int i = 0; i < npt; i++) { 
     ///////////////////////////////////////////////////
@@ -416,23 +417,23 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
     if (ml.IsActive()) {
       ml.ProcessHit(xx, *fHitBufPtr, smearing); // create hit point     
 
-			//Jixie: need to take information out from here and store into the root file
+      //Jixie: need to take information out from here and store into the root file
       StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
       StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
       StepNum++;
-			if(StepNum>=MaxHit) break;
+      if(StepNum>=MaxHit) break;
 
 #ifdef _ExEventGenDebug_
       if( _ExEventGenDebug_ >= 4) {
-				EXHit *hitp = dynamic_cast<EXHit *> (fHitBufPtr->Last());       
-				TVector3 xv=ml.HitToXv((TVTrackHit&)(*hitp));   
-				TVector3 xraw=hitp->GetRawXv();
-				cerr << "MeasLayer "<<setw(2)<< ml.GetIndex()
-					<<": R="<<setw(6)<< ml.GetR()<<": ";
-				cerr << "Xv  =("<<setw(8)<< xv.X()<<",  "
-					<<setw(8)<<xv.Y()<<", "<<setw(8)<<xv.Z()<<"); ";
-				cerr << "Xraw=("<<setw(8)<< xraw.X()<<",  "
-					<<setw(8)<<xraw.Y()<<", "<<setw(8)<<xraw.Z()<<"): \n";
+	EXHit *hitp = dynamic_cast<EXHit *> (fHitBufPtr->Last());       
+	TVector3 xv=ml.HitToXv((TVTrackHit&)(*hitp));   
+	TVector3 xraw=hitp->GetRawXv();
+	cerr << "MeasLayer "<<setw(2)<< ml.GetIndex()
+	     <<": R="<<setw(6)<< ml.GetR()<<": ";
+	cerr << "Xv  =("<<setw(8)<< xv.X()<<",  "
+	     <<setw(8)<<xv.Y()<<", "<<setw(8)<<xv.Z()<<"); ";
+	cerr << "Xraw=("<<setw(8)<< xraw.X()<<",  "
+	     <<setw(8)<<xraw.Y()<<", "<<setw(8)<<xraw.Z()<<"): \n";
       }
 #endif
     }
@@ -442,7 +443,7 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
 
 //x y z in mm and in increasing time order 
 void EXEventGen::MakeHitsFromTraj_mm(double *x_mm, double *y_mm, double *z_mm, 
-  int npt, bool smearing, bool bIncludeCurveBackHits)
+				     int npt, bool smearing, bool bIncludeCurveBackHits)
 {
   double *x=new double[npt]; 
   double *y=new double[npt]; 
