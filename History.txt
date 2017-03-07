@@ -1,13 +1,67 @@
 KalmanFilter application for RTPC12, By Jixie Zhang
 TODO:
-1) Change Bz field of each measure layer according to field map
+1) Change Bz field of each measurement layer according to field map
 2) Add Bx By into the framework
 3) Try to apply Kalman Filter twice, the first iteration is fitting from
-inside to outside, to achieve the state vector for the site at the end of the track.
-Then use this state vector as initial value for the 2nd iteration fit, which is fitting
-from outside to inside. 
+outside to inside then smooth out, to achieve the state vector for the site at the 
+end of the track. Then use this state vector as the initial value for the 2nd 
+iteration, which is fitting from outside to inside. ----done by jixie, March 26 2016
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
+
+2017/03/07
+--------------------------tag v0.97----------------------------------------  
+1. Change Main.cxx, use GNC getopt to take care of input arguments, still 
+support old useage. Here is the new help menu.
+
+/------------------------------usage start----------------------------------------\
+exe [-h] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \
+    [-c <ntracks=1> [space_cm=1.1] [min_ang_deg=23.3] [max_ang_deg=30.0] [ang_sep_cm=0.4>]] \
+    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \
+    [-t <costh_min=-0.00001> <costh_max=0.00001>] \
+    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \
+    [-i <infile="infile.root">]
+
+-------------------The following old usage is also supported----------------------
+exe <job=0|1|2|3|4|5> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \
+   [costh_min=-0.00001] [costh_max=0.00001] [error=0.05] [z_min=0.0] [z_max=0.0] \
+   [infile=infile.root]
+
+          job: 0: run KalmanFilter with generated helix;
+               1: run KalmanFilter with geant4 track;
+               2: run KalmanFilter with generated circle;
+               3: run ChainFinder only geant4 tracks, need to couple with -c option;
+               4: run ChainFinder + Global Helix Fitter with geant4 tracks
+               5: run ChainFinder + KalmanFilter with geant4 tracks
+          nevents: number of events to generate
+          pt_min_gev and pt_max_gev: specifiy the range of pt in Gev
+          Note that if pt is negative then anti-clockwise track will be generated
+          costh_min and costh_max: specifiy the range of costh, only for job==0
+          error is used to initialize the comvariant matrix before fitting.
+
+example1: exe 0 1000 -0.05 -0.07 -0.8 0.8 0.05
+example1: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.1 23.3 30.0 0.4 -z -15 15
+\------------------------------usage  end------------------------------------------/
+
+2. In order to be ccompiled by windows, I add getopt.h into "vc10_proj/." 
+   Note that this file can not be compiled by linux, therefore I do not put it 
+   into "include/." .  
+
+3. Solved several bugs in ChainFinder. Added a few more member subroutines.
+   Also added debug information.
+   
+4. ChainFinder, add "fChainNum_Stored" to indicate how many good tracks (>=5 hits) has 
+   been found. "fChainNum" will also include bad tracks.
+
+5. Indented several files using emacs. 
+    
+--------------------------tag v0.96---------------------------------------- 
+2017/03/03
+Added Chain-Finder. Do not debug yet. Push to github so Carlos can debug it. 
+
+--------------------------tag v0.95---------------------------------------- 
+2017/02/28
+This is the 2nd released version which KalRTPC works as a library.      
 
 2017/02/22
 1. Reorganized the whole project by the following: 
@@ -32,7 +86,9 @@ E) made EXEventGen to be a clean module to generate track and fill original hit 
    To use the chain-finder, user can read multiple entries from the input root file then
    fill all hits into the hit pool. chain-finder will use this pool to do its job. 
    
-      
+--------------------------tag v0.9---------------------------------------- 
+This is the first released version.  This version is good to test Kalman Filter.
+     
 2016/10/11
 1. After a lot of careful comparison I found that: 
 	A) for non-curve-back tracks: global helix fitter is good enough,

@@ -11,6 +11,15 @@
 extern const double kRTPC_R_GEM1 = 7.0;
 extern const double kRTPC_R_Cathode = 3.0;
 
+///////////////////////////////////////////////////////////////////////
+#define _ChainFinderDebug_ 4
+
+//#ifdef _ChainFinderDebug_
+//#include "GlobalDebuger.hh"
+//#endif
+
+///////////////////////////////////////////////////////////////////////
+
 /*
 //this is an example how to use this class 
 void EXample()
@@ -35,11 +44,16 @@ static const double rad2deg = 180./(4.*atan(1.));
 
 ChainFinder::ChainFinder() 
 {
+#if defined _ChainFinderDebug_ && defined _GLOBALDEBUGER_H_
+  Global_Debug_Level=_ChainFinderDebug_;
+#endif
+
   fHitNum = 0;
   fChainNum = 0;
+  fChainNum_Stored = 0;
   for(int i=0;i<MAX_CHAINS_PER_EVENT;i++) {
     fHitNumInAChain[i] = 0;  
-    for(int j=0;j<MAX_HITS_PER_CHAIN;j++) fHitIDInAChain[i][j]=0;
+    for(int j=0;j<MAX_HITS_PER_CHAIN;j++) fHitIDInAChain[i][j]=-1;
   }
   //default values for these parameters 
   Max_Link_Sep = 1.1;             //cm
@@ -57,10 +71,11 @@ void ChainFinder::Reset()
 {
   fHitNum = 0;
   for(int i=0;i<fChainNum;i++) {
-    for(int j=0;j<fHitNumInAChain[i];j++) fHitIDInAChain[i][j]=0;
+    for(int j=0;j<fHitNumInAChain[i];j++) fHitIDInAChain[i][j]=-1;
     fHitNumInAChain[i] = 0;  
   }
   fChainNum = 0;
+  fChainNum_Stored = 0;
 }
 
 //provide x,x,z in mm
@@ -92,7 +107,7 @@ void ChainFinder::PrepareHitPool(int *id, int *tdc, int *adc, double *x, double 
   for(int i=0;i<n;i++) {
     if(fHitNum < MAX_HITS_PER_EVENT) {
       pV3.SetXYZ(x[i],y[i],z[i]);
-      if (pV3.Perp()<kRTPC_R_GEM1+1.0 || pV3.Perp()>kRTPC_R_Cathode-1.0) continue;  
+      if (pV3.Perp()>kRTPC_R_GEM1+1.0 || pV3.Perp()<kRTPC_R_Cathode-1.0) continue;  
       
       fHitPool[fHitNum].ID=id[i];
       fHitPool[fHitNum].TDC=tdc[i];
@@ -103,7 +118,7 @@ void ChainFinder::PrepareHitPool(int *id, int *tdc, int *adc, double *x, double 
       fHitPool[fHitNum].Status=HUNTCHD;
       //The following is added by Jixie for sorting
       fHitPool[fHitNum].S=pV3.Perp();
-      fHitPool[fHitNum].Z=pV3.Phi();
+      fHitPool[fHitNum].Phi=pV3.Phi();
       if(throwntid) fHitPool[fHitNum].ThrownTID=throwntid[i];
       else fHitPool[fHitNum].ThrownTID=-1;
       fHitPool[fHitNum].ChainInfo=-1;
@@ -114,7 +129,7 @@ void ChainFinder::PrepareHitPool(int *id, int *tdc, int *adc, double *x, double 
   }
 }
 
-void ChainFinder::InsertAHit(int hitid, int id, int tdc, int adc, double x, double y, double z,
+void ChainFinder::InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z,
   int ThrownTID, int ChainInfo)
 {
   for(int i=fHitNum;i>hitid;i--) {
@@ -139,15 +154,18 @@ void ChainFinder::InsertAHit(int hitid, int id, int tdc, int adc, double x, doub
   fHitPool[hitid].Z=z;
   fHitPool[hitid].Status=HUNTCHD;
   fHitPool[hitid].S=sqrt(x*x+y*y);
-  fHitPool[hitid].Z=atan2(y,x);
+  fHitPool[hitid].Phi=atan2(y,x);
   fHitPool[hitid].ThrownTID=ThrownTID;
   fHitPool[hitid].ChainInfo=ChainInfo;
   fHitNum += 1;
 }
 
 
-void ChainFinder::RemoveAHit(int hitid)
+int  ChainFinder::RemoveAHitFromPool(int hitid)
 {
+  int found = (hitid>=fHitNum) ? 0 : 1;
+  if(!found) return 0;
+
   for(int i=hitid;i<fHitNum;i++) {
       fHitPool[i].X=fHitPool[i+1].X;
       fHitPool[i].Y=fHitPool[i+1].Y;
@@ -158,13 +176,14 @@ void ChainFinder::RemoveAHit(int hitid)
       fHitPool[i].ThrownTID=fHitPool[i+1].ThrownTID;
   }
   fHitNum -= 1;
+  return found;
 }
 
 //This is for changing status for hits before search
 //For example, if we want to remove bad hits or 
-void ChainFinder::RemoveBadHits()
+int  ChainFinder::RemoveBadHitsFromPool()
 {
-  //
+  return 0;
 }
 
 void ChainFinder::SetParameters(double space, double min_ang, double max_ang, double ang_sep)
@@ -174,20 +193,101 @@ void ChainFinder::SetParameters(double space, double min_ang, double max_ang, do
   Min_Ang      = min_ang;
   Max_Ang      = max_ang;
   Ang_Sep      = ang_sep;
+
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=1) {
+  cout<<"\nChainFinder Parameters: space="<<space<<" cm, min_ang="<<min_ang*rad2deg
+      <<" deg,  max_ang="<<max_ang*rad2deg<<" deg; ang_sep="<<ang_sep<<" cm\n"<<endl;
+  }
+#endif
 }
   
-void ChainFinder::AddHitToChain(int hitid)
+void ChainFinder::AddAHitToChain(int chainid, int hitid)
 {
-  if (fHitNumInAChain[fChainNum] >= MAX_HITS_PER_CHAIN) {        
+  if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {        
     printf("Too many hits for the chain list. Skip...\n"); 
   }
     
-  //THE HIT INDEX WHICH ACOMPLISH THE CONDITION, IS STORED-->
-  fHitIDInAChain[fChainNum][fHitNumInAChain[fChainNum]] = hitid;
+  //THE HIT INDEX WHICH ACOMPLISH THE CONDITION, IS STORED HERE-->
+  fHitIDInAChain[chainid][fHitNumInAChain[chainid]] = hitid;
   
   /* mark it as used */
   fHitPool[hitid].Status |= HISUSED; //this kind of assignment is for 'historical' reasons
-  fHitNumInAChain[fChainNum]++;      //ADD HIT TO THE CHAIN, INCREASE INDEX
+  fHitNumInAChain[chainid]++;      //ADD HIT TO THE CHAIN, INCREASE INDEX
+        
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=4) {
+    cout<<"  Chain "<<chainid<<": Hit "<<hitid<<" is added\n";
+  }
+#endif 
+}
+
+//operate to fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+//will not touch fChainBuf yet
+void ChainFinder::InsertAHitToChain(int chainid, int hitid, int position)
+{
+  int n = fHitNumInAChain[chainid];
+  if(position>n) position=n;
+
+  for(int i=n;i>position;i--) { 
+    fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i-1];
+  }
+  fHitIDInAChain[chainid][position] = hitid;
+  fHitNumInAChain[chainid] += 1;
+}
+
+//remove the first hit with id==hitid from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+//will not touch fChainBuf yet
+//return number of hit that removed
+int  ChainFinder::RemoveAHitFromChain(int chainid, int hitid)
+{
+  //get the position
+  int found = 0;
+  int idx=0;  //store the found position
+
+  int n = fHitNumInAChain[chainid];
+  for(int i=0;i<n;i++) { 
+    if(fHitIDInAChain[chainid][i] == hitid) {
+       found = 1;
+       idx = i;
+       break;
+    }
+  }
+  if(!found) return 0;
+  //shift all hits in the back by 1 position
+  for(int i=idx;i<n-1;i++) {
+      fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
+  }
+  //shrink the chain buffer
+  fHitIDInAChain[chainid][n-1] = -1;
+  fHitNumInAChain[chainid] -= 1;
+  return 1;
+}
+
+//remove the hit at given position  from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+//will not touch fChainBuf yet
+//return number of hit that removed
+int  ChainFinder::RemoveAHitFromChain_At(int chainid, int position)
+{
+  //check the position  
+  int n = fHitNumInAChain[chainid];
+  if (position>=n) return 0;
+
+  //shift all hits in the back by 1 position
+  for(int i=position;i<n-1;i++) {
+      fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
+  }
+  //shrink the chain buffer
+  fHitIDInAChain[chainid][n-1] = -1;
+  fHitNumInAChain[chainid] -= 1;
+  return 1;
+}
+
+
+//remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+void ChainFinder::RemoveRedundantFromChain(int chainid)
+{
+  
   
 }
 
@@ -230,34 +330,47 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     pV3Diff = pV3 - pV3_seed;
     
     //check the distance
-    double separation = pV3Diff.Mag();
+    double separation = pV3Diff.Mag(), acceptance=0.0;
     if( separation > Max_Link_Sep ) continue; 
     
     //for the first seed of a chain, do not require angle in range
     //because this angle has a very large range
     //Fix me:  try to find a good cut for this
-    if(seed == seed_pre) {			
-      AddHitToChain(i);
+    if(seed == seed_pre) {
+#ifdef _ChainFinderDebug_
+      if(_ChainFinderDebug_>=5) {
+	printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg\n",
+	  seed, seed_pre, i, separation, acceptance*rad2deg);
+      }
+#endif
+      AddAHitToChain(fChainNum,i);
       found++;
       continue;
     }
     
     
     //check the angle between pV3_diff and pV3_diff_pre
-    double acceptance = pV3Diff.Angle(pV3Diff_pre);
+    acceptance = pV3Diff.Angle(pV3Diff_pre);
     
     //not very sure we need this line    
-    if(acceptance>90.) acceptance = 180. - acceptance;
+    if(acceptance>90./rad2deg) acceptance = 180./rad2deg - acceptance;
     
+#ifdef _ChainFinderDebug_
+    if(_ChainFinderDebug_>=5) {
+      printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg\n",
+	seed, seed_pre, i, separation, acceptance*rad2deg);
+    }
+#endif
+
     //in order to run fast, we should separate this condition judgement
     //we should always put large probability terms in the front    
     if (separation <= Ang_Sep && acceptance < Max_Ang) {
-      AddHitToChain(i);
+      AddAHitToChain(fChainNum,i);
       found++;
       continue;
     }
     if (separation >  Ang_Sep && acceptance < Min_Ang) {					
-      AddHitToChain(i);
+      AddAHitToChain(fChainNum,i);
       found++;
       continue;
     } 
@@ -275,21 +388,27 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
   
   //loop over the seed pool, currently every point could be the seed
   int seed = 0, seed_pre = 0;
-  for (int i=0; i < fHitNum; i++) {  //anchor_hit
+  for (int anchor_hit=0; anchor_hit < fHitNum; anchor_hit++) {  //anchor_hit
     //do nothing if this hit has been marked as used or unavailable
-    if ( fHitPool[i].Status & HITUNAV )  continue;
+    if ( fHitPool[anchor_hit].Status & HITUNAV )  continue;
       
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    cout<<"\n*****anchor_hit = "<<anchor_hit<<" *****"<<endl;
+  }
+#endif
+
     //add the initial seed into this chain  
     if(fHitNumInAChain[fChainNum] == 0) {  
-      seed = i;
-      AddHitToChain(seed);
+      seed = anchor_hit;
+      AddAHitToChain(fChainNum,seed);
       //fHitNumInAChain[fChainNum] will be added by 1 inside 
     }
         
     //SEARCH ALGORITHM----->
     //search a chain: looping over all founded seeds
     //Note that fHitNumInAChain[fChainNum] will self increasing if hits added into the chain
-	  for (int seed_idx=0; seed_idx<fHitNumInAChain[fChainNum]; seed_idx++) {
+    for (int seed_idx=0; seed_idx<fHitNumInAChain[fChainNum]; seed_idx++) {
     
       //Fix me: currently the chain result are not sorted yet
       //need to do this before passing to Kalman Filter
@@ -301,52 +420,122 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
       //the last hit of current chain yet, release this hit back to the pool
       if(found) seed_pre = seed;
       else {
-        if(seed_idx+1<fHitNumInAChain[fChainNum]) fHitPool[seed].Status &= ~HISUSED;
+	//Remove this seed from seed_list. This seed might be added back by other seeds, 
+	//which in consequence A) mess up the order b)can have multiple redundate copies 
+	//Therefore we have to remove redumdant seeds at the end of the search
+	//after that, do not forget to sort the chain
+        if(seed_idx+1<fHitNumInAChain[fChainNum]) {
+          //fHitPool[seed].Status &= ~HISUSED;
+          //RemoveAHitFromChain_At(fChainNum,seed_idx);
+          //seed_idx--;
+#ifdef _ChainFinderDebug_
+	      if(_ChainFinderDebug_>=4) {
+	       // cout<<"    seed="<<seed<<" seed_pre="<<seed_pre<<", hit "
+	       //     <<seed<<" is released back to the pool\n";
+	      }
+#endif
+        }
       }
     }
     
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    PrintAChain(fChainNum);
+  }
+#endif
+
+    //now, remove redundant seeds from chain buffer
+    RemoveRedundantFromChain(fChainNum);
+
+    //now, sort the chain
+    SortAChain(fChainNum);
+    
     //judge if this chain is valid or not, do not store it if less than 5 hits
     if( fHitNumInAChain[fChainNum] >= Min_HITS_PER_CHAIN) {
-        StoreAChain();
+        StoreAChain(fChainNum);
+      fChainNum++;
     } else {
-      //release this initial seed back to the pool
-      //I think we should not do it, or we should release all hits inside this invalid chain
-      //need to debug this
-      //fHitPool[seed].Status &= ~HISUSED;
+      //If you do not want to save this segment, clear the buffer for this chain
+      //not sure if we need to release hits back to the pool!
+      bool keep_all_segment = true;
+      if (keep_all_segment) {
+	fChainNum++;
+      }
+      else {
+	for(int jj=0;jj<fHitNumInAChain[fChainNum];jj++) {
+	  fHitIDInAChain[fChainNum][jj]=-1;
+	}
+	fHitNumInAChain[fChainNum]=0;
+      }
     }
   
-  }// for (int i = 0; i < nhits; i++) 
+  }// for (int anchor_hit = 0 ......
 
 }
   
+void ChainFinder::PrintAChain(int chainid)
+{
+  int n = fHitNumInAChain[chainid];
+  printf("\nChain #%2d: %4d hits: \n", chainid, n);
 
-void ChainFinder::SortAChain()
+  printf("%-8s: ","hit-id");
+  for (int jj=0; jj<n; jj++) {
+    printf("%7d", fHitIDInAChain[chainid][jj]);
+    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+  }
+  printf("\n");
+  printf("%-8s: ","s(cm)");
+  for (int jj=0; jj<n; jj++) {
+    printf("%7.2f", fHitPool[fHitIDInAChain[chainid][jj]].S);
+    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+  }
+  printf("\n");
+  printf("%-8s: ","phi(deg)");
+  for (int jj=0; jj<n; jj++) {
+    printf("%7.1f", fHitPool[fHitIDInAChain[chainid][jj]].Phi*rad2deg);
+    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+  }
+  printf("\n\n");
+}
+
+
+void ChainFinder::SortAChain(int chainid)
 {
   ;
 }
 
-void ChainFinder::StoreAChain()
+void ChainFinder::StoreAChain(int chainid)
 {
-  printf("\t Store chain #%d: %d hits \n", fChainNum,fHitNumInAChain[fChainNum]);
-  
-  for (int jj=0; jj<fHitNumInAChain[fChainNum]; jj++)
-    {
-      printf(" %d", fHitIDInAChain[fChainNum][jj]);
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=1) {
+    printf("  Store chain #%d: %d hits \n", chainid,fHitNumInAChain[chainid]);
+  }
+#endif
+  for (int jj=0; jj<fHitNumInAChain[chainid]; jj++){
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=1) {
+      printf(" %d", fHitIDInAChain[chainid][jj]);
+  }
+#endif
       //Fill the pointer of found chain
-      int hitid=fHitIDInAChain[fChainNum][jj];
-      fChainBuf[fChainNum].Hits[jj] = &(fHitPool[hitid]);
+      int hitid=fHitIDInAChain[chainid][jj];
+      fChainBuf[chainid].Hits[jj] = &(fHitPool[hitid]);
      
       //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
       //ChainInfo  = cccjjj,  where ccc is ChainIndex and jj is HitIndex 
-      fHitPool[hitid].ChainInfo = fChainNum*1.0E3 + jj;
+      fHitPool[hitid].ChainInfo = chainid*1.0E3 + jj;
     }
 
-  fChainBuf[fChainNum].HitNum = fHitNumInAChain[fChainNum]; //number of hits in the chain
-  fChainBuf[fChainNum].ID = fChainNum;  //this chain index 
-  
-  printf("\n\n");
+  fChainBuf[chainid].HitNum = fHitNumInAChain[chainid]; //number of hits in the chain
+  fChainBuf[chainid].ID = chainid;  //this chain index 
+  fChainNum_Stored++;
 
-  fChainNum++; //NEW CHAIN, INCREASE THE INDEX
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=1) {
+  printf("\n\n");
+  }
+#endif
+
 }
 
 

@@ -17,7 +17,7 @@ using namespace std;
 ClassImp(EXKalManager)
 
 ///////////////////////////////////////////////////////////////////////
-#define _EXKalManDebug_ 2
+#define _EXKalManDebug_ 4
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -320,7 +320,7 @@ bool EXKalManager::FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHit
       cout<<"\nNtuple Event "<<setw(5)<<fNtReader->Index<<":  HitNum_m="<<setw(2)<<fNtReader->HitNum_m
 	  <<",  Smax="<<setw(8)<<fNtReader->Smax<<",  Smin="<<setw(8)<<fNtReader->Smin<<endl
 	  <<"  P0="<<fNtReader->P0_p<<",  Pt="<<fNtReader->P0_p*sin(fNtReader->Theta0_p)<<", Theta0="
-	  <<fNtReader->Theta0_p*57.3<<", Phi0="<<fNtReader->Phi0_p*57.3<<"  Z0="<<fNtReader->Z0/10.<<"cm"<<endl;
+	  <<fNtReader->Theta0_p*57.3<<", Phi0="<<fNtReader->Phi0_p*57.3<<"  Z0="<<fNtReader->Z0/10.<<"cm\n"<<endl;
     }
     if(_EXKalManDebug_>=4) {
       for(int i=0;i<fNtReader->HitNum_m;i++) {
@@ -462,15 +462,15 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
     fChainFinder->Reset();
     bool ret=FillChainFinderHitPool(ntracks,bIncludeCurveBackHits);    
     if(!ret) continue;
-    fChainFinder->RemoveBadHits();
+    fChainFinder->RemoveBadHitsFromPool();
     if(fChainFinder->fHitNum < MinHit) continue;
     fChainFinder->SearchChains();
 
     //This block can be moved into Tree_Fill()
     //store for tree
     CF_HitNum = fChainFinder->fHitNum;
-    ntrack = fChainFinder->fChainNum;
-    CF_ChainNum = fChainFinder->fChainNum;
+    ntrack = fChainFinder->fChainNum_Stored;
+    CF_ChainNum = fChainFinder->fChainNum_Stored;
     for(int i=0;i<CF_HitNum;i++) {
       CF_X[i]=fChainFinder->fHitPool[i].X;
       CF_Y[i]=fChainFinder->fHitPool[i].Y;
@@ -484,12 +484,11 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
     //judge if to do fitting to the found chains
     if(job==3) {
       Tree_Fill(*(fKalRTPC->fKalTrack));
-      continue;
     } else {
       // ===================================================================
       //now call GHF or KF to do fitting
       int CF_npt = 0;  //number of hit in this chain
-      for(int i=0;i<fChainFinder->fChainNum;i++) {
+      for(int i=0;i<fChainFinder->fChainNum_Stored;i++) {
         //extract the hits in the found chain
         CF_npt = fChainFinder->fChainBuf[i].HitNum;
         for(int j=0;j<CF_npt;j++) {
@@ -529,9 +528,13 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
         //  Reset the buffer
         fKalRTPC->Reset();
         Tree_Reset();
-      }
-    }
-  }
+      } //end of for(int i=0;i<fChainFinder->fChainNum;i++)
+    } //end of if(job==3)
+    
+#ifdef _EXKalManDebug_
+    Stop4Debug(_index_);
+#endif
+  } //end of envet loop
 
   //ROOT Tree will be written and closed inside EndOfRun();
   EndOfRun();

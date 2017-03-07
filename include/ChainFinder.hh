@@ -66,17 +66,45 @@ public:
   //provide x,x,z in cm
   void PrepareHitPool(int *id, int *tdc, int *adc, double *x, double *y,
                       double *z, int n, int *throwntid=0, int append=0);
-  void AddHitToChain(int hitid);
+  
   int  SearchHitsForASeed(int seed, int seed_pre=0); 
   void SearchChains();  
-  void StoreAChain();
+  void SortAChain(int chainid);
+  void StoreAChain(int chainid);
   void SetHitStatus(HitStruct *hit);
   
-  void InsertAHit(int hitid, int id, int tdc, int adc, double x, double y, double z, int ThrownTID=-1, int ChainInfo=-1);
-  void RemoveAHit(int hitid);
-  void RemoveBadHits();
+  void InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z, int ThrownTID=-1, int ChainInfo=-1);
+  //return number of hit that removed
+  int  RemoveAHitFromPool(int hitid);
+  //return number of hit that removed
+  int  RemoveBadHitsFromPool();
+  
+  
+  //add a hit to end of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+  //will not touch fChainBuf yet
+  void AddAHitToChain(int chainid, int hitid);
+
+  //incert a hit to given position of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+  //will not touch fChainBuf yet
+  void InsertAHitToChain(int chainid, int hitid, int position);
+  
+  //remove the first hit with id==hitid from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+  //will not touch fChainBuf yet
+  //return number of hit that removed
+  int  RemoveAHitFromChain(int chainid, int hitid);
+  
+  //remove the hit at given position  from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+  //will not touch fChainBuf yet
+  //return number of hit that removed
+  int  RemoveAHitFromChain_At(int chainid, int position);
+  
+  //remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
+  void RemoveRedundantFromChain(int chainid);
 
   void SetParameters(double space, double min_ang, double max_ang, double ang_sep);
+  
+  //print the information of the given chain
+  void PrintAChain(int chainid);
 
   //sort the chain by phi angle, then check s
   void SortAChain();
@@ -86,7 +114,7 @@ public:
   HitStruct fHitPool[MAX_HITS_PER_EVENT]; //Keep all hits in one event
 
 
-  int         fChainNum;
+  int         fChainNum_Stored;
   //this is the buffer to store the chains, only keep pointers
   ChainStruct fChainBuf[MAX_CHAINS_PER_EVENT];   //Keep all chains
 
@@ -98,6 +126,7 @@ private:
   //this is another buffer to store the chains, only keep HitIndex
   //It is not as convenience as fChainBuf because user have to put these id
   //back to fHitPool to extract xyz info
+  int    fChainNum;
   int    fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   int    fHitNumInAChain[MAX_CHAINS_PER_EVENT];  //keep number of hits on each chain
   
