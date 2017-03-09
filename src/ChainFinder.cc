@@ -6,33 +6,35 @@
 #include <stdio.h>
 #include "TVector3.h"
 
+#include <algorithm>
 #include "ChainFinder.hh"
 
 extern const double kRTPC_R_GEM1 = 7.0;
 extern const double kRTPC_R_Cathode = 3.0;
 
 ///////////////////////////////////////////////////////////////////////
-#define _ChainFinderDebug_ 4
+#define _ChainFinderDebug_ 5
 
-//#ifdef _ChainFinderDebug_
+#ifdef _ChainFinderDebug_
 //#include "GlobalDebuger.hh"
-//#endif
+#include "TBenchmark.h"
+#endif
 
 ///////////////////////////////////////////////////////////////////////
 
 /*
 //this is an example how to use this class 
-void EXample()
+void Example()
 {
   ChainFinder pTF;  
   pTF->SetParameters(v1,v2,v3,v4);
   for(int ii;ii<nevents;ii++) {
     pTF.Reset();
     pTF.PrepareHitPool(vvv);
-    pTF.RemoveBadHits();
+    pTF.RemoveBadHitsFromPool();
     pTF.SearchChains();
     //call KF
-    for(int i=0;i<fChainNum;i++) DoKalmanFilter();  
+    for(int i=0;i<fChainNum_Stored;i++) DoKalmanFilter();  
   }
 }
 */
@@ -175,14 +177,41 @@ int  ChainFinder::RemoveAHitFromPool(int hitid)
       fHitPool[i].Phi=fHitPool[i+1].Phi;
       fHitPool[i].ThrownTID=fHitPool[i+1].ThrownTID;
   }
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=2) {
+    printf("\t*****Hit %2d is removed from pool!*****\n",hitid);
+  }
+#endif
   fHitNum -= 1;
   return found;
 }
 
 //This is for changing status for hits before search
-//For example, if we want to remove bad hits or 
+//For example, if we want to remove bad hits or redundate hit
+//if we want fast speed, we should remove these hits
 int  ChainFinder::RemoveBadHitsFromPool()
 {
+  TVector3 pV3(0,0,0);
+  TVector3 pV3_pre(0,0,0);
+    // removes the same hits (perhaps redundant)
+  for(int i = 0; i<fHitNum; i++) {
+    if(fHitPool[i].Status & HITUNAV) continue;
+    pV3.SetXYZ(fHitPool[i].X, fHitPool[i].Y, fHitPool[i].Z);
+    
+    if (pV3.Perp()>kRTPC_R_GEM1+1.0 || pV3.Perp()<kRTPC_R_Cathode-1.0) {
+      fHitPool[i].Status |= HISUSED;
+      //fHitNum -= RemoveAHitFromPool(i);
+      continue;  
+    }
+    
+    // removes the same hits (perhaps redundant)
+    if(i>0) pV3_pre.SetXYZ(fHitPool[i-1].X, fHitPool[i-1].Y, fHitPool[i-1].Z);
+    if ( (pV3-pV3_pre).Mag() <= 1.0E-5 ) {
+      fHitPool[i].Status |= HISUSED;
+      //fHitNum -= RemoveAHitFromPool(i);
+      continue;
+    } 
+  }
   return 0;
 }
 
@@ -287,8 +316,7 @@ int  ChainFinder::RemoveAHitFromChain_At(int chainid, int position)
 //remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
 void ChainFinder::RemoveRedundantFromChain(int chainid)
 {
-  
-  
+  ;
 }
 
 //return how many hit has been found
@@ -299,7 +327,6 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
   //declare the 3 vector here to avoid construction and deconstruction frequently
   TVector3 pV3_seed_pre(fHitPool[seed_pre].X, fHitPool[seed_pre].Y, fHitPool[seed_pre].Z);
   TVector3 pV3_seed(fHitPool[seed].X, fHitPool[seed].Y, fHitPool[seed].Z);
-  TVector3 pV3_pre(0,0,0);
   TVector3 pV3(0,0,0);
   TVector3 pV3Diff, pV3Diff_pre;
      
@@ -311,56 +338,32 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     if(seed == i) continue;
     
     pV3.SetXYZ(fHitPool[i].X, fHitPool[i].Y, fHitPool[i].Z);
-    
-    //By Jixie: this block has been taken care when filling the hit pool
-    //for some reason, if the hit is invalid, it could be set to (0,0,0) or (9999.,9999.;9999.)
-    //It will be better not to include these hit when filling the pool
-    //This hard coded part should only be used by RTPC12
-    //if (pV3.Perp()<kRTPC_R_GEM1+1.0 || pV3.Perp()>kRTPC_R_Cathode-1.0) continue;  
-  
-    if(i>0) pV3_pre.SetXYZ(fHitPool[i-1].X, fHitPool[i-1].Y, fHitPool[i-1].Z);
-    
-    // removes the same hits (perhaps redundant)
-    //if (!(pV3-pV3_pre).Mag() == 0)  never use ==0 to judge a floating number
-    if ( (pV3-pV3_pre).Mag() <= 1.0E-5 ) {
-      fHitPool[i].Status |= HISUSED;
-      continue;
-    } 
-    
     pV3Diff = pV3 - pV3_seed;
     
     //check the distance
-    double separation = pV3Diff.Mag(), acceptance=0.0;
+    double separation = pV3Diff.Mag(); 
     if( separation > Max_Link_Sep ) continue; 
     
-    //for the first seed of a chain, do not require angle in range
-    //because this angle has a very large range
-    //Fix me:  try to find a good cut for this
-    if(seed == seed_pre) {
-#ifdef _ChainFinderDebug_
-      if(_ChainFinderDebug_>=5) {
-	printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg\n",
-	  seed, seed_pre, i, separation, acceptance*rad2deg);
-      }
-#endif
-      AddAHitToChain(fChainNum,i);
-      found++;
-      continue;
-    }
-    
-    
     //check the angle between pV3_diff and pV3_diff_pre
-    acceptance = pV3Diff.Angle(pV3Diff_pre);
-    
+    double acceptance = pV3Diff.Angle(pV3Diff_pre);
     //not very sure we need this line    
     if(acceptance>90./rad2deg) acceptance = 180./rad2deg - acceptance;
     
 #ifdef _ChainFinderDebug_
     if(_ChainFinderDebug_>=5) {
-      printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg\n",
+      printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg  ",
 	seed, seed_pre, i, separation, acceptance*rad2deg);
     }
 #endif
+
+    //for the first seed of a chain, do not require angle in range
+    //because this angle has a very large range
+    //Fix me:  try to find a good cut for this
+    if(seed == seed_pre) {
+      AddAHitToChain(fChainNum,i);
+      found++;
+      continue;
+    }
 
     //in order to run fast, we should separate this condition judgement
     //we should always put large probability terms in the front    
@@ -375,6 +378,11 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
       continue;
     } 
     
+#ifdef _ChainFinderDebug_
+    if(_ChainFinderDebug_>=5) {
+      printf("  ...... skipped \n");
+    }
+#endif
   }
   return found;
 }
@@ -447,12 +455,12 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
     //now, remove redundant seeds from chain buffer
     RemoveRedundantFromChain(fChainNum);
 
-    //now, sort the chain
-    SortAChain(fChainNum);
     
     //judge if this chain is valid or not, do not store it if less than 5 hits
     if( fHitNumInAChain[fChainNum] >= Min_HITS_PER_CHAIN) {
-        StoreAChain(fChainNum);
+      //now, sort the chain
+      SortAChain(fChainNum);
+      StoreAChain(fChainNum);
       fChainNum++;
     } else {
       //If you do not want to save this segment, clear the buffer for this chain
@@ -495,13 +503,373 @@ void ChainFinder::PrintAChain(int chainid)
     printf("%7.1f", fHitPool[fHitIDInAChain[chainid][jj]].Phi*rad2deg);
     if (!((jj+1)%15) && jj+1!=n) printf("\n");
   }
+  printf("\n");
+  printf("%-8s:","ThrownTID");
+  for (int jj=0; jj<n; jj++) {
+    printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].ThrownTID);
+    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+  }
   printf("\n\n");
 }
 
+//Bubble sort is simple but slow, the number of step is in the ordre of O(n^2)
+//sort fHitIDInAChain[][], by S increaseing order
+void ChainFinder::BubbleSort_S(int *arr, int size)  
+{   
+  int i, j, tmp;
 
+  for(i=0; i<size; i++) { // Make a pass through the array for each element
+    for(j=1; j<(size-i); j++) { // Go through the array beginning to end
+      if(fHitPool[arr[j-1]].S > fHitPool[arr[j]].S) {
+	// If the the previous number is greater, swap it 
+	tmp = arr[j-1];
+	arr[j-1] = arr[j];
+	arr[j] = tmp;
+      }
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//Quick Sort Algorithm
+//The divide-and-conquer strategy is used in quicksort. Below the recursion step is described:
+//
+//1. Choose a pivot value. We take the value of the middle element as pivot value, but it 
+//   can be any value, which is in range of sorted values, even if it doesn't present in the array.
+//2. Partition. Rearrange elements in such a way, that all elements which are lesser than 
+//   the pivot go to the left part of the array and all elements greater than the pivot, go 
+//   to the right part of the array. Values equal to the pivot can stay in any part of the array. 
+//   Notice, that array may be divided in non-equal parts.
+//3. Sort both parts. Apply quicksort algorithm recursively to the left and the right parts.
+//
+//Partition algorithm in detail
+//
+//  There are two indices i and j and at the very beginning of the partition algorithm i points 
+//  to the first element in the array and j points to the last one. Then algorithm moves i 
+//  forward, until an element with value greater or equal to the pivot is found. Index j is moved 
+//  backward, until an element with value lesser or equal to the pivot is found. If i ¡Ü j then 
+//  they are swapped and i steps to the next position (i + 1), j steps to the previous one (j - 1). 
+//  Algorithm stops, when i becomes greater than j.
+//
+//  After partition, all values before i-th element are less or equal than the pivot and all 
+//  values after j-th element are greater or equal to the pivot.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//quick sort faster than bubble sort, the number of step is in the ordre of O(n*log(n))
+//sort fHitIDInAChain[][], by S increaseing order
+void ChainFinder::QuickSort_S(int *arr, int left, int right) 
+{
+  int i = left, j = right;
+  int tmp;
+  int pivot = arr[(left + right) / 2];
+  double S_pivot = fHitPool[pivot].S;
+
+  // partition 
+  while (i <= j) {
+    while (fHitPool[arr[i]].S < S_pivot) i++;
+    while (fHitPool[arr[j]].S > S_pivot) j--;
+
+    //swap i and j
+    if (i <= j) {
+      tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+      i++;
+      j--;
+    }
+  };
+
+  // recursion 
+  if (left < j) QuickSort_S(arr, left, j);
+  if (i < right) QuickSort_S(arr, i, right);
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//Selection Sort Algorithm
+//
+// Array is imaginary divided into two parts - sorted one and unsorted one. At the beginning, 
+// sorted part is empty, while unsorted one contains whole array. At every step, algorithm finds 
+// minimal element in the unsorted part and adds it to the end of the sorted one. When unsorted 
+// part becomes empty, algorithm stops.
+//
+// When algorithm sorts an array, it swaps first element of unsorted part with minimal element 
+// and then it is included to the sorted part. This implementation of selection sort in not stable. 
+// In case of linked list is sorted, and, instead of swaps, minimal element is linked to the 
+// unsorted part, selection sort is stable.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//selection sort is slow, the number of step is in the ordre of O(n^2)
+//sort fHitIDInAChain[][], by S increaseing order
+void ChainFinder::SelectSort_S(int *arr, int size) 
+{
+  int i, j, minIndex, tmp;    
+
+  for (i = 0; i < size - 1; i++) {
+    minIndex = i;
+
+    for (j = i + 1; j < size; j++) {
+      //find the minimum for the rest of the array 
+      if (fHitPool[arr[j]].S < fHitPool[arr[minIndex]].S) minIndex = j;
+    }
+
+    if (minIndex != i) {
+      //swap
+      tmp = arr[i];
+      arr[i] = arr[minIndex];
+      arr[minIndex] = tmp;
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//Insertion Sort Algorithm
+//
+// Insertion sort algorithm somewhat resembles selection sort. Array is imaginary divided into two 
+// parts - sorted one and unsorted one. At the beginning, sorted part contains first element of the 
+// array and unsorted one contains the rest. At every step, algorithm takes first element in the 
+// unsorted part and inserts it to the right place of the sorted one. When unsorted part becomes 
+// empty, algorithm stops.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//insertion sort is slow, the number of step is in the ordre of O(n^2)
+//sort fHitIDInAChain[][], by S increaseing order
+void ChainFinder::InsertSort_S(int *arr, int size)
+{
+  int i, j, tmp;
+
+  for (i = 1; i < size; i++) {
+    j = i;
+    while (j > 0 && fHitPool[arr[j]].S < fHitPool[arr[j-1]].S) {
+      tmp = arr[j];
+      arr[j] = arr[j-1];
+      arr[j-1] = tmp;
+      j--;
+    }
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//Shell Sort Algorithm
+//
+// Insertion sort is quick if size is small and the array is nearly sorted. It is slow when the array
+// is sorted in the opposite way.
+// Shell sort is based on insertion sort. It repeatedly compares elements that are a certain distance 
+// away from each other (gap represents this distance)
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//Shell Sort using half division
+//Sort array fHitIDInAChain[][], by S increaseing order
+void ChainFinder::ShellSort2_S(int *arr, int size)
+{
+  //Narrow the array by 2 everytime
+  for (int gap = size / 2; gap > 0; gap /= 2) {
+    for (int i = gap; i < size; ++i) {
+      for (int j = i; j >= gap && fHitPool[arr[j]].S < fHitPool[arr[j-gap]].S; j -= gap) {
+      //for (int j = i; j >= gap && arr[j] < arr[j-gap]; j -= gap) {
+	//swap j and j-gap
+	int tmp = arr[j];
+	arr[j] = arr[j - gap];
+	arr[j - gap] = tmp;
+      }
+    } 
+  }
+}
+
+void ChainFinder::ShellSort3_S(int *arr, int size)
+{
+  //Narrow the array by 2 everytime
+  for (int gap = size / 3; gap > 0; gap /= 3) {
+    for (int i = gap; i < size; ++i) {
+      for (int j = i; j >= gap && fHitPool[arr[j]].S < fHitPool[arr[j-gap]].S; j -= gap) {
+      //for (int j = i; j >= gap && arr[j] < arr[j-gap]; j -= gap) {
+	//swap j and j-gap
+	int tmp = arr[j];
+	arr[j] = arr[j - gap];
+	arr[j - gap] = tmp;
+      }
+    } 
+  }
+}
+
+//Shell Sort using gap_sequence of 13,9,5,2,1
+//Sort array fHitIDInAChain[][], by S increaseing order
+void ChainFinder::ShellSort_Seq_S(int *arr, int size)
+{
+  //this is even worse than the next 
+  static const int gap_sequence[] = { 13, 9, 5, 2, 1 }; 
+  for(int gg=0;gg<5;gg++) {
+    int gap = gap_sequence[gg];
+    if( gap < size )
+    {
+      for(int i = gap ; i < size; ++i )
+	for (int j = i-gap; j >= 0 && fHitPool[arr[j]].S > fHitPool[arr[j+gap]].S; j -= gap) {
+	  int tmp = arr[j];
+	  arr[j] = arr[j + gap];
+	  arr[j + gap] = tmp;
+	}
+    }
+  }
+ 
+}
+
+
+
+
+
+//sort fHitIDInAChain[][], by Phi decreaseing order
+void ChainFinder::QSort_Phi(int *arr, int left, int right) 
+{
+  /*
+  //need to check these 2 phi angle if they across 180 deg line 
+  double Phi_left = fHitPool[left].Phi;
+  double Phi_right = fHitPool[right].Phi;
+  
+  double dPhi = Phi_left - Phi_right;
+  if( fabs(dPhi)>180/rad2deg ) {
+    //cross the line
+    if(Phi_left<0) Phi_left *=-1.0;
+    if(Phi_right<0) Phi_right *=-1.0;
+  }
+  */
+}
+
+//sort fHitIDInAChain[][], will use it to store chain
+//First sort by S increasing order, if their S is equal, sort by phi.
+//in order of phi could be increasing or decreasing. But it should be 
+//consistant with the whole track
 void ChainFinder::SortAChain(int chainid)
 {
-  ;
+  //now sort array buf using its S and Phi 
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
+  //By Jixie; I want to do a bench mark test which sort algrithm works better 
+
+  //conclusion of sorting:
+  //1) bubble and selection sort are most slow
+  //2) incertion sort is faster than any if the array already sorted or near sorted
+  //   it will be as slow as bubble if the array is sorted in opposite way
+  //3) for random array, quick sort is the fastest one.
+  //4) shell_3 is faster than shell_2 and shell_seq
+  //5) For random array, if size<30, shell_3 is faster than quicksort.
+  //6) For the chain from this chainfinder, (they are almost sorted), if size<80
+  //   shell_3 is faster than quicksort. Sometimes incertion sort is the best. 
+  int buf0[2000];
+  int n=0; 
+  bool test_by_one_chain = true;  // false will use the whole hit pool to do this test
+  if(test_by_one_chain) {
+    n=fHitNumInAChain[chainid]; 
+    for(int i=0;i<n;i++) buf0[i]=fHitIDInAChain[chainid][i];
+  }else{
+    n=fHitNum; 
+    for(int i=0;i<n;i++) buf0[i]=i;
+  }
+  //std::random_shuffle( buf0, buf0+n ) ;
+
+  TBenchmark pBenchmark;
+  int buf1[2000];
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_copybuf");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+  }
+  pBenchmark.Stop("stress_copybuf");
+  pBenchmark.Print("stress_copybuf");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_bubble");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    BubbleSort_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_bubble");
+  pBenchmark.Print("stress_bubble");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_select");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    SelectSort_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_select");
+  pBenchmark.Print("stress_select");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_insert");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    InsertSort_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_insert");
+  pBenchmark.Print("stress_insert");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_quick");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    QuickSort_S(buf1,0,n-1);
+  }
+  pBenchmark.Stop("stress_quick");
+  pBenchmark.Print("stress_quick");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_shell2");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    ShellSort2_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_shell2");
+  pBenchmark.Print("stress_shell2");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+  
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_shell3");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    ShellSort3_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_shell3");
+  pBenchmark.Print("stress_shell3");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_shell_seq");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    ShellSort_Seq_S(buf1,n);
+  }
+  pBenchmark.Stop("stress_shell_seq");
+  pBenchmark.Print("stress_shell_seq");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+#endif
+   
+  /////////////////////////////////////////////////
+  //do the sort
+  //get number of hits and make buf point to this array
+  int nhits = fHitNumInAChain[chainid];
+  int *buf = fHitIDInAChain[chainid];
+  //QuickSort_S(buf,0,nhits-1);
+  ShellSort3_S(buf,nhits);
+
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    printf("*****  After sortting by S: *****\n");
+    PrintAChain(fChainNum);
+  }
+#endif
 }
 
 void ChainFinder::StoreAChain(int chainid)

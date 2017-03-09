@@ -320,7 +320,7 @@ bool EXKalManager::FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHit
       cout<<"\nNtuple Event "<<setw(5)<<fNtReader->Index<<":  HitNum_m="<<setw(2)<<fNtReader->HitNum_m
 	  <<",  Smax="<<setw(8)<<fNtReader->Smax<<",  Smin="<<setw(8)<<fNtReader->Smin<<endl
 	  <<"  P0="<<fNtReader->P0_p<<",  Pt="<<fNtReader->P0_p*sin(fNtReader->Theta0_p)<<", Theta0="
-	  <<fNtReader->Theta0_p*57.3<<", Phi0="<<fNtReader->Phi0_p*57.3<<"  Z0="<<fNtReader->Z0/10.<<"cm\n"<<endl;
+	  <<fNtReader->Theta0_p*57.3<<", Phi0="<<fNtReader->Phi0_p*57.3<<"  Z0="<<fNtReader->Z0/10.<<"cm"<<endl;
     }
     if(_EXKalManDebug_>=4) {
       for(int i=0;i<fNtReader->HitNum_m;i++) {

@@ -105,6 +105,21 @@ public:
   
   //print the information of the given chain
   void PrintAChain(int chainid);
+   
+  //Sort array fHitIDInAChain[][], by S increaseing order
+  void BubbleSort_S(int *arr, int size);
+  void SelectSort_S(int *arr, int size);
+  void InsertSort_S(int *arr, int size);
+  void QuickSort_S(int *arr, int left, int right);
+  //Shell Sort using gap_sequence of size/2, size/4 size/8;
+  void ShellSort2_S(int *arr, int size);
+  //Shell Sort using gap_sequence of size/3, size/9 size/27;
+  void ShellSort3_S(int *arr, int size);
+  //Shell Sort using gap_sequence of 13,9,5,2,1
+  void ShellSort_Seq_S(int *arr, int size);
+  
+  //sort fHitIDInAChain[][], by Phi increaseing order
+  void QSort_Phi(int *arr, int left, int right);
 
   //sort the chain by phi angle, then check s
   void SortAChain();

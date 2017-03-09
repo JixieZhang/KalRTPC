@@ -21,10 +21,9 @@ static const double kRTPC_R_Cathode = 3.0;
 /////////////////////////////////////////////////////////////////
 
 class EXEventGen {
- public:
- EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
-   : fCradlePtr(&cradle), fHitBufPtr(&kalhits) {}
-  virtual ~EXEventGen() {}
+public:
+  EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits);
+  virtual ~EXEventGen();
 
   THelicalTrack GenerateHelix(double pt_min, double pt_max, double cosmin=0.0, 
 			      double cosmax=0.0, double z_min=0.0, double z_max=0.0);
@@ -44,14 +43,29 @@ class EXEventGen {
   static Double_t GetT0()            { return fgT0; }
 
   static void PrintHelix(THelicalTrack *aTrack, const char *title="helix");
+  
+  //binary searches for a value in an decreasing sorted array
+  //   arr is an array to search in, in decreasing order
+  // value is searched value
+  //  left is an index of left boundary
+  // right is an index of right boundary
+  //returns position of searched value, if it presents in the array
+  //        or -1*position_it_should_be_incerted, if it is absent
+  static int BinarySearch(const double* arr, double value, int left, int right);
 
- private:
+private:
   TKalDetCradle *fCradlePtr;     // pointer to detector system
   TObjArray     *fHitBufPtr;     // pointer to hit array
 
   static Double_t  fgT0;         // t0
+    
+  //use to store the detector layer boundaries
+  //fDetLayerRBoundary[0]=kRTPC_R_GEM1, 
+  //fDetLayerRBoundary[kNDetLayer]=kRTPC_R_Cathode, 
+  // then fDetLayerRBoundary[i=1...kNDetLayer-1] := (kDetLayerRList[i-1]+kDetLayerRList[i])/2
+  double *fDetLayerRBoundary;   //[kNDetLayer+1];
 
- public:
+public:
 
   //some buff to hold some thrown variables, they will be used to fill root tree
   double X0,Y0,Z0;               //at vertex

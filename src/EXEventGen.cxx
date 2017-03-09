@@ -15,9 +15,33 @@ using namespace std;
 
 ClassImp(EXEventGen)
 
-//#define _ExEventGenDebug_ 2
+//#define _ExEventGenDebug_ 9
+
+#ifdef _ExEventGenDebug_
+#include "TBenchmark.h"
+#endif
 
 Double_t EXEventGen::fgT0 = 14.; // [nsec]
+
+EXEventGen::EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
+   : fCradlePtr(&cradle), fHitBufPtr(&kalhits) 
+{
+  //double fDetLayerRBoundary[kNDetLayer+1];
+  //fDetLayerRBoundary[0]=kRTPC_R_GEM1, 
+  //fDetLayerRBoundary[kNDetLayer]=kRTPC_R_Cathode, 
+  // then fDetLayerRBoundary[i=1...kNDetLayer-1] := (kDetLayerRList[i-1]+kDetLayerRList[i])/2
+  fDetLayerRBoundary = new double [kNDetLayer+1];
+  fDetLayerRBoundary[0] = kRTPC_R_GEM1;
+  fDetLayerRBoundary[kNDetLayer]=kRTPC_R_Cathode;
+  for(int i=1;i<kNDetLayer-1; i++) {
+    fDetLayerRBoundary[i] = (kDetLayerRList[i-1]+kDetLayerRList[i])/2;
+  }
+}
+ 
+EXEventGen::~EXEventGen() 
+{
+  delete fDetLayerRBoundary;
+}
 
 //This routine will create parameters for a THelicalTrack,
 //There are no hits inside, just a abstract track 
@@ -357,6 +381,30 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
   return StepNum;
 }
 
+
+//binary searches for a value in an decreasing sorted array
+//   arr is an array to search in, in decreasing order
+// value is searched value
+//  left is an index of left boundary
+// right is an index of right boundary
+//returns position of searched value, if it presents in the array
+//        or -1*position_it_should_be_incerted, if it is absent
+int EXEventGen::BinarySearch(const double *arr, double value, int left, int right) 
+{
+  while (left <= right) {
+    int middle = (left + right) / 2;
+    if (arr[middle] == value) {
+      return middle;
+    } else if (arr[middle] < value) {
+      right = middle - 1;
+    } else {
+      left = middle + 1;
+    }
+  }
+  return -((left + right) / 2 + 1);
+}
+
+
 //x y z in cm and in increasing time order 
 void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
 				  bool smearing, bool bIncludeCurveBackHits)
@@ -365,7 +413,7 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
   //  use given track to make hits
   // ------------------------------------------------------
   int npt=0;
-  
+
   if(!bIncludeCurveBackHits) { 
     //Do this block if you only keep forward going points
     double tmpR=0.0,tmpRmax=0.0;
@@ -382,26 +430,113 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
 	
   StepNum=0;
   TVector3 xx; 
-  for (int i = 0; i < npt; i++) { 
+  for (int i = 0; i < npt; i++) {
     ///////////////////////////////////////////////////
     //determine which measurement layer this hit belongs to
     ///////////////////////////////////////////////////
-    //By Jixie: This block should be replaced by BinarySearch()
-    //
     //Note that kDetLayerRList is in decreasing order
+    //By Jixie @20170308: 
+    //After benchmark test, I found that, for kNDetLayer=35, binary search will
+    //run faster than bruit-force search. It is not faster than expected simply 
+    //because that there are only 35 detector layers and these hits are already sorted.
+    //Assuming a track have 35 total hits and one hit in each layer, the total time 
+    //it takes for search 10^8 times for the whole track are ~70 seconds for  
+    // loop search and ~35 seconds for binary search.
+    //
+    //I also test kNDetLayer=70, in this case,  binary search is much fast. 
+    // kNDetLayer=35, in each 10^8 search, binary serach takes 1.01 seconds
+    // kNDetLayer=70, in each 10^8 search, binary serach takes 1.25 seconds
+    // loop search searches to step 10 for 10^8 times will take 0.95 seconds
+    // loop search searches to step 20 for 10^8 times will take 1.78 seconds
+    // loop search searches to step 31 for 10^8 times will take 3.60 seconds
+    // loop search searches to step 35 for 10^8 times will take 3.90 seconds
+    // loop search searches to step 40 for 10^8 times will take 4.42 seconds
+    // loop search searches to step 51 for 10^8 times will take 5.43 seconds
+    // loop search searches to step 61 for 10^8 times will take 6.30 seconds
+    // loop search searches to step 69 for 10^8 times will take 7.31 seconds
+    //
+    //Assuming a track have 70 total hits and one hit in each layer, the total time 
+    //it takes for search 10^8 times for the whole track are ~259.5 seconds for  
+    // loop search and ~87.5 seconds for binary search.
+    //If kNDetLayer==21,  binary search uses the same time as loop search does.
+    //
+    //since the hits are almost sorted, I optimized the loop-search. it 
+    //is much faster than binary search. It takes only 30-40% of the time  
+    //binary search does.
+
     xx.SetXYZ(x[i],y[i],z[i]);
     int pLyrIndex=-1;    
     //pLyrIndex = Get Layer Index From R
     double r=xx.Perp();
     if(r>kRTPC_R_GEM1 || r<kRTPC_R_Cathode) continue;
 
-    double pRmin, pRmax=kRTPC_R_Cathode;
-    for(int j=kNDetLayer-1;j>=0;j--){
-      pRmin=pRmax;
-      if(j>0) pRmax=(kDetLayerRList[j]+kDetLayerRList[j-1])/2;
-      else pRmax=kRTPC_R_GEM1;
-      if(r>=pRmin && r<pRmax) {pLyrIndex=kNDetLayer-1-j; break;}
+    //using optimzed loop search to determine the detector layer index
+    int jj = 6+int((kRTPC_R_GEM1-r)/(kRTPC_R_GEM1-kRTPC_R_Cathode)*kNDetLayer);
+    if(jj>kNDetLayer) jj=kNDetLayer;
+    for(int j=jj;j>0;j--){
+      if(r>=fDetLayerRBoundary[j] && r<fDetLayerRBoundary[j-1]) {
+	pLyrIndex=kNDetLayer-j; break;
+      }
     }
+    
+#if defined _ExEventGenDebug_ && (_ExEventGenDebug_>=9)
+    //Do bench mark test on brute force search and binuary search
+    TBenchmark pBenchmark;
+    int _ret_=0;
+
+    pBenchmark.Start("stress_binaryserach");
+    for(int k=0;k<100000000;k++) {
+      ///////////////////
+      _ret_=BinarySearch(fDetLayerRBoundary,r,0,kNDetLayer);
+      pLyrIndex=kNDetLayer-abs(_ret_);
+      ///////////////////
+    }
+    pBenchmark.Stop("stress_binaryserach");
+    pBenchmark.Print("stress_binaryserach");
+
+
+    pBenchmark.Start("stress_loopserach");
+    for(int k=0;k<100000000;k++) {
+      ///////////////////
+      for(int j=kNDetLayer;j>0;j--){
+	if(r>=fDetLayerRBoundary[j] && r<fDetLayerRBoundary[j-1]) {
+	  pLyrIndex=kNDetLayer-j; break;
+	}
+      }
+      ///////////////////
+    }
+    pBenchmark.Stop("stress_loopserach");
+    pBenchmark.Print("stress_loopserach");
+    
+    int pLyrIndex_opt=-1, jstart=0;
+    pBenchmark.Start("stress_loopserach_opt");
+    for(int k=0;k<100000000;k++) {
+      ///////////////////
+      jstart = 6+int((kRTPC_R_GEM1-r)/(kRTPC_R_GEM1-kRTPC_R_Cathode)*kNDetLayer);
+      if(jstart>kNDetLayer) jstart=kNDetLayer;
+      for(int j=jstart;j>0;j--){
+	if(r>=fDetLayerRBoundary[j] && r<fDetLayerRBoundary[j-1]) {
+	  pLyrIndex_opt=kNDetLayer-j; break;
+	}
+      }
+      ///////////////////
+    }
+    pBenchmark.Stop("stress_loopserach_opt");
+    pBenchmark.Print("stress_loopserach_opt");
+
+    if (_ExEventGenDebug_>=10) {
+      for(int j=0;j<=kNDetLayer;j++) { printf("%6d ",j);}
+      printf("\n"); 
+      for(int j=0;j<=kNDetLayer;j++) { printf("%6.2f ",fDetLayerRBoundary[j]);}
+      printf("\n"); 
+    }
+    cout<<"BinarySearch(): r="<<r<<" return="<<_ret_<<"  jstart="<<jstart
+	<<"  loop_pLyrIndex_opt="<<pLyrIndex_opt
+	<<"  loop_pLyrIndex="<<pLyrIndex
+	<<"  binary_pLyrIndex="<<kNDetLayer-abs(_ret_)<<endl;
+#endif
+
+
 #ifdef _ExEventGenDebug_
     if( _ExEventGenDebug_ >= 4) {
       cout<<"Hit_R="<<r<<" --> pLyrIndex="<<pLyrIndex+kNDetDummyLayer<<endl;

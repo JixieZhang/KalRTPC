@@ -19,6 +19,10 @@
 
 ##How to compile?
 
+ First of all, you need to define $rtpcsoft.  
+ You can simply define it this way:  
+   setenv rtpcsoft $home/rtpcsoft
+ 
  1) install root and clhep    
                       
   setenv ROOTSYS ${rtpcsoft}/root-5.28.00-x86_64                              
@@ -39,6 +43,7 @@
  type 'make;make install' to install it.
 
  3) compile kalRTPC
+ 
   cd kalRTPC;
   make 
 

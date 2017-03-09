@@ -44,7 +44,7 @@ void usage()
   cerr << "\t  job: 0: run KalmanFilter with generated helix;\n";
   cerr <<" \t       1: run KalmanFilter with geant4 track;\n";
   cerr << "\t       2: run KalmanFilter with generated circle;\n";
-  cerr << "\t       3: run ChainFinder only geant4 tracks, need to couple with -c option; \n";
+  cerr << "\t       3: run ChainFinder using geant4 tracks, need to couple with -c option; \n";
   cerr << "\t       4: run ChainFinder + Global Helix Fitter with geant4 tracks\n";
   cerr << "\t       5: run ChainFinder + KalmanFilter with geant4 tracks\n";
   cerr << "\t  nevents: number of events to generate \n";
@@ -195,6 +195,7 @@ int main (int argc, char **argv)
     <<"\t z_min="<<z_min<<",  z_max="<<z_max<<", infile="<<infile<<endl
     <<"\t ntracks="<<ntracks<<",  space="<<space<<" min_ang="<<min_ang/rad2deg
     <<",  max_ang="<<max_ang/rad2deg<<",  ang_sep="<<ang_sep<<endl
+    <<"\t infile="<<infile<<endl
     <<endl;
 
 

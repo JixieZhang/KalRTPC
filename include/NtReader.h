@@ -224,6 +224,7 @@ NtReader::NtReader(const char *InFileName) : fChain(0), fCurrent(-1)
     cout<<"Error: can not open input root file '"<<InFileName<<"' ... "<<endl;
     return;  
   }
+  cout<<"NtReader open file "<<InFileName<<endl; 
   f->GetObject("ep",fChain);
 
   Init();

@@ -9,6 +9,30 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+
+2017/03/09
+1. Added binary search to EXEventGen. Do benchmark test on binary-search, loop-search
+   and optimized-loop-search to find out which can fastly determine which detector 
+   layer for a given hit. The conclusion is: 
+   //If kNDetLayer==21,  binary-search runs at the same speed as loop-search.
+   //optimized-loop-search takes only 30-40% of the time that binary-search does.
+2. Added sort angrithm into ChainFinder to sort chain by S increasing order. Do benchmark 
+   test on them.
+  //conclusion of sorting:
+  //1) bubble and selection sort are most slow
+  //2) incertion sort is faster than any if the array already sorted or near sorted
+  //   it will be as slow as bubble if the array is sorted in opposite way
+  //3) for random array, quick sort is the fastest one.
+  //4) shell_3 is faster than shell_2 and shell_seq
+  //5) For random array, if size<30, shell_3 is faster than quicksort.
+  //6) For the chain from this chainfinder, (they are almost sorted), if size<80
+  //   shell_3 is faster than quicksort. Sometimes incertion sort is the best. 
+3. TODO: group hits in a chain by channel then sort by phi. Note that phi should be
+  in either increasing or decreasing order. Think about that before writing the code.
+4. TODO: find out how to link hits. Develop a good space-angle relationship.   
+  
+    
+
 2017/03/07
 --------------------------tag v0.97----------------------------------------  
 1. Change Main.cxx, use GNC getopt to take care of input arguments, still 

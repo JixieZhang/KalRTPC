@@ -5,7 +5,7 @@
 #include "TVKalDetector.h"    // from KalTrackLib
 #include "EXMeasLayer.h"
 
-extern   const int    kNDetDummyLayer ;  //= 6;
+extern   const int    kNDetDummyLayer ;  // = 6;
 extern   const int    kNDetLayer;        // = 35;
 extern   const double kDetLayerRList[];  //in decreasing order
 

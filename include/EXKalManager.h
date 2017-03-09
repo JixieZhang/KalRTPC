@@ -58,7 +58,7 @@ class EXKalManager {
 	    double costh_max, double z_min=0.0, double z_max=0.0);
 
   void SetCovMElement(double val) {fKalRTPC->SetCovMElement(val);};
-  void SetG4InputFile(const char* val) {sprintf(fG4Inputfile, "%s","infile.root");};
+  void SetG4InputFile(const char* val) {sprintf(fG4Inputfile, "%s",val);};
 
  private:
 
