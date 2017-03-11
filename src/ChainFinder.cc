@@ -909,7 +909,7 @@ void ChainFinder::SortAChain(int chainid)
     PrintAChain(fChainNum);
   }
 #endif
-  
+  /*
   //sorting by phi
   InsertSort_Phi(buf,nhits);
     
@@ -929,7 +929,7 @@ void ChainFinder::SortAChain(int chainid)
     PrintAChain(fChainNum);
   }
 #endif
-
+ */
 }
 
 void ChainFinder::StoreAChain(int chainid)
