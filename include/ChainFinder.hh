@@ -67,8 +67,8 @@ public:
   void PrepareHitPool(int *id, int *tdc, int *adc, double *x, double *y,
                       double *z, int n, int *throwntid=0, int append=0);
   
-  int  SearchHitsForASeed(int seed, int seed_pre=0); 
-  void SearchChains();  
+  int  SearchHitsForASeed(int seed, int seed_pre); 
+  void SearchChains(int do_sort=1);  
   void SortAChain(int chainid);
   void StoreAChain(int chainid);
   void SetHitStatus(HitStruct *hit);
@@ -79,10 +79,13 @@ public:
   //return number of hit that removed
   int  RemoveBadHitsFromPool();
   
+  void SetParameters(double space, double min_ang, double max_ang, double ang_sep);
+
+private:  
   
   //add a hit to end of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   //will not touch fChainBuf yet
-  void AddAHitToChain(int chainid, int hitid);
+  void AddAHitToChain(int seed, int chainid, int hitid);
 
   //incert a hit to given position of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   //will not touch fChainBuf yet
@@ -101,8 +104,6 @@ public:
   //remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   void RemoveRedundantFromChain(int chainid);
 
-  void SetParameters(double space, double min_ang, double max_ang, double ang_sep);
-  
   //print the information of the given chain
   void PrintAChain(int chainid);
    
@@ -118,8 +119,9 @@ public:
   //Shell Sort using gap_sequence of 13,9,5,2,1
   void ShellSort_Seq_S(int *arr, int size);
   
-  //sort fHitIDInAChain[][], by Phi increaseing order
-  void QSort_Phi(int *arr, int left, int right);
+  //after sorting by S, sort fHitIDInAChain[][] by Phi increaseing order
+  //only sort these hits with the same TDC
+  void InsertSort_Phi(int *arr, int size);
 
   //sort the chain by phi angle, then check s
   void SortAChain();
@@ -137,7 +139,12 @@ public:
 private:
   //These line is used to indicate how to search chains
   //int    anchor_hit, seed_hit, next_hit, seed_index;
-
+  
+  //to store which seed add this hit into the chain
+  //this buffer is syncronized with fHitIDInAChain[][]
+  //should only be operated by AddAHitToChain(int seed, int chainid, int hitid)
+  int    fParentSeed[MAX_HITS_PER_CHAIN];
+  
   //this is another buffer to store the chains, only keep HitIndex
   //It is not as convenience as fChainBuf because user have to put these id
   //back to fHitPool to extract xyz info

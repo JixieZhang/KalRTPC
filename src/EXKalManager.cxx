@@ -257,7 +257,7 @@ void EXKalManager::BeginOfRun(int eventtype)
 
 void EXKalManager::EndOfRun()
 {
-  fFile->Write();
+  fFile->Write("",TObject::kOverwrite);
 }
 
 //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
@@ -765,6 +765,7 @@ void EXKalManager::Tree_Fill(TKalTrack &kaltrack)
   phi0_last=fEventGen->Phi0_last;
 
   fTree->Fill();
+  if(!((_index_+1)%100)) fFile->Write("",TObject::kOverwrite);
   _index_++;
 }
 

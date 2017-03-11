@@ -13,7 +13,7 @@ extern const double kRTPC_R_GEM1 = 7.0;
 extern const double kRTPC_R_Cathode = 3.0;
 
 ///////////////////////////////////////////////////////////////////////
-#define _ChainFinderDebug_ 5
+#define _ChainFinderDebug_ 10
 
 #ifdef _ChainFinderDebug_
 //#include "GlobalDebuger.hh"
@@ -41,6 +41,7 @@ void Example()
 
 using namespace std;
 
+static const double kPi = atan(1.0)*4;
 static const double rad2deg = 180./(4.*atan(1.));
 
 
@@ -231,7 +232,7 @@ void ChainFinder::SetParameters(double space, double min_ang, double max_ang, do
 #endif
 }
   
-void ChainFinder::AddAHitToChain(int chainid, int hitid)
+void ChainFinder::AddAHitToChain(int seed, int chainid, int hitid)
 {
   if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {        
     printf("Too many hits for the chain list. Skip...\n"); 
@@ -239,6 +240,7 @@ void ChainFinder::AddAHitToChain(int chainid, int hitid)
     
   //THE HIT INDEX WHICH ACOMPLISH THE CONDITION, IS STORED HERE-->
   fHitIDInAChain[chainid][fHitNumInAChain[chainid]] = hitid;
+  fParentSeed[fHitNumInAChain[chainid]] = seed;
   
   /* mark it as used */
   fHitPool[hitid].Status |= HISUSED; //this kind of assignment is for 'historical' reasons
@@ -360,7 +362,7 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     //because this angle has a very large range
     //Fix me:  try to find a good cut for this
     if(seed == seed_pre) {
-      AddAHitToChain(fChainNum,i);
+      AddAHitToChain(seed,fChainNum,i);
       found++;
       continue;
     }
@@ -368,12 +370,12 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     //in order to run fast, we should separate this condition judgement
     //we should always put large probability terms in the front    
     if (separation <= Ang_Sep && acceptance < Max_Ang) {
-      AddAHitToChain(fChainNum,i);
+      AddAHitToChain(seed,fChainNum,i);
       found++;
       continue;
     }
     if (separation >  Ang_Sep && acceptance < Min_Ang) {					
-      AddAHitToChain(fChainNum,i);
+      AddAHitToChain(seed,fChainNum,i);
       found++;
       continue;
     } 
@@ -388,7 +390,7 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
 }
 
 
-void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
+void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
 {
   //reset fChainNum = 0;  
   fChainNum = 0;
@@ -409,7 +411,7 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
     //add the initial seed into this chain  
     if(fHitNumInAChain[fChainNum] == 0) {  
       seed = anchor_hit;
-      AddAHitToChain(fChainNum,seed);
+      AddAHitToChain(seed,fChainNum,seed);
       //fHitNumInAChain[fChainNum] will be added by 1 inside 
     }
         
@@ -421,13 +423,12 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
       //Fix me: currently the chain result are not sorted yet
       //need to do this before passing to Kalman Filter
       seed = fHitIDInAChain[fChainNum][seed_idx]; 
-      if (seed_idx==0) seed_pre=seed;
+      seed_pre=fParentSeed[seed_idx];
       int found = SearchHitsForASeed(seed, seed_pre);
       
       //check any hits are found based on this seed, if no more hits found and not reach 
       //the last hit of current chain yet, release this hit back to the pool
-      if(found) seed_pre = seed;
-      else {
+      if(!found) {
 	//Remove this seed from seed_list. This seed might be added back by other seeds, 
 	//which in consequence A) mess up the order b)can have multiple redundate copies 
 	//Therefore we have to remove redumdant seeds at the end of the search
@@ -459,7 +460,7 @@ void ChainFinder::SearchChains() //HitStruct *fHitPool, int nhits)
     //judge if this chain is valid or not, do not store it if less than 5 hits
     if( fHitNumInAChain[fChainNum] >= Min_HITS_PER_CHAIN) {
       //now, sort the chain
-      SortAChain(fChainNum);
+      if(do_sort) SortAChain(fChainNum);
       StoreAChain(fChainNum);
       fChainNum++;
     } else {
@@ -504,12 +505,28 @@ void ChainFinder::PrintAChain(int chainid)
     if (!((jj+1)%15) && jj+1!=n) printf("\n");
   }
   printf("\n");
-  printf("%-8s:","ThrownTID");
-  for (int jj=0; jj<n; jj++) {
-    printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].ThrownTID);
-    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
+  if(_ChainFinderDebug_>=10) {
+    printf("%-8s: ","TDC");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].TDC);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n");
+    }
+    printf("\n");
   }
-  printf("\n\n");
+    
+  if(_ChainFinderDebug_>=11) {
+    printf("%-8s:","ThrownTID");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].ThrownTID);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n");
+    }
+    printf("\n");
+  }
+#endif
+
+  printf("\n");
 }
 
 //Bubble sort is simple but slow, the number of step is in the ordre of O(n^2)
@@ -675,6 +692,7 @@ void ChainFinder::ShellSort2_S(int *arr, int size)
   }
 }
 
+//shell_3 has bugs, it skip some hits 
 void ChainFinder::ShellSort3_S(int *arr, int size)
 {
   //Narrow the array by 2 everytime
@@ -713,24 +731,39 @@ void ChainFinder::ShellSort_Seq_S(int *arr, int size)
 }
 
 
-
-
-
-//sort fHitIDInAChain[][], by Phi decreaseing order
-void ChainFinder::QSort_Phi(int *arr, int left, int right) 
+//sort fHitIDInAChain[][], by Phi increaseing order
+void ChainFinder::InsertSort_Phi(int *arr, int size) 
 {
-  /*
-  //need to check these 2 phi angle if they across 180 deg line 
-  double Phi_left = fHitPool[left].Phi;
-  double Phi_right = fHitPool[right].Phi;
-  
-  double dPhi = Phi_left - Phi_right;
-  if( fabs(dPhi)>180/rad2deg ) {
-    //cross the line
-    if(Phi_left<0) Phi_left *=-1.0;
-    if(Phi_right<0) Phi_right *=-1.0;
+  int i, j, tmp;
+  //need to check if this check arossing phi=180deg line
+  double dphi = fHitPool[arr[0]].Phi - fHitPool[arr[size-1]].Phi;
+  bool arossline = (fabs(dphi) > kPi-0.001) ? true : false;
+
+  //make a copy of the phi into array 
+  //if cross the line, need to add 2Pi to negative phi 
+  double *phi = new double [size];
+  for (i = 0; i < size; i++) {
+    phi[i] = fHitPool[arr[i]].Phi; 
+    if (arossline && phi[i] < 0.0) phi[i] += 2*kPi; 
   }
-  */
+
+  //do sorting now 
+  for (i = 1; i < size; i++) {
+    j = i;
+    while (j > 0 && fHitPool[arr[j]].TDC == fHitPool[arr[j-1]].TDC &&
+      phi[j] < phi[j-1]) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
+	if(_ChainFinderDebug_>=10)
+	  cout<<"\tInsertSort_Phi(): swap("<<j<<", "<<j-1<<") ..."<<endl;
+#endif
+	tmp = arr[j];
+	arr[j] = arr[j-1];
+	arr[j-1] = tmp;
+	j--;
+    }
+  }
+  //free memory
+  delete phi;
 }
 
 //sort fHitIDInAChain[][], will use it to store chain
@@ -742,16 +775,20 @@ void ChainFinder::SortAChain(int chainid)
   //now sort array buf using its S and Phi 
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
   //By Jixie; I want to do a bench mark test which sort algrithm works better 
+  //Conclusion of sorting:
+  //1) Bubble and selection sort are most slow in any case
+  //2) Bubble, selection and incertion sort are stable (stable means will not change 
+  //order if two values are equal to each other).  Quick and shell sort are not stable.
+  //3) Incertion sort is the fatest only if the array already sorted. It will be as 
+  //slow as bubble if the array is sorted in opposite way. For random array it is still 
+  //faster than bubble and selection sort. 
+  //4) Shell_3 is faster than shell_2 and shell_seq.
+  //5) For random array, if array size>=30, quick sort is the fastest one. If array 	
+  //size<30, shell_3 is faster than quick sort.
+  //6) For the chain from this chainfinder, (they are almost sorted only a few location 
+  //need to adjust), if array size<80, shell_3 is faster than quicksort.  
+  //If size<40 incertion sort is the best. 
 
-  //conclusion of sorting:
-  //1) bubble and selection sort are most slow
-  //2) incertion sort is faster than any if the array already sorted or near sorted
-  //   it will be as slow as bubble if the array is sorted in opposite way
-  //3) for random array, quick sort is the fastest one.
-  //4) shell_3 is faster than shell_2 and shell_seq
-  //5) For random array, if size<30, shell_3 is faster than quicksort.
-  //6) For the chain from this chainfinder, (they are almost sorted), if size<80
-  //   shell_3 is faster than quicksort. Sometimes incertion sort is the best. 
   int buf0[2000];
   int n=0; 
   bool test_by_one_chain = true;  // false will use the whole hit pool to do this test
@@ -861,8 +898,10 @@ void ChainFinder::SortAChain(int chainid)
   //get number of hits and make buf point to this array
   int nhits = fHitNumInAChain[chainid];
   int *buf = fHitIDInAChain[chainid];
-  //QuickSort_S(buf,0,nhits-1);
-  ShellSort3_S(buf,nhits);
+  
+  if(nhits<40) InsertSort_S(buf,nhits);
+  //else if(nhits<80) ShellSort3_S(buf,nhits); //shell_3 has bugs
+  else QuickSort_S(buf,0,nhits-1);
 
 #ifdef _ChainFinderDebug_
   if(_ChainFinderDebug_>=3) {
@@ -870,6 +909,27 @@ void ChainFinder::SortAChain(int chainid)
     PrintAChain(fChainNum);
   }
 #endif
+  
+  //sorting by phi
+  InsertSort_Phi(buf,nhits);
+    
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    printf("*****  After sortting by Phi 1st: *****\n");
+    PrintAChain(fChainNum);
+  }
+#endif
+
+  //sorting by phi again
+  InsertSort_Phi(buf,nhits);
+    
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    printf("*****  After sortting by Phi 2nd: *****\n");
+    PrintAChain(fChainNum);
+  }
+#endif
+
 }
 
 void ChainFinder::StoreAChain(int chainid)
@@ -905,7 +965,4 @@ void ChainFinder::StoreAChain(int chainid)
 #endif
 
 }
-
-
-
 
