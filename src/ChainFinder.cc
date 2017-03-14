@@ -13,10 +13,10 @@ extern const double kRTPC_R_GEM1 = 7.0;
 extern const double kRTPC_R_Cathode = 3.0;
 
 ///////////////////////////////////////////////////////////////////////
-#define _ChainFinderDebug_ 10
+#define _ChainFinderDebug_ 5
 
 #ifdef _ChainFinderDebug_
-//#include "GlobalDebuger.hh"
+#include "GlobalDebuger.hh"
 #include "TBenchmark.h"
 #endif
 
@@ -216,6 +216,130 @@ int  ChainFinder::RemoveBadHitsFromPool()
   return 0;
 }
 
+//the real data in bonus6 it in channel ID increasing order, for the same ID,
+//TDC in decreasing order. This routine is only for simulation
+//sort hitpool to match this order
+void ChainFinder::SortHitPoolByIDTDC()
+{
+  //make a copy of the whole public hit poll
+  HitStruct *pHitPool = new HitStruct [fHitNum];
+  int *pOrder = new int [fHitNum]; 
+  for(int t=0;t<fHitNum;t++) {
+    pOrder[t] = t;
+    pHitPool[t].ID = fHitPool[t].ID;
+    pHitPool[t].TDC = fHitPool[t].TDC;
+    pHitPool[t].ADC = fHitPool[t].ADC;
+    pHitPool[t].X = fHitPool[t].X;
+    pHitPool[t].Y = fHitPool[t].Y;
+    pHitPool[t].Z = fHitPool[t].Z;
+    pHitPool[t].Status = fHitPool[t].Status;
+    pHitPool[t].S = fHitPool[t].S;
+    pHitPool[t].Phi = fHitPool[t].Phi;
+    pHitPool[t].ThrownTID = fHitPool[t].ThrownTID;
+    pHitPool[t].ChainInfo = fHitPool[t].ChainInfo;
+  }
+  
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=9) {  
+    PrintHitPool("before sorting:");
+  }
+#endif
+
+  QuickSort_IDTDC(pOrder, 0, fHitNum-1);
+
+  //copy the value back to the public hit pool
+  for(int i=0;i<fHitNum;i++) {
+    int t = pOrder[i];
+    fHitPool[i].ID =  pHitPool[t].ID;
+    fHitPool[i].TDC =  pHitPool[t].TDC;
+    fHitPool[i].ADC =  pHitPool[t].ADC;
+    fHitPool[i].X =  pHitPool[t].X;
+    fHitPool[i].Y =  pHitPool[t].Y;
+    fHitPool[i].Z =  pHitPool[t].Z;
+    fHitPool[i].Status =  pHitPool[t].Status;
+    fHitPool[i].S =  pHitPool[t].S;
+    fHitPool[i].Phi =  pHitPool[t].Phi;
+    fHitPool[i].ThrownTID =  pHitPool[t].ThrownTID;
+    fHitPool[i].ChainInfo =  pHitPool[t].ChainInfo;
+  }
+  
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=9) {  
+    PrintHitPool("After sorted by ID_increasing then TDC_decreasing");
+  }
+#endif
+
+  delete pHitPool;
+  delete pOrder;
+}
+
+  
+//sort by ID increasing order, for the same ID, sort TDC in decreasing order. 
+void ChainFinder::PrintHitPool(const char *keywords)
+{
+  //print the keywords then content
+  printf("\nHitPool, %d hits: %s\n",fHitNum, keywords);
+
+  printf("%9s: ","PAD-ID");
+  for(int i=0;i<fHitNum;i++) { printf("%7d",fHitPool[i].ID);}
+  printf("\n");
+  printf("%9s: ","TDC");
+  for(int i=0;i<fHitNum;i++) { printf("%7d",fHitPool[i].TDC);}
+  printf("\n");
+  printf("%9s: ","ThrownTID");
+  for(int i=0;i<fHitNum;i++) { printf("%7d",fHitPool[i].ThrownTID);}
+  printf("\n");
+
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {    
+    printf("%9s: ","S");
+    for(int i=0;i<fHitNum;i++) { printf("%7.2f",fHitPool[i].S);}
+    printf("\n");    
+    printf("%9s: ","Phi");
+    for(int i=0;i<fHitNum;i++) { printf("%7.1f",fHitPool[i].Phi);}
+    printf("\n");
+  }
+#endif
+
+  printf("\n");
+
+}
+  
+//sort by ID increasing order, for the same ID, sort TDC in decreasing order. 
+void ChainFinder::QuickSort_IDTDC(int *arr, int left, int right)
+{
+  int i = left, j = right;
+  int tmp;
+  int pivot = arr[(left + right) / 2];
+  int ID_pivot = fHitPool[pivot].ID;
+  int TDC_pivot = fHitPool[pivot].TDC;
+
+  // partition 
+  while (i <= j) {
+    while (fHitPool[arr[i]].ID < ID_pivot || (fHitPool[arr[i]].ID == ID_pivot && fHitPool[arr[i]].TDC > TDC_pivot) ) i++;
+    while (fHitPool[arr[j]].ID > ID_pivot || (fHitPool[arr[j]].ID == ID_pivot && fHitPool[arr[j]].TDC < TDC_pivot) ) j--;
+    //while (fHitPool[arr[i]].ID < ID_pivot ) i++;
+    //while (fHitPool[arr[j]].ID > ID_pivot ) j--;
+
+    //swap i and j
+    if (i <= j) {
+      //cout<<"  QuickSort_IDTDC()  swap("<<i<<", "<<j<<") "<<endl;
+      tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+      i++;
+      j--;
+    }
+  };
+
+  // recursion 
+  if (left < j) QuickSort_IDTDC(arr, left, j);
+  if (i < right) QuickSort_IDTDC(arr, i, right);
+
+}
+
+
+
 void ChainFinder::SetParameters(double space, double min_ang, double max_ang, double ang_sep)
 {
   // USER SHOULD PROVIDE THESE VARIABLES
@@ -232,39 +356,61 @@ void ChainFinder::SetParameters(double space, double min_ang, double max_ang, do
 #endif
 }
   
-void ChainFinder::AddAHitToChain(int seed, int chainid, int hitid)
+
+//I need to determine the location that this hit should be incerted
+//I should compare the distances of all hits behine this seed in the seed_list
+//By Jixie: this will slow down the search and not sure it can improve the result 
+//if the chain is full return 0, otherwise 1
+int  ChainFinder::AddAHitToChain(int seed, int chainid, int hitid, double space)
 {
   if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {        
     printf("Too many hits for the chain list. Skip...\n"); 
+    return 0;
   }
-    
-  //THE HIT INDEX WHICH ACOMPLISH THE CONDITION, IS STORED HERE-->
-  fHitIDInAChain[chainid][fHitNumInAChain[chainid]] = hitid;
-  fParentSeed[fHitNumInAChain[chainid]] = seed;
   
-  /* mark it as used */
-  fHitPool[hitid].Status |= HISUSED; //this kind of assignment is for 'historical' reasons
-  fHitNumInAChain[chainid]++;      //ADD HIT TO THE CHAIN, INCREASE INDEX
-        
-#ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=4) {
-    cout<<"  Chain "<<chainid<<": Hit "<<hitid<<" is added\n";
-  }
-#endif 
+  //determine the location this hit should be incerted
+  int n=fHitNumInAChain[chainid];  //just make it short
+  int t=n-1;  
+  //require t>1 (not 0),  because this hit can not be inserted in front of its seed
+  while(t>1 && fParentSeed[t]==seed && fDist2Seed[t]>space) t--;
+  
+  int position = (t==n-1) ? n : t;
+  //if you want to always add this seed to the end of the list, set 
+  position = n;
+  InsertAHitToChain(chainid,hitid,position,seed,space);
+  return 1;
 }
 
 //operate to fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
 //will not touch fChainBuf yet
-void ChainFinder::InsertAHitToChain(int chainid, int hitid, int position)
-{
+void ChainFinder::InsertAHitToChain(int chainid, int hitid, int position, int seed, double separation)
+{ 
   int n = fHitNumInAChain[chainid];
   if(position>n) position=n;
 
+  //shift the hits behind the given position 
   for(int i=n;i>position;i--) { 
     fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i-1];
+    //also need to shift parent seed and space
+    fParentSeed[i] = fParentSeed[i-1];
+    fDist2Seed[i] = fDist2Seed[i-1];
   }
+  
+  fHitPool[hitid].Status |= HISUSED; //mark this hit as used
   fHitIDInAChain[chainid][position] = hitid;
   fHitNumInAChain[chainid] += 1;
+  
+  fParentSeed[position] = seed;
+  fDist2Seed[position] = separation;
+
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=4) {
+    cout<<"  Chain "<<chainid<<": hit "<<hitid<<" is "<< ((position==n) ? "added":"inserted")
+      <<" to "<<position<<"\n";
+  }
+#endif 
+
+
 }
 
 //remove the first hit with id==hitid from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
@@ -315,11 +461,6 @@ int  ChainFinder::RemoveAHitFromChain_At(int chainid, int position)
 }
 
 
-//remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
-void ChainFinder::RemoveRedundantFromChain(int chainid)
-{
-  ;
-}
 
 //return how many hit has been found
 //fid hits for a given seed(pivot)
@@ -342,9 +483,11 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     pV3.SetXYZ(fHitPool[i].X, fHitPool[i].Y, fHitPool[i].Z);
     pV3Diff = pV3 - pV3_seed;
     
-    //check the distance
+    //check the distance    
+    //for the first seed of a chain, do not require angle in range
+    //but require distance < 1.5 cm
     double separation = pV3Diff.Mag(); 
-    if( separation > Max_Link_Sep ) continue; 
+    if((seed == seed_pre && separation > 1.5) || separation > Max_Link_Sep ) continue; 
     
     //check the angle between pV3_diff and pV3_diff_pre
     double acceptance = pV3Diff.Angle(pV3Diff_pre);
@@ -358,25 +501,11 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     }
 #endif
 
-    //for the first seed of a chain, do not require angle in range
-    //because this angle has a very large range
-    //Fix me:  try to find a good cut for this
-    if(seed == seed_pre) {
-      AddAHitToChain(seed,fChainNum,i);
-      found++;
-      continue;
-    }
-
-    //in order to run fast, we should separate this condition judgement
-    //we should always put large probability terms in the front    
-    if (separation <= Ang_Sep && acceptance < Max_Ang) {
-      AddAHitToChain(seed,fChainNum,i);
-      found++;
-      continue;
-    }
-    if (separation >  Ang_Sep && acceptance < Min_Ang) {					
-      AddAHitToChain(seed,fChainNum,i);
-      found++;
+    if( (separation >  Ang_Sep && acceptance < Min_Ang) || 
+       (separation <= Ang_Sep && acceptance < Max_Ang) ) {
+      int ret = AddAHitToChain(seed,fChainNum,i,separation);
+      if(ret == 0) break; // this chain is full
+      found += 1;
       continue;
     } 
     
@@ -411,7 +540,7 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
     //add the initial seed into this chain  
     if(fHitNumInAChain[fChainNum] == 0) {  
       seed = anchor_hit;
-      AddAHitToChain(seed,fChainNum,seed);
+      AddAHitToChain(seed,fChainNum,seed,0.0);
       //fHitNumInAChain[fChainNum] will be added by 1 inside 
     }
         
@@ -419,16 +548,18 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
     //search a chain: looping over all founded seeds
     //Note that fHitNumInAChain[fChainNum] will self increasing if hits added into the chain
     for (int seed_idx=0; seed_idx<fHitNumInAChain[fChainNum]; seed_idx++) {
-    
-      //Fix me: currently the chain result are not sorted yet
-      //need to do this before passing to Kalman Filter
+      if(seed_idx >= MAX_HITS_PER_CHAIN) break;
       seed = fHitIDInAChain[fChainNum][seed_idx]; 
-      seed_pre=fParentSeed[seed_idx];
+      seed_pre = fParentSeed[seed_idx];
       int found = SearchHitsForASeed(seed, seed_pre);
       
       //check any hits are found based on this seed, if no more hits found and not reach 
       //the last hit of current chain yet, release this hit back to the pool
       if(!found) {
+      /*
+      //FIX me
+      By Jixie: this part is for cross chain, I do not know how to deal with it yet.
+
 	//Remove this seed from seed_list. This seed might be added back by other seeds, 
 	//which in consequence A) mess up the order b)can have multiple redundate copies 
 	//Therefore we have to remove redumdant seeds at the end of the search
@@ -443,23 +574,23 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
 	       //     <<seed<<" is released back to the pool\n";
 	      }
 #endif
-        }
+	}
+	*/
       }
     }
     
-#ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=3) {
-    PrintAChain(fChainNum);
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
+  if(_ChainFinderDebug_>=9) {
+    PrintAChain(fChainNum, "before sorting");
   }
 #endif
-
-    //now, remove redundant seeds from chain buffer
-    RemoveRedundantFromChain(fChainNum);
-
     
     //judge if this chain is valid or not, do not store it if less than 5 hits
     if( fHitNumInAChain[fChainNum] >= Min_HITS_PER_CHAIN) {
       //now, sort the chain
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
+  if(_ChainFinderDebug_==9) BenchmarkSort(fChainNum);
+#endif
       if(do_sort) SortAChain(fChainNum);
       StoreAChain(fChainNum);
       fChainNum++;
@@ -468,9 +599,8 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
       //not sure if we need to release hits back to the pool!
       bool keep_all_segment = true;
       if (keep_all_segment) {
-	fChainNum++;
-      }
-      else {
+	    fChainNum++;
+      } else {
 	for(int jj=0;jj<fHitNumInAChain[fChainNum];jj++) {
 	  fHitIDInAChain[fChainNum][jj]=-1;
 	}
@@ -481,46 +611,102 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
   }// for (int anchor_hit = 0 ......
 
 }
+
   
-void ChainFinder::PrintAChain(int chainid)
+void ChainFinder::PrintAChain(int *buf, int size, const char *keywords)
+{
+  int n = size;
+  printf("\nChain buffer##: %4d hits: %s\n", n, keywords);
+
+  printf("%-8s: ","hit-id");
+  for (int jj=0; jj<n; jj++) {
+    printf("%7d", buf[jj]);
+    if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+  }
+  printf("\n");
+
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+  if(_ChainFinderDebug_>=5) {
+    printf("%-8s: ","s(cm)");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7.2f", fHitPool[buf[jj]].S);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+
+    printf("%-8s: ","phi(deg)");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7.1f", fHitPool[buf[jj]].Phi*rad2deg);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+  }
+  if(_ChainFinderDebug_>=6) {
+    printf("%-8s: ","TDC");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7d", fHitPool[buf[jj]].TDC);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+  }
+
+  if(_ChainFinderDebug_>=3) {
+    printf("%-8s:","ThrownTID");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7d", fHitPool[buf[jj]].ThrownTID);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+  }
+#endif
+
+  printf("\n");
+}
+
+//print the chain buffer
+void ChainFinder::PrintAChain(int chainid, const char *keywords)
 {
   int n = fHitNumInAChain[chainid];
-  printf("\nChain #%2d: %4d hits: \n", chainid, n);
+  printf("\nChain #%2d: %4d hits: %s\n", chainid, n, keywords);
 
   printf("%-8s: ","hit-id");
   for (int jj=0; jj<n; jj++) {
     printf("%7d", fHitIDInAChain[chainid][jj]);
-    if (!((jj+1)%15) && jj+1!=n) printf("\n");
-  }
-  printf("\n");
-  printf("%-8s: ","s(cm)");
-  for (int jj=0; jj<n; jj++) {
-    printf("%7.2f", fHitPool[fHitIDInAChain[chainid][jj]].S);
-    if (!((jj+1)%15) && jj+1!=n) printf("\n");
-  }
-  printf("\n");
-  printf("%-8s: ","phi(deg)");
-  for (int jj=0; jj<n; jj++) {
-    printf("%7.1f", fHitPool[fHitIDInAChain[chainid][jj]].Phi*rad2deg);
-    if (!((jj+1)%15) && jj+1!=n) printf("\n");
+    if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
   }
   printf("\n");
 
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
-  if(_ChainFinderDebug_>=10) {
-    printf("%-8s: ","TDC");
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+  if(_ChainFinderDebug_>=5) {
+    printf("%-8s: ","s(cm)");
     for (int jj=0; jj<n; jj++) {
-      printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].TDC);
-      if (!((jj+1)%15) && jj+1!=n) printf("\n");
+      printf("%7.2f", fHitPool[fHitIDInAChain[chainid][jj]].S);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+
+    printf("%-8s: ","phi(deg)");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7.1f", fHitPool[fHitIDInAChain[chainid][jj]].Phi*rad2deg);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
     }
     printf("\n");
   }
-    
-  if(_ChainFinderDebug_>=11) {
+
+  if(_ChainFinderDebug_>=6) {
+    printf("%-8s: ","TDC");
+    for (int jj=0; jj<n; jj++) {
+      printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].TDC);
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
+    }
+    printf("\n");
+  }
+ 
+  if(_ChainFinderDebug_>=3) {
     printf("%-8s:","ThrownTID");
     for (int jj=0; jj<n; jj++) {
       printf("%7d", fHitPool[fHitIDInAChain[chainid][jj]].ThrownTID);
-      if (!((jj+1)%15) && jj+1!=n) printf("\n");
+      if (!((jj+1)%15) && jj+1!=n) printf("\n%10s","");
     }
     printf("\n");
   }
@@ -601,6 +787,85 @@ void ChainFinder::QuickSort_S(int *arr, int left, int right)
 
 }
 
+//combile sorting S and Phi together is very slow!!!
+//sort fHitIDInAChain[][], by S increaseing order, if S equal, by phi increasing order
+//I could also use TDC instead of S, but I worry about the TDC offsets various from chanel to channel
+void ChainFinder::QuickSort_SPhi(int *arr, int left, int right) 
+{
+  int i = left, j = right;
+  int tmp;
+  int pivot = (left + right) / 2;
+  //double S_pivot = fHitPool[arr[pivot]].S;
+  double tmpphi;
+
+  
+  //make a copy of the phi into array 
+  //if cross the 180deg line, need to add 2Pi to negative phi 
+
+  //determine Phimin Phimax 
+  double Phimin,Phimax;
+  int idxPhimin,idxPhimax;
+  double *phi = new double [right+1];
+  idxPhimin=idxPhimax=left;
+  Phimin=Phimax=fHitPool[arr[left]].Phi;
+  for(int i=left;i<=right;i++) {
+    phi[i] = fHitPool[arr[i]].Phi;
+    if(Phimin >= fHitPool[arr[i]].Phi) {Phimin = fHitPool[arr[i]].Phi; idxPhimin=i;}
+    else if(Phimax <= fHitPool[arr[i]].Phi) {Phimax = fHitPool[arr[i]].Phi; idxPhimax=i;}
+  }
+  
+  //this track aross the 180 deg line, need to check for phimin phimax again
+  if(Phimax-Phimin > kPi) {   
+  for(int i=left;i<=right;i++) {
+      if (phi[i]<0.0) phi[i] += 2*kPi;
+      if(Phimax <= phi[i]) {Phimax = phi[i]; idxPhimax=i;}   
+      else if(Phimin >= phi[i]) {Phimin = phi[i]; idxPhimin=i;}
+    }
+  }
+
+  //double phi_pivot = phi[pivot];
+
+  //for (int t = left; t <= right; t++) {
+  // printf("phi[t]=%f  fHitPool[arr[t]].Phi=%f \n",phi[t]*rad2deg, fHitPool[arr[t]].Phi*rad2deg);
+  //}
+
+  // partition 
+  while (i <= j) {
+    //while ( fHitPool[arr[i]].S < S_pivot || 
+    //  (fabs(fHitPool[arr[i]].S-S_pivot)<1.0E-5 && phi[i]<phi_pivot) ) i++;
+    //while ( fHitPool[arr[j]].S > S_pivot || 
+    //  (fabs(fHitPool[arr[j]].S-S_pivot)<1.0E-5 && phi[j]>phi_pivot) ) j--;
+    //Note that I have to use floating phi_pivot and S_pivot, the above will crash
+
+    while ( fHitPool[arr[i]].S < fHitPool[arr[pivot]].S || 
+      (fabs(fHitPool[arr[i]].S-fHitPool[arr[pivot]].S)<1.0E-5 && phi[i]<phi[pivot]) ) i++;
+    while ( fHitPool[arr[j]].S > fHitPool[arr[pivot]].S || 
+      (fabs(fHitPool[arr[j]].S-fHitPool[arr[pivot]].S)<1.0E-5 && phi[j]>phi[pivot]) ) j--;
+    
+
+    //swap i and j
+    if (i <= j) {
+      //cout<<"\QuickSort_SPhi(): swap("<<i<<", "<<j<<") ..."<<endl;
+      //need to swap phi array too
+      tmpphi = phi[i];
+      phi[i] = phi[j];
+      phi[j] = tmpphi;
+      tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+
+      i++;
+      j--;
+    }
+  };
+
+  // recursion 
+  if (left < j) QuickSort_SPhi(arr, left, j);
+  if (i < right) QuickSort_SPhi(arr, i, right);
+
+  delete phi;
+  //Stop4Debug();
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //Selection Sort Algorithm
@@ -692,22 +957,6 @@ void ChainFinder::ShellSort2_S(int *arr, int size)
   }
 }
 
-//shell_3 has bugs, it skip some hits 
-void ChainFinder::ShellSort3_S(int *arr, int size)
-{
-  //Narrow the array by 2 everytime
-  for (int gap = size / 3; gap > 0; gap /= 3) {
-    for (int i = gap; i < size; ++i) {
-      for (int j = i; j >= gap && fHitPool[arr[j]].S < fHitPool[arr[j-gap]].S; j -= gap) {
-      //for (int j = i; j >= gap && arr[j] < arr[j-gap]; j -= gap) {
-	//swap j and j-gap
-	int tmp = arr[j];
-	arr[j] = arr[j - gap];
-	arr[j - gap] = tmp;
-      }
-    } 
-  }
-}
 
 //Shell Sort using gap_sequence of 13,9,5,2,1
 //Sort array fHitIDInAChain[][], by S increaseing order
@@ -732,12 +981,15 @@ void ChainFinder::ShellSort_Seq_S(int *arr, int size)
 
 
 //sort fHitIDInAChain[][], by Phi increaseing order
-void ChainFinder::InsertSort_Phi(int *arr, int size) 
+void  ChainFinder::InsertSort_Phi(int *arr, int size) 
 {
   int i, j, tmp;
+  double tmpphi;
   //need to check if this check arossing phi=180deg line
+  //Here I assumes that this chain is already sorted by S
+  //therefore its [0] and [size-1] represent the two ends of phi
   double dphi = fHitPool[arr[0]].Phi - fHitPool[arr[size-1]].Phi;
-  bool arossline = (fabs(dphi) > kPi-0.001) ? true : false;
+  bool arossline = (fabs(dphi) > 3*kPi/4.0) ? true : false;
 
   //make a copy of the phi into array 
   //if cross the line, need to add 2Pi to negative phi 
@@ -745,21 +997,74 @@ void ChainFinder::InsertSort_Phi(int *arr, int size)
   for (i = 0; i < size; i++) {
     phi[i] = fHitPool[arr[i]].Phi; 
     if (arossline && phi[i] < 0.0) phi[i] += 2*kPi; 
-  }
+  }   
+
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=11
+  //print the array before shorting
+      if(_ChainFinderDebug_>=13)
+        cout<<"\tInsertSort_Phi(): before sorting ...**************************"<<endl;
+      
+      if(_ChainFinderDebug_>=13) {
+	printf("%9s:","TDC");
+	for(int t=0;t<size;t++) { 
+	  printf("%7d",fHitPool[arr[t]].TDC);
+	  if(!((t+1)%15)) printf("\n%10s","");
+	}
+	printf("\n");
+	printf("%9s:","phi_deg");
+	for(int t=0;t<size;t++) { 
+	    printf("%7.1f",phi[t]*57.3); 
+	  if(!((t+1)%15)) printf("\n%10s","");
+	}
+	printf("\n");
+	printf("%9s:","ThrownTID");
+	for(int t=0;t<size;t++) { 
+	    printf("%7d",fHitPool[arr[t]].ThrownTID); 
+	  if(!((t+1)%15)) printf("\n%10s","");
+	}
+	printf("\n");
+      }
+#endif
 
   //do sorting now 
   for (i = 1; i < size; i++) {
     j = i;
     while (j > 0 && fHitPool[arr[j]].TDC == fHitPool[arr[j-1]].TDC &&
-      phi[j] < phi[j-1]) {
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
-	if(_ChainFinderDebug_>=10)
-	  cout<<"\tInsertSort_Phi(): swap("<<j<<", "<<j-1<<") ..."<<endl;
+           phi[j] < phi[j-1]) {
+      //swap
+      tmp = arr[j];
+      arr[j] = arr[j-1];
+      arr[j-1] = tmp;
+      //need to swap phi also
+      tmpphi = phi[j];
+      phi[j] = phi[j-1];
+      phi[j-1] = tmpphi;
+	     
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=10
+      if(_ChainFinderDebug_>=11)
+        cout<<"\tInsertSort_Phi(): swap("<<j<<", "<<j-1<<") ..."<<endl;
+      
+      if(_ChainFinderDebug_>=12) {
+	printf("%9s:","TDC");
+	for(int t=0;t<=j;t++) {
+	  //if(t==j-1 || t==j) printf("%7d",fHitPool[arr[t]].TDC);
+	  //else printf("%7s",".");
+	  printf("%7d",fHitPool[arr[t]].TDC);
+	  if(!((t+1)%15)) printf("\n%10s","");
+	}
+	printf("\n");
+	printf("%9s:","phi_deg");
+	for(int t=0;t<=j;t++) {
+	  //if(t==j-1 || t==j) printf("%7.1f",phi[t]*57.3);
+	  //else printf("%7s","."); 
+	  printf("%7.1f",phi[t]*57.3);
+	  if(!((t+1)%15)) printf("\n%10s","");
+	}
+	printf("\n");
+      }
 #endif
-	tmp = arr[j];
-	arr[j] = arr[j-1];
-	arr[j-1] = tmp;
-	j--;
+
+      j--;
     }
   }
   //free memory
@@ -770,7 +1075,7 @@ void ChainFinder::InsertSort_Phi(int *arr, int size)
 //First sort by S increasing order, if their S is equal, sort by phi.
 //in order of phi could be increasing or decreasing. But it should be 
 //consistant with the whole track
-void ChainFinder::SortAChain(int chainid)
+void ChainFinder::BenchmarkSort(int chainid)
 {
   //now sort array buf using its S and Phi 
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
@@ -779,15 +1084,14 @@ void ChainFinder::SortAChain(int chainid)
   //1) Bubble and selection sort are most slow in any case
   //2) Bubble, selection and incertion sort are stable (stable means will not change 
   //order if two values are equal to each other).  Quick and shell sort are not stable.
-  //3) Incertion sort is the fatest only if the array already sorted. It will be as 
+  //3) Incertion sort is the fastest only if the array already sorted. It will be as 
   //slow as bubble if the array is sorted in opposite way. For random array it is still 
   //faster than bubble and selection sort. 
-  //4) Shell_3 is faster than shell_2 and shell_seq.
-  //5) For random array, if array size>=30, quick sort is the fastest one. If array 	
-  //size<30, shell_3 is faster than quick sort.
+  //4) Shell_2 and Shell_seq are about the same speed. 
+  //5) For random array, if array size>=30, quick sort is the fastest one. 
   //6) For the chain from this chainfinder, (they are almost sorted only a few location 
-  //need to adjust), if array size<80, shell_3 is faster than quicksort.  
-  //If size<40 incertion sort is the best. 
+  //need to adjust), if array size>50, quick sort is the fastest, otherwise incertion sort 
+  //is the best. 
 
   int buf0[2000];
   int n=0; 
@@ -819,6 +1123,7 @@ void ChainFinder::SortAChain(int chainid)
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     BubbleSort_S(buf1,n);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_bubble");
   pBenchmark.Print("stress_bubble");
@@ -830,6 +1135,7 @@ void ChainFinder::SortAChain(int chainid)
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     SelectSort_S(buf1,n);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_select");
   pBenchmark.Print("stress_select");
@@ -841,6 +1147,7 @@ void ChainFinder::SortAChain(int chainid)
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     InsertSort_S(buf1,n);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_insert");
   pBenchmark.Print("stress_insert");
@@ -852,6 +1159,7 @@ void ChainFinder::SortAChain(int chainid)
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     QuickSort_S(buf1,0,n-1);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_quick");
   pBenchmark.Print("stress_quick");
@@ -863,6 +1171,7 @@ void ChainFinder::SortAChain(int chainid)
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     ShellSort2_S(buf1,n);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_shell2");
   pBenchmark.Print("stress_shell2");
@@ -870,81 +1179,288 @@ void ChainFinder::SortAChain(int chainid)
   printf("\n\n");
   
   /////////////////////////////////////////////////
-  pBenchmark.Start("stress_shell3");
-  for(int k=0;k<1000000;k++) {
-    for(int i=0;i<n;i++) buf1[i]=buf0[i];
-    ShellSort3_S(buf1,n);
-  }
-  pBenchmark.Stop("stress_shell3");
-  pBenchmark.Print("stress_shell3");
-  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
-  printf("\n\n");
-
-  /////////////////////////////////////////////////
   pBenchmark.Start("stress_shell_seq");
   for(int k=0;k<1000000;k++) {
     for(int i=0;i<n;i++) buf1[i]=buf0[i];
     ShellSort_Seq_S(buf1,n);
+    InsertSort_Phi(buf1,n);
   }
   pBenchmark.Stop("stress_shell_seq");
   pBenchmark.Print("stress_shell_seq");
   for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
   printf("\n\n");
+  
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_quick_sphi");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    QuickSort_SPhi(buf1,0,n-1);
+  }
+  pBenchmark.Stop("stress_quick_sphi");
+  pBenchmark.Print("stress_quick_sphi");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+  
+  
+  /////////////////////////////////////////////////
+  int buf2[2000];
+  for(int i=0;i<n;i++) buf1[i]=buf0[i];
+  InsertSort_S(buf1,n);
+  pBenchmark.Start("stress_InsertSort_Phi");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf2[i]=buf1[i];
+    InsertSort_Phi(&buf2[0],n);
+  }
+  pBenchmark.Stop("stress_InsertSort_Phi");
+  pBenchmark.Print("stress_InsertSort_Phi");
+  for(int i=0;i<n;i++) printf("%3d ",buf2[i]);
+  printf("\n\n");
+
+  /////////////////////////////////////////////////
+  pBenchmark.Start("stress_my_choice");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf1[i]=buf0[i];
+    if(n<50) InsertSort_S(buf1,n);
+    else QuickSort_S(buf1,0,n-1);
+    InsertSort_Phi(buf1,n);
+  }
+  pBenchmark.Stop("stress_my_choice");
+  pBenchmark.Print("stress_my_choice");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+
+  
+  /////////////////////////////////////////////////
+  for(int i=0;i<n;i++) buf1[i]=buf0[i];
+  pBenchmark.Start("stress_SortAChain");
+  for(int k=0;k<1000000;k++) {
+    for(int i=0;i<n;i++) buf0[i]=buf1[i];
+    SortAChain(chainid);
+  }
+  pBenchmark.Stop("stress_SortAChain");
+  pBenchmark.Print("stress_SortAChain");
+  for(int i=0;i<n;i++) printf("%3d ",buf1[i]);
+  printf("\n\n");
+  for(int i=0;i<n;i++) buf0[i]=buf1[i];
 
 #endif
-   
-  /////////////////////////////////////////////////
-  //do the sort
-  //get number of hits and make buf point to this array
+}
+
+
+//For froward tracks, sorting by either S then Phi will work.
+//For curve back tracks, sorting by S then phi will not work.
+//Here is my solution:  
+//1) spilt the whole chain into two parts: forward part + backward part
+//2) sort both part by S then phi. 
+//   Forward part: S increasing, if S equal phi increasing;
+//   Backward part: S decreasing, if S equal phi increasing;
+//3) Finally merge these 2 parts together 
+void ChainFinder::SortAChain(int chainid) 
+{  
   int nhits = fHitNumInAChain[chainid];
   int *buf = fHitIDInAChain[chainid];
   
-  if(nhits<40) InsertSort_S(buf,nhits);
-  //else if(nhits<80) ShellSort3_S(buf,nhits); //shell_3 has bugs
-  else QuickSort_S(buf,0,nhits-1);
+  double *phi = new double [nhits];
+  for(int i=0;i<nhits;i++) {phi[i]=fHitPool[buf[i]].Phi;}
+
+  //first, we judge if it is a curve back track
+  //if Smax and phi_min|phi_max is the same hit or neighbor hits
+  //it is a forward track
+
+  //determine Smin Smax Phimin Phimax
+  double Smin,Smax,Phimin,Phimax;
+  int idxSmin,idxSmax,idxPhimin,idxPhimax;
+  
+  idxSmin=idxSmax=idxPhimin=idxPhimax=0;
+  Smin=Smax=fHitPool[buf[0]].S;
+  Phimin=Phimax=fHitPool[buf[0]].Phi;
+  for(int i=0;i<nhits;i++) {
+    if(Smin >= fHitPool[buf[i]].S) {Smin = fHitPool[buf[i]].S; idxSmin=i;}
+    else if(Smax - fHitPool[buf[i]].S < 1.0E-5) {Smax = fHitPool[buf[i]].S; idxSmax=i;}   
+    if(Phimin >= fHitPool[buf[i]].Phi) {Phimin = fHitPool[buf[i]].Phi; idxPhimin=i;}
+    else if(Phimax - fHitPool[buf[i]].Phi < 1.0E-5) {Phimax = fHitPool[buf[i]].Phi; idxPhimax=i;}
+  }
+  
+  //this track aross the 180 deg line, need to check for phimin phimax again
+  if(Phimax-Phimin > kPi) {    
+    Phimin=Phimax;
+    Phimax=0.0;
+    for(int i=0;i<nhits;i++) { 
+      if (phi[i]<0.0) phi[i] += 2*kPi;
+      if(Phimax <= phi[i]) {Phimax = phi[i]; idxPhimax=i;}   
+      else if(Phimin >= phi[i]) {Phimin = phi[i]; idxPhimin=i;}
+    }
+  }
+
+  //determine track property: forward or backward
+  //for postive track phi increasing
+  //for backward track, Smax locate in the mindle of the chain
+  //but this chain is not sorted yet ......
+  bool bIsBackwardTrack=false;  
+  //first of all, check coverage:
+  double Sspan=Smax-Smin;
+  double Phispan=Phimax-Phimin;
+  //In theory, Phispan = Phi_at_cathode - Phi_at_GEM1 
+  //Phi_at_D = kPi/2-atan(D/2./R), where R = P_GeV/(0.3B) 
+  //For Pt=0.30 GeV, Phispan = 5.7 deg
+  //For Pt=0.20 GeV, Phispan = 8.3 deg
+  //For Pt=0.15 GeV, Phispan = 10.8 deg
+  //For Pt=0.053 GeV, Phispan = 66.8 deg
+  //If Phispan small, it is a high Pt chain, which never curve back
+  //If Phispan very large, it is a small Pt chain, which is very likely to curve back
+  //Note that the phi uncertainty is about 2 deg
+  
+  if(Phispan < 12.0/rad2deg ) bIsBackwardTrack=false;
+  //Smax and phimax stay together, it is a positive and forward track 
+  else if (Smax-fHitPool[buf[idxPhimax]].S < 0.5) bIsBackwardTrack=false;
+  //Smax and phimin stay together, it is a negative and forward track 
+  else if ( Smax-fHitPool[buf[idxPhimin]].S < 0.5) bIsBackwardTrack=false; 
+  //take the differece os S between two ends of phi, is it is 0.5 cm less than Sspan, 
+  //it must be curve-back track. For curve-back track, it is hard to determine which
+  //end is head or tail
+  else if (Sspan - fabs(fHitPool[buf[idxPhimin]].S-fHitPool[buf[idxPhimax]].S) > 0.5 ) {
+    bIsBackwardTrack=true;
+  }
+  else if (Phispan > 80/rad2deg) bIsBackwardTrack=true;
 
 #ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=3) {
-    printf("*****  After sortting by S: *****\n");
-    PrintAChain(fChainNum);
-  }
-#endif
-  /*
-  //sorting by phi
-  InsertSort_Phi(buf,nhits);
-    
-#ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=3) {
-    printf("*****  After sortting by Phi 1st: *****\n");
-    PrintAChain(fChainNum);
-  }
+    if(_ChainFinderDebug_>=10) {
+      cout<<"nhits="<<nhits<<" idxSmax="<<idxSmax<<"  idxSmin="<<idxSmin<<"  idxPhimax="<<idxPhimax 
+	  <<"  idxPhimin="<<idxPhimin <<endl
+	  <<"\t Smax="<<Smax<<"  Smin="<<Smin<<"  S[idxPhimax]="<<fHitPool[buf[idxPhimax]].S
+	  <<"  S[idxPhimin]="<<fHitPool[buf[idxPhimin]].S<<endl
+	  <<"\t Phimax="<<Phimax*rad2deg<<"  Phimin="<<Phimin*rad2deg<<"  Phi[idxSmax]="<<phi[idxSmax]*rad2deg
+	  <<"  Phi[idxSmin]="<<phi[idxSmin]*rad2deg<<endl
+	  <<endl;
+      printf("***************  Chain #%02d is a %s chain  ***************\n\n",
+	fChainNum, (bIsBackwardTrack ? "backward":"forward") );
+    }
 #endif
 
-  //sorting by phi again
-  InsertSort_Phi(buf,nhits);
-    
+  //now do sorting
+  if (!bIsBackwardTrack) { 
+    //forward track
+    //1st: sort by S
+    if(nhits<50) InsertSort_S(buf,nhits);
+    else QuickSort_S(buf,0,nhits-1);
+
 #ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=3) {
-    printf("*****  After sortting by Phi 2nd: *****\n");
-    PrintAChain(fChainNum);
-  }
+    if(_ChainFinderDebug_>=11) {
+      printf("*****  Forward chain: after sortting by S: *****\n");
+      PrintAChain(fChainNum, "forward chain: after sorting by S");
+    }
 #endif
- */
+
+    //2nd: sort by phi increasing for equal S hits
+    InsertSort_Phi(buf,nhits);
+
+#ifdef _ChainFinderDebug_
+    if(_ChainFinderDebug_>=10) {
+      printf("*****  Forward Chain: after sortting by S then Phi: *****\n");
+      PrintAChain(fChainNum, "Forward Chain: after sorting by S then Phi");
+    }
+#endif
+
+  } else {
+    //backward tracks
+    //1st: split the array into two part
+    //forward: [0-idxSmax], backward: (idxSmax+1,nhits-1]
+
+    //due to the fact that the original chain is in random order
+    //the backward could contain some forward hits, I should split them out
+    
+    int count=0;
+    int ii = 0, jj = nhits-1;
+    int tmp;
+    double tmpphi;
+    double phi_pivot = phi[idxSmax];
+
+    // move all hits that have large phi to the backward part
+    // if it is negative chain, we should do in the opposite way, but 
+    // we do not know the charge yet ...
+    while (ii <= jj) {
+      while ( phi[ii] < phi_pivot) ii++;
+      while ( phi[jj] > phi_pivot) jj--;
+
+      if (ii <= jj) {
+	if(ii!=jj) {
+#ifdef _ChainFinderDebug_
+	  if(_ChainFinderDebug_>=11) {
+	    cout<<"\tSplit backward chain: swap("<<ii<<", "<< jj<<")"<<endl;
+	  }
+#endif
+	  tmp = buf[ii];  buf[ii] = buf[jj];  buf[jj] = tmp;
+	  tmpphi = phi[ii]; phi[ii] = phi[jj]; phi[jj] = tmpphi;
+	  count++;
+	}
+	ii++;
+	jj--;
+      }
+    }
+    idxSmax = jj;
+#ifdef _ChainFinderDebug_
+    if(_ChainFinderDebug_>=11 && count) {
+      cout<<"\n  Backward chain: after spliting, idxSmax="<<idxSmax<<endl;
+      PrintAChain(buf, nhits, "Backward chain: after splitting and before sorting");
+    }
+#endif
+
+    //take care forward part 
+    //sorting by S inceasing order
+    if(idxSmax<50) InsertSort_S(buf,idxSmax+1);
+    else QuickSort_S(buf,0,idxSmax);   
+    //sorting by phi increasing order
+    InsertSort_Phi(buf,idxSmax+1);
+
+#ifdef _ChainFinderDebug_
+    if(_ChainFinderDebug_>=11) {
+      printf("*****Forward part of the backward chain: after sortting by S then Phi: *****\n");
+      PrintAChain(buf, idxSmax+1, "Backward chain: after farward part sorted");
+    }
+#endif
+
+    /////////////////////////////////////////////////////////////////
+    //take care backward part
+    int n1 = nhits-idxSmax-1; 
+    if(n1>0) {
+      int *buf1 = new int [n1];
+      //copy the backward part in oppsite order since they are nearly in S decreasing order
+      //now buf1 is in S nearlly increasing order
+      for(int i=0;i<n1;i++) {buf1[i]=buf[nhits-1-i];}
+
+      //sorting by S inceasing order
+      if(n1<50) InsertSort_S(buf1,n1);
+      else QuickSort_S(buf1,0,n1-1);  
+
+      //now put it back as S decreasing, noting that buf1 is in S increasing order now 
+      for(int i=0;i<n1;i++) buf[idxSmax+1+i]=buf1[n1-1-i];
+      //sorting by phi increasing order, add Smax point into it
+      InsertSort_Phi(&buf[idxSmax],n1+1);
+
+      delete buf1;
+
+  #ifdef _ChainFinderDebug_
+      if(_ChainFinderDebug_>=11) {
+	printf("*****Backward part of the backward chain: after sortting by S then Phi: *****\n");
+	PrintAChain(&buf[idxSmax], n1+1, "Backward chain: after backward part sorted");
+      }
+  #endif
+
+  #ifdef _ChainFinderDebug_
+      if(_ChainFinderDebug_>=10) {
+	printf("*****Backward chain: after sortting by S then Phi: *****\n");
+	PrintAChain(&buf[0], nhits, "Backward chain: after forward+backward sorted");
+      }
+  #endif
+    }//end of if(n1>0) {
+  }
+  delete phi;
+
 }
 
 void ChainFinder::StoreAChain(int chainid)
 {
-#ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=1) {
-    printf("  Store chain #%d: %d hits \n", chainid,fHitNumInAChain[chainid]);
-  }
-#endif
   for (int jj=0; jj<fHitNumInAChain[chainid]; jj++){
-#ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=1) {
-      printf(" %d", fHitIDInAChain[chainid][jj]);
-  }
-#endif
       //Fill the pointer of found chain
       int hitid=fHitIDInAChain[chainid][jj];
       fChainBuf[chainid].Hits[jj] = &(fHitPool[hitid]);
@@ -957,12 +1473,12 @@ void ChainFinder::StoreAChain(int chainid)
   fChainBuf[chainid].HitNum = fHitNumInAChain[chainid]; //number of hits in the chain
   fChainBuf[chainid].ID = chainid;  //this chain index 
   fChainNum_Stored++;
-
+  
 #ifdef _ChainFinderDebug_
-  if(_ChainFinderDebug_>=1) {
-  printf("\n\n");
+  if(_ChainFinderDebug_>=3) {
+    printf("\n ***** Store chain #%d: %d hits ***** \n", chainid,fHitNumInAChain[chainid]);
+    PrintAChain(chainid,"stored into fChainBuf[#]!!!");
   }
 #endif
 
 }
-

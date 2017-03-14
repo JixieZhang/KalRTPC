@@ -7,7 +7,7 @@
 
 #define MAX_HITS_PER_EVENT  5000   
 #define MAX_CHAINS_PER_EVENT 100        
-#define MAX_HITS_PER_CHAIN   200         
+#define MAX_HITS_PER_CHAIN   200       
 #define Min_HITS_PER_CHAIN   5   
 
 
@@ -69,15 +69,19 @@ public:
   
   int  SearchHitsForASeed(int seed, int seed_pre); 
   void SearchChains(int do_sort=1);  
-  void SortAChain(int chainid);
   void StoreAChain(int chainid);
-  void SetHitStatus(HitStruct *hit);
-  
+
+  //incert a hit into hitpool at position==hitid
   void InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z, int ThrownTID=-1, int ChainInfo=-1);
   //return number of hit that removed
   int  RemoveAHitFromPool(int hitid);
   //return number of hit that removed
   int  RemoveBadHitsFromPool();
+  //the real data in bonus6 it in channel ID increasing order, for the same ID,
+  //TDC in decreasing order
+  //sort hitpool to match this order
+  void SortHitPoolByIDTDC();
+
   
   void SetParameters(double space, double min_ang, double max_ang, double ang_sep);
 
@@ -85,11 +89,12 @@ private:
   
   //add a hit to end of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   //will not touch fChainBuf yet
-  void AddAHitToChain(int seed, int chainid, int hitid);
+  //if the chain is full return 0, otherwise 1
+  int  AddAHitToChain(int seed, int chainid, int hitid, double separation);
 
   //incert a hit to given position of fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   //will not touch fChainBuf yet
-  void InsertAHitToChain(int chainid, int hitid, int position);
+  void InsertAHitToChain(int chainid, int hitid, int position, int seed, double separation);
   
   //remove the first hit with id==hitid from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   //will not touch fChainBuf yet
@@ -101,11 +106,17 @@ private:
   //return number of hit that removed
   int  RemoveAHitFromChain_At(int chainid, int position);
   
-  //remove redundate hit from fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
-  void RemoveRedundantFromChain(int chainid);
+  //sort by ID increasing order, for the same ID, sort TDC in decreasing order. 
+  void QuickSort_IDTDC(int *arr, int left, int right);
+
+  
+  //print the information of the given chain
+  void PrintHitPool(const char *keywords="");
 
   //print the information of the given chain
-  void PrintAChain(int chainid);
+  void PrintAChain(int *buf, int size, const char *keywords="");
+  //print the chain buffer,buf only store the hit-id
+  void PrintAChain(int chainid, const char *keywords);
    
   //Sort array fHitIDInAChain[][], by S increaseing order
   void BubbleSort_S(int *arr, int size);
@@ -114,17 +125,29 @@ private:
   void QuickSort_S(int *arr, int left, int right);
   //Shell Sort using gap_sequence of size/2, size/4 size/8;
   void ShellSort2_S(int *arr, int size);
-  //Shell Sort using gap_sequence of size/3, size/9 size/27;
-  void ShellSort3_S(int *arr, int size);
   //Shell Sort using gap_sequence of 13,9,5,2,1
   void ShellSort_Seq_S(int *arr, int size);
   
   //after sorting by S, sort fHitIDInAChain[][] by Phi increaseing order
   //only sort these hits with the same TDC
-  void InsertSort_Phi(int *arr, int size);
+  void  InsertSort_Phi(int *arr, int size);
+
+  //sort fHitIDInAChain[][], by S increaseing order, if S equal, by phi increasing order
+  void QuickSort_SPhi(int *arr, int left, int right);
+
+  //For froward tracks, sorting by either S then Phi will work.
+  //For curve back tracks, sorting by S then phi will not work.
+  //Here is my solution:  
+  //1) spilt the whole chain into two part: forward part + backward part
+  //2) sort both part by S then phi. 
+  //   Forward part: S increasing, if S equal phi increasing;
+  //   Backwad part: S decreasing, if S equal phi increasing
+  //3) Finally merge these 2 part together 
+  void SortAChain(int chainid);
 
   //sort the chain by phi angle, then check s
-  void SortAChain();
+  void BenchmarkSort(int chainid);
+
 
 public:
   int       fHitNum;                      //Number of Hits in the pool
@@ -144,7 +167,8 @@ private:
   //this buffer is syncronized with fHitIDInAChain[][]
   //should only be operated by AddAHitToChain(int seed, int chainid, int hitid)
   int    fParentSeed[MAX_HITS_PER_CHAIN];
-  
+  double fDist2Seed[MAX_HITS_PER_CHAIN];
+
   //this is another buffer to store the chains, only keep HitIndex
   //It is not as convenience as fChainBuf because user have to put these id
   //back to fHitPool to extract xyz info

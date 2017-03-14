@@ -464,6 +464,7 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
     if(!ret) continue;
     fChainFinder->RemoveBadHitsFromPool();
     if(fChainFinder->fHitNum < MinHit) continue;
+    fChainFinder->SortHitPoolByIDTDC();
     fChainFinder->SearchChains();
 
     //This block can be moved into Tree_Fill()

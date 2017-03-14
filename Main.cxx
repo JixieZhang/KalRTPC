@@ -31,7 +31,7 @@ void usage()
 {
   printf("/------------------------------usage start----------------------------------------\\ \n");
   printf("exe [-h] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \\\n");
-  printf("    [-c <ntracks=1> [space_cm=1.1] [min_ang_deg=23.3] [max_ang_deg=30.0] [ang_sep_cm=0.4>]] \\\n");
+  printf("    [-c <ntracks=1> [space_cm=1.9] [min_ang_deg=30] [max_ang_deg=40.0] [ang_sep_cm=0.4>]] \\\n");
   printf("    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \\\n");
   printf("    [-t <costh_min=-0.00001> <costh_max=0.00001>] \\\n");
   printf("    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \\\n");  
@@ -44,7 +44,7 @@ void usage()
   cerr << "\t  job: 0: run KalmanFilter with generated helix;\n";
   cerr <<" \t       1: run KalmanFilter with geant4 track;\n";
   cerr << "\t       2: run KalmanFilter with generated circle;\n";
-  cerr << "\t       3: run ChainFinder using geant4 tracks, need to couple with -c option; \n";
+  cerr << "\t       3: run ChainFinder only geant4 tracks, need to couple with -c option; \n";
   cerr << "\t       4: run ChainFinder + Global Helix Fitter with geant4 tracks\n";
   cerr << "\t       5: run ChainFinder + KalmanFilter with geant4 tracks\n";
   cerr << "\t  nevents: number of events to generate \n";
@@ -53,12 +53,12 @@ void usage()
   cerr << "\t  costh_min and costh_max: specifiy the range of costh, only for job==0\n";
   cerr << "\t  error is used to initialize the comvariant matrix before fitting. \n\n";
   cerr << "example1: exe 0 1000 -0.05 -0.07 -0.8 0.8 0.05 \n";
-  cerr << "example1: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.1 23.3 30.0 0.4 -z -15 15\n";
+  cerr << "example1: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.9 30.0 40.0 0.4 -z -15 15\n";
   printf("\\------------------------------usage  end------------------------------------------/ \n");
   abort();
 }
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
   const double rad2deg = 180./(4.*atan(1.));
 
@@ -69,7 +69,7 @@ int main (int argc, char **argv)
   int    nevents=10000;
   double error=0.05;
   int    ntracks=1;  //how many track to dump into hitpool in an event
-  double space=1.1, min_ang=23.3/rad2deg, max_ang=30.0/rad2deg, ang_sep=0.4;
+  double space=1.9, min_ang=30.0/rad2deg, max_ang=40.0/rad2deg, ang_sep=0.4;
   double pt_min=0.1, pt_max=0.1;
   double costh_min=-0.00001, costh_max=0.00001;
   double z_min=0.0, z_max=0.0;
@@ -79,7 +79,7 @@ int main (int argc, char **argv)
 
   int index, c;
   int optmarker = 0;
-  while ((c = getopt (argc, argv, "hj:e:c:p:t:z:i:x:")) != -1) {
+  while ((c = getopt (argc, argv, "hj:n:e:c:p:t:z:i:x:")) != -1) {
     switch (c) {
     case 'h':
       usage();
@@ -157,7 +157,7 @@ int main (int argc, char **argv)
       sprintf(infile, "%s",argv[optind-1]);
       break;
     case '?':
-      if (strchr("j:e:c:p:t:z:i:x:",optopt))
+      if (strchr("j:n:e:c:p:t:z:i:x:",optopt))
         fprintf (stderr, "Option -%c requires an argument.\n", optopt);
       else if (isprint (optopt))
         fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -193,9 +193,8 @@ int main (int argc, char **argv)
     <<"\t pt_min="<<pt_min<<",  pt_max="<<pt_max
     <<", costh_min="<<costh_min<<",  costh_max="<<costh_max<<endl
     <<"\t z_min="<<z_min<<",  z_max="<<z_max<<", infile="<<infile<<endl
-    <<"\t ntracks="<<ntracks<<",  space="<<space<<" min_ang="<<min_ang/rad2deg
-    <<",  max_ang="<<max_ang/rad2deg<<",  ang_sep="<<ang_sep<<endl
-    <<"\t infile="<<infile<<endl
+    <<"\t ntracks="<<ntracks<<",  space="<<space<<" min_ang="<<min_ang*rad2deg
+    <<",  max_ang="<<max_ang*rad2deg<<",  ang_sep="<<ang_sep<<endl
     <<endl;
 
 

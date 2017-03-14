@@ -9,6 +9,59 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2017/03/14
+--------------------------tag v0.97---------------------------------------- 
+This is release 0.97. ChainFinder is ready!!!
+
+1) Updated ChainFinder with sorting subroutine. Remove shell_3 because it has bugs.
+   Added SortHitPoolByIDTDC() to sort the hit pool to match the order of BONUS6 data.
+   After that I ran benchmark test again to chieve the following conclusion.
+  //Conclusion of sorting:
+  //1) Bubble and selection sort are most slow in any case
+  //2) Bubble, selection and incertion sort are stable (stable means will not change 
+  //order if two values are equal to each other).  Quick and shell sort are not stable.
+  //3) Incertion sort is the fastest only if the array already sorted. It will be as 
+  //slow as bubble if the array is sorted in opposite way. For random array it is still 
+  //faster than bubble and selection sort. 
+  //4) Shell_2 and Shell_seq are about the same speed. 
+  //5) For random array, if array size>=30, quick sort is the fastest one. 
+  //6) For the chain from this chainfinder, (they are almost sorted only a few location 
+  //need to adjust), if array size>50, quick sort is the fastest, otherwise incertion sort 
+  //is the best. 
+2) Rewrite SortAChain(), 
+  //For froward tracks, sorting by either S then Phi will work.
+  //For curve back tracks, sorting by S then phi will not work.
+  //Here is my solution:  
+  //1) spilt the whole chain into two parts: forward part + backward part
+  //2) sort both part by S then phi. 
+  //   Forward part: S increasing, if S equal phi increasing;
+  //   Backward part: S decreasing, if S equal phi increasing;
+  //3) Finally merge these 2 parts together
+ 
+  To identify backward or forward chain:
+  //In theory, Phispan = Phi_at_cathode - Phi_at_GEM1 
+  //Phi_at_D = kPi/2-atan(D/2./R), where R = P_GeV/(0.3B) 
+  //For Pt=0.30 GeV, Phispan = 5.7 deg
+  //For Pt=0.20 GeV, Phispan = 8.3 deg
+  //For Pt=0.15 GeV, Phispan = 10.8 deg
+  //For Pt=0.053 GeV, Phispan = 66.8 deg
+  //If Phispan small, it is a high Pt chain, which never curve back
+  //If Phispan very large, it is a small Pt chain, which is very likely to curve back
+  //Note that the phi uncertainty is about 2 deg
+  
+  if(Phispan < 12.0/rad2deg ) bIsBackwardTrack=false;
+  //Smax and phimax stay together, it is a positive and forward track 
+  else if (Smax-fHitPool[buf[idxPhimax]].S < 0.5) bIsBackwardTrack=false;
+  //Smax and phimin stay together, it is a negative and forward track 
+  else if ( Smax-fHitPool[buf[idxPhimin]].S < 0.5) bIsBackwardTrack=false; 
+  //take the differece os S between two ends of phi, is it is 0.5 cm less than Sspan, 
+  //it must be curve-back track. For curve-back track, it is hard to determine which
+  //end is head or tail
+  else if (Sspan - fabs(fHitPool[buf[idxPhimin]].S-fHitPool[buf[idxPhimax]].S) > 0.5 ) {
+    bIsBackwardTrack=true;
+  }
+  else if (Phispan > 80/rad2deg) bIsBackwardTrack=true;
+
 
 2017/03/09
 1. Added binary search to EXEventGen. Do benchmark test on binary-search, loop-search
@@ -33,8 +86,7 @@ bad performance.  ---------------------------done by jixie, March 26 2016
   
     
 
-2017/03/07
---------------------------tag v0.97----------------------------------------  
+2017/03/07 
 1. Change Main.cxx, use GNC getopt to take care of input arguments, still 
 support old useage. Here is the new help menu.
 

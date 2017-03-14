@@ -348,7 +348,7 @@ Int_t NtReader::LoadATrack()
   // otherwise return  HitNum_m
   HitNum_m = 0;
 
-  while (HitNum_m<5 || Smax<50.) {
+  while (HitNum_m<4 || Smax<40.) {
     fChain->GetEntry(++fCurrent);
 #ifdef _NtReaderDebug_
     if(_NtReaderDebug_>=2) {
