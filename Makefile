@@ -1,7 +1,8 @@
 ########################################################################
+#   By Jixie Zhang
 #   This Makefile shows how to compile all C++, C and Fortran
 #   files found in $(SRCDIR) directory.
-#   Linking is done with g++. Need to have $ROOTSYS defined
+#   Linking is done with g++. Need to have root installed
 ########################################################################
 
 ########################################################################
@@ -13,7 +14,7 @@ MYHOST      := $(shell hostname -s)
 ########################################################################
 EXECFILE    := EXKalRTPC
 LIBNAME     := EXKalRTPC
-VERSION     := 1.0.2
+VERSION     := 0.97
 
 LIBFILE     := lib$(LIBNAME).so
 USERDICT    := $(LIBNAME)Dict
@@ -27,14 +28,23 @@ MODELDIR    := #geomlib:kallib:kaltracklib:utils
 MODELLIST   := $(subst :, ,$(MODELDIR))
 INCDIRS     := $(INCDIR):$(MODELDIR)
 
+
+########################################################################
+#check for CLHEP and KalmanFilter installation
+ifeq ("$(CLHEP_BASE_DIR)","")
+#$(info ***Error: $$CLHEP_BASE_DIR is missing .......***)
+$(error Error: $$CLHEP_BASE_DIR is not set .......)
+endif
+
+ifeq ("$(KALMANROOT)","")
+$(errro Error: $$KALMANROOT is not set .......)
+endif
+
 #OTHERINC just define the header file, will not be used for cint
 #OTHERLIBS is for those third-party libs
-ifeq ("$(KALMANROOT)","")
-KALMANROOT := /media/DISK500G/work/KalmanFilter
-endif
-OTHERINC    := -I$(KALMANROOT)/include -I$(CLHEP_INCLUDE_DIR)
+OTHERINC    := -I$(KALMANROOT)/include -I$(CLHEP_BASE_DIR)/include
 OTHERLIBS   := -L$(KALMANROOT)/lib -lS4Goem -lS4Kalman -lS4KalTrack -lS4Utils
-OTHERLIBS   += -L$(CLHEP_LIB_DIR) -lCLHEP
+OTHERLIBS   += -L$(CLHEP_BASE_DIR)/lib -lCLHEP
 
 ########################################################################
 # Compiler
