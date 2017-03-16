@@ -402,7 +402,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
   int npt=0;
   double szPos[200][3];
   double tmpR=0.0, tmpRmax=0.0;
-  for(int j=0;j<npt;j++) {
+  for(int j=0;j<_npt_;j++) {
     //in case you do not want to include curve back hits!!!
     if(!bIncludeCurveBackHits) {
       tmpR = sqrt(x[j]*x[j]+y[j]*y[j]);
@@ -419,6 +419,16 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
     if(npt>=200) break; //GHF only fit 200 hits
   }
   
+  //copy the buffer to EXEventgen
+  fEventGen->StepNum=npt;
+  for(int j=0;j<npt;j++) {
+    fEventGen->StepX[j]=x[j];
+    fEventGen->StepY[j]=y[j];
+    fEventGen->StepZ[j]=z[j];
+    fEventGen->StepS[j]=sqrt(x[j]*x[j]+y[j]*y[j]);
+    fEventGen->StepPhi[j]=atan2(y[j],x[j]);
+  }
+
   if(npt<MinHit) return -1.0;
   //////////////////////////////////////////////////////////////////////
   

@@ -16,6 +16,8 @@
  git clone git@github.com:jixie/KalmanFilter.git 
  or
  git clone https://github.com:jixie/KalmanFilter.git 
+ 
+ You need to have these 2 enviroment variables set: ${KALMANROOT} and ${CLHEP_BASE_DIR}
 
 ##How to compile?
 
@@ -31,7 +33,7 @@
   setenv LD_LIBRARY_PATH ${ROOTSYS}/lib:${LD_LIBRARY_PATH}     
 
   setenv  CLHEP_BASE_DIR     ${rtpcsoft}/clhep-2.1.3.1-x86_64
-  setenv  LD_LIBRARY_PATH ${CLHEP_LIB_DIR}:${LD_LIBRARY_PATH}
+  setenv  LD_LIBRARY_PATH ${CLHEP_BASE_DIR}/lib:${LD_LIBRARY_PATH}
 
  2) install KalmanFilter
 
@@ -40,12 +42,14 @@
 
  cd KalmanFilter, change 'setup.csh' to define where you want to 
  install KalmanFilter package, then change to  KalmanFilter/src,
- type 'make;make install' to install it.
+ type 'make clean; make;make install' to install it.
 
  3) compile kalRTPC
  
   cd kalRTPC;
-  make 
+  make clean;
+  make
+
 
 
 ========================================================================
@@ -54,4 +58,4 @@
 vc10 project files are also available. I can provide g77 compiler and 
 VC10 project files for clhep. You need to download vc10 version of 
 root_v5.28 from "root.cern.ch".  Place KalmanFilter and KalRTPC into 
-the same directory. Then open the VC10 solution file with VC10. 
+the same directory. Then use the VC10 solution file. 

@@ -392,7 +392,9 @@ label_105:
     {
       asym = bet*xf[i] - alf*yf[i];   ss0[i] = 1.0;
       if (asym < 0.0) ss0[i] = -1.0;
-      ff0 = ome*(rf[i]*rf[i] - dd0*dd0)/(2.0*rf[i]*gg0) + dd0/rf[i];
+      //By jixie: if rf[i] == 0, there is a problem on ff0. 
+      if(!rf[i]) ff0 = 0; 
+      else ff0 = ome*(rf[i]*rf[i] - dd0*dd0)/(2.0*rf[i]*gg0) + dd0/rf[i];
 
       if (ff0 < -1.0) ff0 = -1.0;
       if (ff0 >  1.0) ff0 =  1.0;
@@ -402,7 +404,7 @@ label_105:
       if (del[i] < -ONEPI) del[i] += TWOPI;
     }
 
-    /*
+    
     // -------- Fit straight line in S-Z
     for(i=0; i<n; i++)
     {
@@ -430,7 +432,7 @@ label_105:
       sxy[i] = 2.0*asin(eee[i])/ome;
       //printf("original sxy[%d] = %f\n",i,sxy[i]);
     }
-    */
+    
     //if(badarg)
     {
       /*

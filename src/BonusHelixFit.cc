@@ -216,27 +216,27 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   double& Phi, double& Theta, double& X0, double& Y0,double& Z0,  
   double &DCA, double& Chi2,int fit_track_to_beamline)
 {
-  const int MAX_HITS_ON_CHAIN = 255;
+  const int kMaxHit = 200;  //set it to 200 to match that one in rwfthc.cc
   const float PI = acos(0.0)*2.0;
 
   int jj;
   float my_phi;
-  float rf[MAX_HITS_ON_CHAIN];
-  float pf[MAX_HITS_ON_CHAIN];
-  float wfi[MAX_HITS_ON_CHAIN];
-  float zf[MAX_HITS_ON_CHAIN];
-  float wzf[MAX_HITS_ON_CHAIN];
+  float rf[kMaxHit];
+  float pf[kMaxHit];
+  float wfi[kMaxHit];
+  float zf[kMaxHit];
+  float wzf[kMaxHit];
   int iopt;
   int npt;
   float vv0[5];
   float ee0[15];
   float ch2ph;
   float ch2z;
-  float del[MAX_HITS_ON_CHAIN];
-  float delz[MAX_HITS_ON_CHAIN];
+  float del[kMaxHit];
+  float delz[kMaxHit];
 
   float phi0;
-  if(PointNum>MAX_HITS_ON_CHAIN) PointNum=MAX_HITS_ON_CHAIN-1;
+  if(PointNum>=kMaxHit) PointNum=kMaxHit-1;
 
   npt = PointNum;
   if(npt<5) return;
@@ -260,7 +260,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
 
   if(fit_track_to_beamline)
   {
-    rf[npt]= 0.0;
+    rf[npt]= 0.0001;  //rf=0 will cause chi2=nan problem
     pf[npt]= 0.0;
     zf[npt]= 0.0; 
     wfi[npt]= 1.0;
@@ -316,7 +316,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
 }
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-void HelixFit(int PointNum,double szPos[][3], double& R, double& A, double& B,
+void HelixFit(int PointNum, double szPos[][3], double& R, double& A, double& B,
   double& Phi_deg, double& Theta_deg, double& Z0, int fit_track_to_beamline )
 {
   const double PI=acos(0.0)*2;

@@ -66,6 +66,11 @@ class EXKalManager {
   void  Tree_Fill(TKalTrack &kaltrack);
   void  Tree_Reset();
   void  Tree_Reset_CF();
+  
+  //To identify which thrown track this chain corresponding to
+  //return the ThrownTID, also return the likelyhood, which is
+  //defined as occurance/total-hits
+  int IdentifyThrownTID(int chainid, double &likelyhood);
 
  public:
 
@@ -88,11 +93,13 @@ class EXKalManager {
   //Chain Finder tree buffer, number of found tracks store at 'ntrack' and also 'CF_ChainNum'
   int CF_ntrack_read;  //number of tracks that read from g4 tree
   int CF_ntrack_good;  //number of good tracks that read from g4 tree
+  
   int CF_HitNum, CF_ChainNum;
+  int CF_ID[MAX_HITS_PER_EVENT],CF_TDC[MAX_HITS_PER_EVENT],CF_ADC[MAX_HITS_PER_EVENT]; 
   double CF_X[MAX_HITS_PER_EVENT],CF_Y[MAX_HITS_PER_EVENT],CF_Z[MAX_HITS_PER_EVENT]; 
+  double CF_S[MAX_HITS_PER_EVENT],CF_Phi[MAX_HITS_PER_EVENT]; 
   int CF_Status[MAX_HITS_PER_EVENT],CF_ThrownTID[MAX_HITS_PER_EVENT];
   int CF_ChainInfo[MAX_HITS_PER_EVENT]; 
-
 
   //When load G4 track, we also need to load the following thrown parameters and store
   //them into the output tree. in unit of cm.
@@ -101,6 +108,8 @@ class EXKalManager {
   //as the original G4 tree, therefore I do not know how to incert these values
   double CF_X0[MAX_CHAINS_PER_EVENT], CF_Y0[MAX_CHAINS_PER_EVENT], CF_Z0[MAX_CHAINS_PER_EVENT];
   double CF_Theta0[MAX_CHAINS_PER_EVENT], CF_Phi0[MAX_CHAINS_PER_EVENT], CF_P0[MAX_CHAINS_PER_EVENT];
+
+  double CF_ThrownTID_like;  //to tell how likely this chain to be thrown track with id==trackid 
 
   //root variables
   //a lot of vaiable here are redundent, they have been defined in KalRTPC or EventGen

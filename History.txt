@@ -9,6 +9,24 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2017/03/15
+
+1) Fixed one bug in EXKalRTPC::DoGlobalHelixFit(). It never do the fit before.
+   Now it works.
+2) Solved chi2=nan from BonusHelixFit.cc. The bug is due to the fact that include the 
+   beam line point whose r=0 will cause "devide by zero".  I simple set the beam line
+   point with r=0.00001 to avoid this.
+
+3) Updated EXKalManger. Added chain-finder tree leaves for "ID, TDC, ADC, S, Phi". 
+   Added subroutine  IdentifyThrownTID() to identify which thrown track a given chain 
+   is corresponding to.
+
+4) Updated Makefile to check for CLHEP and KalmanFilter installation. Renamed the version
+   to v0.97 to match the tag version.
+
+
+
+
 2017/03/14
 --------------------------tag v0.97---------------------------------------- 
 This is release 0.97. ChainFinder is ready!!!
@@ -28,7 +46,7 @@ This is release 0.97. ChainFinder is ready!!!
   //6) For the chain from this chainfinder, (they are almost sorted only a few location 
   //need to adjust), if array size>50, quick sort is the fastest, otherwise incertion sort 
   //is the best. 
-2) Rewrite SortAChain(), 
+2) Rewrote SortAChain(), 
   //For froward tracks, sorting by either S then Phi will work.
   //For curve back tracks, sorting by S then phi will not work.
   //Here is my solution:  

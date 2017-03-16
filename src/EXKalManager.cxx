@@ -67,19 +67,31 @@ void EXKalManager::Tree_Init()
   t->Branch("trackid",&trackid,"trackid/I");
   t->Branch("ntrack",&ntrack,"ntrack/I");
 
-
   // For Chain Finder
   t->Branch("CF_ntrack_read",&CF_ntrack_read,"CF_ntrack_read/I");
   t->Branch("CF_ntrack_good",&CF_ntrack_good,"CF_ntrack_good/I");
   t->Branch("CF_HitNum",&CF_HitNum,"CF_HitNum/I");
   t->Branch("CF_ChainNum",&CF_ChainNum,"CF_ChainNum/I");
+  t->Branch("CF_ID",CF_ID,"CF_ID[CF_HitNum]/I");
+  t->Branch("CF_TDC",CF_TDC,"CF_TDC[CF_HitNum]/I");
+  t->Branch("CF_ADC",CF_ADC,"CF_ADC[CF_HitNum]/I");
   t->Branch("CF_X",CF_X,"CF_X[CF_HitNum]/D");
   t->Branch("CF_Y",CF_Y,"CF_Y[CF_HitNum]/D");
   t->Branch("CF_Z",CF_Z,"CF_Z[CF_HitNum]/D");
   t->Branch("CF_Status",CF_Status,"CF_Status[CF_HitNum]/I");
+  t->Branch("CF_S",CF_S,"CF_S[CF_HitNum]/D");
+  t->Branch("CF_Phi",CF_Phi,"CF_Phi[CF_HitNum]/D");
   t->Branch("CF_ThrownTID",CF_ThrownTID,"CF_ThrownTID[CF_HitNum]/I");
   t->Branch("CF_ChainInfo",CF_ChainInfo,"CF_ChainInfo[CF_HitNum]/I");
-
+  
+  t->Branch("CF_X0",CF_X0,"CF_X0[CF_ntrack_read]/D");
+  t->Branch("CF_Y0",CF_Y0,"CF_Y0[CF_ntrack_read]/D");
+  t->Branch("CF_Z0",CF_Z0,"CF_Z0[CF_ntrack_read]/D");
+  t->Branch("CF_Theta0",CF_Theta0,"CF_Theta0[CF_ntrack_read]/D");
+  t->Branch("CF_Phi0",CF_Phi0,"CF_Phi0[CF_ntrack_read]/D");
+  t->Branch("CF_P0",CF_P0,"CF_P0[CF_ntrack_read]/D");
+  
+  t->Branch("CF_ThrownTID_like",&CF_ThrownTID_like,"CF_ThrownTID_like/D");
 
   // thrown parameters
   t->Branch("p0",&p0,"p0/D");
@@ -180,9 +192,11 @@ void EXKalManager::Tree_Init()
 
 void EXKalManager::Tree_Reset_CF()
 {
-  //Chain Finder tree buffer, number of found tracks store at 'ntrack' and also CF_ChainNum
+  //ChainFinder tree buffer, number of found tracks store 
+  //at 'ntrack' and also CF_ChainNum
   for(int i=0;i<CF_HitNum;i++) {
-    CF_X[i]=CF_Y[i]=CF_Z[i]=0.0; 
+    CF_ID[i]=CF_TDC[i]=CF_ADC[i]=-1; 
+    CF_X[i]=CF_Y[i]=CF_Z[i]=CF_S[i]=CF_Phi[i]=0.0; 
     CF_Status[i]=CF_ThrownTID[i]=CF_ChainInfo[i]=-1; 
   }
 
@@ -190,14 +204,9 @@ void EXKalManager::Tree_Reset_CF()
     CF_X0[i]=CF_Y0[i]=CF_Z0[i]=CF_Theta0[i]=CF_Phi0[i]=CF_P0[i]=0.0;
   }
 
-  for(int i=0;i<CF_ChainNum;i++) {
-    step_x[i]=step_y[i]=step_z[i]=step_phi[i]=step_s[i]=0.0;
-  }
-  CF_ntrack_read=0;  //number of tracks that read from g4 tree
-  CF_ntrack_good=0;  //number of good tracks that read from g4 tree
-  CF_HitNum=0;
-  CF_ChainNum=0;
-
+  CF_ntrack_read=CF_ntrack_good=0;  
+  CF_HitNum=CF_ChainNum=0;
+  CF_ThrownTID_like=0.0;
 }
 
 void EXKalManager::Tree_Reset()
@@ -421,6 +430,52 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
   return true;
 }
 
+//To identify which thrown track this chain corresponding to
+//return the ThrownTID, also return the likelyhood, which is
+//defined as occurance/total-hits
+int EXKalManager::IdentifyThrownTID(int chainid, double &likelyhood) 
+{
+  int n = fChainFinder->fChainBuf[chainid].HitNum;
+  int *thrownTID_list = new int [n];
+  int *thrownTID_occur = new int [n];
+
+  int nSource = 0;
+  thrownTID_list[nSource]=fChainFinder->fChainBuf[chainid].Hits[0]->ThrownTID/1000;
+  thrownTID_occur[nSource++]=1;
+  
+  //first need to check how many thrownTID exist
+  for(int j=1;j<n;j++) {
+    int thrownTID = fChainFinder->fChainBuf[chainid].Hits[j]->ThrownTID/1000;
+    int found = 0;
+    for(int t=0;t<nSource;t++) {
+      if(thrownTID == thrownTID_list[t]) {
+	thrownTID_occur[t]++;
+	found = 1;
+	break;
+      }
+    }
+    if(!found) {
+      thrownTID_list[nSource] = thrownTID;
+      thrownTID_occur[nSource++]=1;
+    }
+  }
+
+  //check which thrownTID dominate, store it
+  int theThrownTID = thrownTID_list[0];
+  int occurMax = thrownTID_occur[0];
+  for(int t=1;t<nSource;t++) {
+    if(occurMax < thrownTID_occur[t]) {
+      occurMax = thrownTID_occur[t];
+      theThrownTID = thrownTID_list[t];
+    }
+  }
+
+  likelyhood = double(occurMax)/double(n);
+  delete thrownTID_list;
+  delete thrownTID_occur;
+  return theThrownTID;
+}
+
 
 //run ChainFinder to search for chains
 //in each event, read multiple tracks from G4 root tree and store them into hit pool
@@ -450,6 +505,7 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
     cerr << "\n------ Event " << eventno << " ------" << endl;
 #endif
     eventid = eventno;
+    trackid = 0; //will be updated if _eventtype_>3
 
     // ============================================================
     //  Reset the buffer
@@ -466,20 +522,6 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
     if(fChainFinder->fHitNum < MinHit) continue;
     fChainFinder->SortHitPoolByIDTDC();
     fChainFinder->SearchChains();
-
-    //This block can be moved into Tree_Fill()
-    //store for tree
-    CF_HitNum = fChainFinder->fHitNum;
-    ntrack = fChainFinder->fChainNum_Stored;
-    CF_ChainNum = fChainFinder->fChainNum_Stored;
-    for(int i=0;i<CF_HitNum;i++) {
-      CF_X[i]=fChainFinder->fHitPool[i].X;
-      CF_Y[i]=fChainFinder->fHitPool[i].Y;
-      CF_Z[i]=fChainFinder->fHitPool[i].Z;
-      CF_Status[i]=fChainFinder->fHitPool[i].Status;
-      CF_ThrownTID[i]=fChainFinder->fHitPool[i].ThrownTID;
-      CF_ChainInfo[i]=fChainFinder->fHitPool[i].ChainInfo;
-    }
 
     // ===================================================================
     //judge if to do fitting to the found chains
@@ -498,7 +540,13 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double space, dou
           zz[j] = fChainFinder->fChainBuf[i].Hits[j]->Z;
         }
 
-
+	//only for simulation
+	//to tell which thrown track this chain is
+	//It is slow, do not call if only one thrown track per event 
+	if(CF_ntrack_read<2) {trackid=0;CF_ThrownTID_like=1.0;}
+	else trackid = IdentifyThrownTID(i, CF_ThrownTID_like); 
+	 
+	
         if(job==4) {
           // ============================================================
           //  call global helix fit
@@ -637,19 +685,48 @@ void EXKalManager::Tree_Fill(TKalTrack &kaltrack)
 {
   //Note that all variable in NtReader are in unit of mm
   //all come from KalRTPC are in unit of cm
+  
+  //This block is for chain-finder
+  //It will be called CF_ChainNum times in a given event
+  //I do not care the speed for this class, since it is just for illustration
+  CF_HitNum = fChainFinder->fHitNum;
+  ntrack = fChainFinder->fChainNum_Stored;
+  CF_ChainNum = fChainFinder->fChainNum_Stored;
+  for(int i=0;i<CF_HitNum;i++) {
+    CF_ID[i]=fChainFinder->fHitPool[i].ID;
+    CF_TDC[i]=fChainFinder->fHitPool[i].TDC;
+    CF_ADC[i]=fChainFinder->fHitPool[i].ADC;
+    CF_X[i]=fChainFinder->fHitPool[i].X;
+    CF_Y[i]=fChainFinder->fHitPool[i].Y;
+    CF_Z[i]=fChainFinder->fHitPool[i].Z;
+    CF_S[i]=fChainFinder->fHitPool[i].S;
+    CF_Phi[i]=fChainFinder->fHitPool[i].Phi;
+    CF_Status[i]=fChainFinder->fHitPool[i].Status;
+    CF_ThrownTID[i]=fChainFinder->fHitPool[i].ThrownTID;
+    CF_ChainInfo[i]=fChainFinder->fHitPool[i].ChainInfo;
+  }
 
 
   //Load the thrown parameters, most of them available from fEvenGen
-  p0=fEventGen->P0;
-  th0=fEventGen->Theta0;
-  ph0=fEventGen->Phi0; 
+  if(_eventtype_>=3) {
+    _x0_=CF_X0[trackid];
+    _y0_=CF_Y0[trackid];
+    _z0_=CF_Z0[trackid];
+    p0=CF_P0[trackid];
+    th0=CF_Theta0[trackid];
+    ph0=CF_Phi0[trackid]; 
+  }else {
+    _x0_=fEventGen->X0;
+    _y0_=fEventGen->Y0;
+    _z0_=fEventGen->Z0;
+    p0=fEventGen->P0;
+    th0=fEventGen->Theta0;
+    ph0=fEventGen->Phi0; 
+  }
   if(ph0> kPi) ph0-=2*kPi;
   if(ph0<-kPi) ph0+=2*kPi;
   pt0=p0*sin(th0);
   pz0=p0*cos(th0);
-  _x0_=fEventGen->X0;
-  _y0_=fEventGen->Y0;
-  _z0_=fEventGen->Z0;
 
   npt0=fEventGen->StepNum;
   for(int i=0;i<npt0;i++) {
