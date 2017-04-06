@@ -132,6 +132,41 @@ void ChainFinder::PrepareHitPool(int *id, int *tdc, int *adc, double *x, double 
   }
 }
 
+//By Carlos: VECTOR CONTAINER ROUTINE
+//provide x,x,z in cm
+void ChainFinder::PrepareHitPool(vector<int> *id, vector<int> *tdc, vector<int> *adc, 
+				   vector<double> *x, vector<double> *y, vector<double> *z, 
+				   int n, vector<int> *throwntid, int append)
+{
+  TVector3 pV3;
+  if(append==0) fHitNum=0; 
+  for(int i=0;i<n;i++) {
+    if(fHitNum < MAX_HITS_PER_EVENT) {
+      pV3.SetXYZ((*x)[i],(*y)[i],(*z)[i]);
+      if (pV3.Perp()>kRTPC_R_GEM1+1.0 || pV3.Perp()<kRTPC_R_Cathode-1.0) continue;  
+      
+      fHitPool[fHitNum].ID     = (*id)[i];//THIS IS PAD NUMBER
+      fHitPool[fHitNum].TDC    = (*tdc)[i];
+      fHitPool[fHitNum].ADC    = (*adc)[i];
+      fHitPool[fHitNum].X      = (*x)[i];
+      fHitPool[fHitNum].Y      = (*y)[i];
+      fHitPool[fHitNum].Z      = (*z)[i];
+      fHitPool[fHitNum].Status = HUNTCHD;
+      //The following is added by Jixie for sorting
+      fHitPool[fHitNum].S=pV3.Perp();
+      fHitPool[fHitNum].Phi=pV3.Phi();
+
+      if(throwntid) fHitPool[fHitNum].ThrownTID=(*throwntid)[i];
+      else fHitPool[fHitNum].ThrownTID=-1;
+
+      fHitPool[fHitNum].ChainInfo=-1;
+      fHitNum++;
+    } else {
+      cout<<"MAX_HITS_PER_EVENT("<<MAX_HITS_PER_EVENT<<") is too small, tracks are potentially lost!\n";
+    }
+  }
+}
+
 void ChainFinder::InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z,
   int ThrownTID, int ChainInfo)
 {

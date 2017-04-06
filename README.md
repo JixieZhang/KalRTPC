@@ -1,6 +1,5 @@
 # KalRTPC
  Kalman Filter program for RTPC12
- This project is built to test how well Kalman Filter can fit RTPC tracks.
 
 ##How to get these source code: 
 
@@ -32,7 +31,7 @@
   setenv PATH ${ROOTSYS}/bin:${PATH}                                         
   setenv LD_LIBRARY_PATH ${ROOTSYS}/lib:${LD_LIBRARY_PATH}     
 
-  setenv  CLHEP_BASE_DIR     ${rtpcsoft}/clhep-2.1.3.1-x86_64
+  setenv  CLHEP_BASE_DIR  ${rtpcsoft}/clhep-2.1.3.1-x86_64
   setenv  LD_LIBRARY_PATH ${CLHEP_BASE_DIR}/lib:${LD_LIBRARY_PATH}
 
  2) install KalmanFilter
@@ -56,6 +55,6 @@
 ##To run this in windows:
 
 vc10 project files are also available. I can provide g77 compiler and 
-VC10 project files for clhep. You need to download vc10 version of 
-root_v5.28 from "root.cern.ch".  Place KalmanFilter and KalRTPC into 
-the same directory. Then use the VC10 solution file. 
+VC10 project files for clhep. You need to download and install vc10 version 
+of root_v5.28 from "root.cern.ch".  Place KalmanFilter and KalRTPC into 
+the same directory. Then use the provided vc10 solution file. 

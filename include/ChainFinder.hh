@@ -1,6 +1,10 @@
 //Modify by Jixie: 
-//Change this code to a class
+//originally from Carlos Ayerbe Gayoso and BoNuS6
+//Change this code to a class, add sorting algorithm
 //The whole class is in unit of cm and rad
+
+#include <vector> 
+using namespace std;
 
 #ifndef _ChainFinder_H_
 #define _ChainFinder_H_ 1
@@ -66,6 +70,11 @@ public:
   //provide x,x,z in cm
   void PrepareHitPool(int *id, int *tdc, int *adc, double *x, double *y,
                       double *z, int n, int *throwntid=0, int append=0);
+                      
+  //Added By Carlos, using vector instead of array, provide x,x,z in cm
+  void PrepareHitPool(vector<int> *id, vector<int> *tdc, vector<int> *adc, 
+		      vector<double> *x, vector<double> *y,  vector<double> *z, 
+		      int n, vector<int> *throwntid=0,  int append=0);
   
   int  SearchHitsForASeed(int seed, int seed_pre); 
   void SearchChains(int do_sort=1);  

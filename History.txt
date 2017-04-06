@@ -9,6 +9,14 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+
+2017/04/06
+1. Added subroutine PrepareHitPool() which is passing vector as arguments.
+  //Added By Carlos, using vector instead of array, provide x,x,z in cm
+  void PrepareHitPool(vector<int> *id, vector<int> *tdc, vector<int> *adc, 
+		      vector<double> *x, vector<double> *y,  vector<double> *z, 
+		      int n, vector<int> *throwntid=0,  int append=0);
+          
 2017/03/15
 
 1) Fixed one bug in EXKalRTPC::DoGlobalHelixFit(). It never do the fit before.
@@ -24,11 +32,8 @@ bad performance.  ---------------------------done by jixie, March 26 2016
 4) Updated Makefile to check for CLHEP and KalmanFilter installation. Renamed the version
    to v0.97 to match the tag version.
 
-
-
-
-2017/03/14
 --------------------------tag v0.97---------------------------------------- 
+2017/03/14
 This is release 0.97. ChainFinder is ready!!!
 
 1) Updated ChainFinder with sorting subroutine. Remove shell_3 because it has bugs.
