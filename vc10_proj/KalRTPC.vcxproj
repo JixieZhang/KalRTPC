@@ -45,12 +45,14 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <CustomBuildAfterTargets Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Build</CustomBuildAfterTargets>
     <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Link</CustomBuildBeforeTargets>
+    <ExecutablePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\FORTRAN\G77\lib;C:\FORTRAN\G77\bin;$(ExecutablePath)</ExecutablePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\FORTRAN\G77\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalOptions>/EHs %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>./;../;../include;include;..\..\KalmanFilter\src\utils;..\..\KalmanFilter\src\kaltracklib;..\..\KalmanFilter\src\kallib;..\..\KalmanFilter\src\geomlib;C:\root\include;C:\CLHEP-2.1.0.1_VC10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;../;../include;include;C:\root\include;..\..\KalmanFilter\src\utils;..\..\KalmanFilter\src\kaltracklib;..\..\KalmanFilter\src\kallib;..\..\KalmanFilter\src\geomlib;C:\CLHEP-2.1.0.1_VC10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>
@@ -127,29 +129,37 @@
     <ClCompile Include="..\src\ConfigManager.cc" />
     <ClCompile Include="..\src\EXEventGen.cxx" />
     <ClCompile Include="..\src\EXHit.cxx" />
+    <ClCompile Include="..\src\EXHYBTrack.cxx" />
     <ClCompile Include="..\src\EXKalDetector.cxx" />
     <ClCompile Include="..\src\EXKalManager.cxx" />
     <ClCompile Include="..\src\EXKalRTPC.cxx" />
     <ClCompile Include="..\EXKalRTPCDict.cxx" />
     <ClCompile Include="..\src\EXMeasLayer.cxx" />
     <ClCompile Include="..\Main.cxx" />
+    <ClCompile Include="..\src\EXVKalDetector.cxx" />
+    <ClCompile Include="..\src\EXVMeasLayer.cxx" />
     <ClCompile Include="..\src\FitCircle.cc" />
     <ClCompile Include="..\src\GlobalDebuger.cc" />
     <ClCompile Include="..\src\NtReader.cxx" />
+    <ClCompile Include="..\src\ReadGEMC.cc" />
     <ClCompile Include="..\src\rwfthc.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\CircleFitter_LM.h" />
     <ClInclude Include="..\include\EXEventGen.h" />
     <ClInclude Include="..\include\EXHit.h" />
+    <ClInclude Include="..\include\EXHYBTrack.h" />
     <ClInclude Include="..\include\EXKalDetector.h" />
     <ClInclude Include="..\include\EXKalManager.h" />
     <ClInclude Include="..\include\EXKalRTPC.h" />
     <ClInclude Include="..\EXKalRTPCDict.h" />
     <ClInclude Include="..\include\EXMeasLayer.h" />
+    <ClInclude Include="..\include\EXVKalDetector.h" />
+    <ClInclude Include="..\include\EXVMeasLayer.h" />
     <ClInclude Include="..\include\FitCircle.h" />
     <ClInclude Include="..\include\LinkDef.h" />
     <ClInclude Include="..\include\NtReader.h" />
+    <ClInclude Include="..\include\ReadGEMC.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\include\BField_Helm.hh" />
