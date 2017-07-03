@@ -18,23 +18,22 @@
 #include "TVector3.h"
 #include "TKalMatrix.h"
 #include "TCylinder.h"
-#include "TVMeasLayer.h"
+#include "EXVMeasLayer.h"
 #include "KalTrackDim.h"
+#include "TAttDrawable.h"
 
 class TVTrackHit;
 
-class EXMeasLayer : public TVMeasLayer, public TCylinder {
+class EXMeasLayer : public EXVMeasLayer, public TCylinder{
 public:
-   static Bool_t kActive;
-   static Bool_t kDummy;
-
    // Ctors and Dtor
 
    EXMeasLayer(TMaterial &min,
                TMaterial &mout,
                Double_t   r0,
                Double_t   lhalf,
-               Bool_t     type = EXMeasLayer::kActive);
+               Bool_t     isactive = EXVMeasLayer::kActive,
+         const Char_t    *name = "RTPCML");
    virtual ~EXMeasLayer();
 
    // Parrent's pure virtuals that must be implemented
@@ -53,15 +52,19 @@ public:
 				 TObjArray   &hits,
 				 bool smearing=true);
 
-   void     SetSigmaX(Double_t v)  { fgSigmaX=v; }
-   void     SetSigmaZ(Double_t v)  { fgSigmaZ=v; }
+   void     SetSigmaX(Double_t v)  { fSigmaX=v; }
+   void     SetSigmaZ(Double_t v)  { fSigmaZ=v; }
 
-   inline Double_t GetSigmaX() const { return fgSigmaX; }
-   inline Double_t GetSigmaZ() const { return fgSigmaZ; }
+   inline Double_t GetSigmaX() const { return fSigmaX; }
+   inline Double_t GetSigmaZ() const { return fSigmaZ; }
+   
+   using TObject::Draw;
+   //using TAttDrawable::Draw;
+   virtual void Draw(Int_t color, const Char_t *opt);
 
 private:
-   Double_t fgSigmaX;   // rphi resolution
-   Double_t fgSigmaZ;   // z  resolution
+   Double_t fSigmaX;   // rphi resolution
+   Double_t fSigmaZ;   // z  resolution
 
    ClassDef(EXMeasLayer,1) 	// Sample measurement layer class
 };

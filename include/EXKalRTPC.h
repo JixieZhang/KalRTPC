@@ -13,6 +13,7 @@
 #include "TKalTrackSite.h"    // from KalTrackLib
 #include "TKalTrack.h"        // from KalTrackLib
 
+#include "EXHYBTrack.h"        
 #include "EXKalDetector.h"
 #include "EXEventGen.h"
 #include "EXHit.h"
@@ -105,7 +106,7 @@ class EXKalRTPC {
 
   TFile* fFile;
 
-  TKalTrack     *fKalTrack;   // The buffer to hold the fitted result
+  EXHYBTrack    *fKalTrack;   // The buffer to hold the fitted result
   TObjArray     *fKalHits;    // hit buffer to hold original hits, include the backward hits
   TObjArray     *fKalHits_Forward;    // hit buffer to hold only the forward part of hits
   TKalDetCradle *fCradle;     // detctor system

@@ -20,14 +20,17 @@
 #include "EXKalDetector.h"
 #include "TRandom.h"
 #include "TMath.h"
+
+#include "TVirtualPad.h"
+#include "TTUBE.h"    //this is root TTUBE.h, do not use TTube.h from KalmanFilter/include
+#include "TNode.h"
+#include "TString.h"
+
 #include <iostream>
 #include <iomanip>
 using namespace std;
 
 //#define _EXMeasLayerDebug_ 1
-
-Bool_t   EXMeasLayer::kActive = kTRUE;
-Bool_t   EXMeasLayer::kDummy = kFALSE;
 
 ClassImp(EXMeasLayer)
 
@@ -36,8 +39,9 @@ EXMeasLayer::EXMeasLayer(
   TMaterial &mout,     // material outside the layer
   Double_t   r0,       // radius of the cylindrial layer
   Double_t   lhalf,    // half length of the cylindrical layer
-  Bool_t     isactive) // flag to tell the layer is active
-  : TVMeasLayer(min, mout, isactive),
+  Bool_t     isactive, // flag to tell the layer is active
+  const Char_t    *name)
+  : EXVMeasLayer(min, mout, isactive),
   TCylinder(r0, lhalf)
 {
   //Lorentz angle:  Phi(S) = 0.0278*S^2 - 0.5334*S + 2.3475  //in rad and cm
@@ -51,13 +55,13 @@ EXMeasLayer::EXMeasLayer(
 
   double S = r0;
   double t = -0.1642*(S*S) -0.0947*S + 8.8001;
-  double dt = 0.1 ;  //100 ns
+  double dt = 0.06 ;  //60 ns
   double dS = fabs((-0.071*t - 0.3208)) * dt;
   double dPhi = fabs((0.0556*S - 0.5334)) * dS;
 
-  fgSigmaX = S*dPhi;    //r*dphi 
-  //fgSigmaX = dPhi;    //dphi 
-  fgSigmaZ = 0.2;       //dz = 2 mm
+  fSigmaX = S*dPhi;    //r*dphi 
+  //fSigmaX = dPhi;    //dphi 
+  fSigmaZ = 0.2;       //dz = 2 mm
 
 #ifdef  _EXMeasLayerDebug_ 
   if(_EXMeasLayerDebug_>=2) {
@@ -67,8 +71,8 @@ EXMeasLayer::EXMeasLayer(
 	<<"  r="<<setw(6)<<setprecision(4)<<S 
 	<<"  dr="<<setw(6)<<setprecision(4)<<dS//<<endl
 	<<"  dPhi="<<setw(6)<<setprecision(4)<<dPhi*57.3<<"(deg)"
-	<<"  d(rphi)="<<setw(7)<<setprecision(5)<<fgSigmaX
-	<<"  dz="<<setw(5)<<setprecision(3)<<fgSigmaZ
+	<<"  d(rphi)="<<setw(7)<<setprecision(5)<<fSigmaX
+	<<"  dz="<<setw(5)<<setprecision(3)<<fSigmaZ
 	<< setprecision(7)<< resetiosflags(ios::showpoint)<<endl;
     }
   }
@@ -163,8 +167,8 @@ void EXMeasLayer::ProcessHit(const TVector3    &xx,
   Double_t   rphi = h(0, 0);
   Double_t   z    = h(1, 0);
 
-  Double_t dx = fgSigmaX;
-  Double_t dz = fgSigmaZ;
+  Double_t dx = fSigmaX;
+  Double_t dz = fSigmaZ;
   if(smearing) {
     rphi += gRandom->Gaus(0., dx);   // smearing rphi
     z    += gRandom->Gaus(0., dz);   // smearing z
@@ -183,3 +187,26 @@ void EXMeasLayer::ProcessHit(const TVector3    &xx,
   hits.Add(aHit);
 }
 
+
+// -----------------
+//  Draw
+// -----------------
+//    Drawing method for event display
+//
+void EXMeasLayer::Draw(Int_t color, const Char_t *opt)
+{
+   if (!gPad) return;
+   if (!IsActive()) return;
+   if (!GetNodePtr()) {
+      const Char_t *name  = GetMLName().Data();
+      const Char_t *nname = (GetMLName() + "Node").Data();
+      Double_t r    = GetR();
+      Double_t hlen = GetZmax();
+      TTUBE *tubep = new TTUBE(name,name,"void",r,r,hlen);
+      tubep->SetBit(kCanDelete);
+      TNode *nodep = new TNode(nname,nname,name);
+      nodep->SetLineColor(color);
+      nodep->SetLineWidth(0);
+      SetNodePtr(nodep);
+   }
+}

@@ -9,7 +9,55 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2017/06/14
+1. Added visulization feature. 
+   A) Added 3 base class EXVKalDetector,EXVMeasLayer and EXHYBTrack. The purpose
+      is to add Draw(Int_t color, const Char_t *opt) method into Detectors and tracks.   
+   B) Modified class EXKalDetector, EXMeasLayer, EXKalRTPC and EXKalManager to adapt 
+      the above changes.
+      
+2. Modified EXKalManager to read GEMC root file as input.
 
+3. Modified Main.cxx, use -g option to tell what type of input file. The new usage is:        
+/------------------------------usage start----------------------------------------\ 
+exe [-h] [-i] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \           
+    [-c <ntracks=1> [space_cm=1.9] [min_ang_deg=30] [max_ang_deg=40.0] [ang_sep_cm=0.4>]] \
+    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \                                              
+    [-t <costh_min=-0.00001> <costh_max=0.00001>] \                                        
+    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \                                                   
+    [-f <infile="infile.root">] \                                                          
+    [-g <g4type=0>                                                                         
+
+-------------------The following old usage is also supported----------------------
+exe <job=0|1|2|3|4|5|6> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \
+   [costh_min=-0.00001] [costh_max=0.00001] [error=0.05] [z_min=0.0] [z_max=0.0] \
+   [infile=infile.root] [g4type=0]
+
+          -h show this help menu;
+          -i interactive mode;
+          job: 0: run KalmanFilter with generated helix;
+               1: run KalmanFilter with geant4 track;
+               2: run KalmanFilter with generated circle;
+               3: run ChainFinder but no fitting with geant4 tracks, need to couple with -c option;
+               4: run ChainFinder + Global Helix Fitter with geant4 tracks
+               5: run ChainFinder + KalmanFilter with geant4 tracks
+          nevents: number of events to generate
+          pt_min_gev and pt_max_gev: specifiy the range of pt in Gev
+          Note that if pt is negative then anti-clockwise track will be generated
+          costh_min and costh_max: specifiy the range of costh, only for job==0
+          error is used to initialize the comvariant matrix before fitting.
+          z_min and z_max are used to tell the range of thrown z.
+          infile is used to specifiy the input root file.
+          g4type tells the type of the input file: 0, Jixie's Geant4 RTPC12 tree, 1 GEMC tree
+
+example1: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05
+example2: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05 ' -20.0' 20.0 infile.root 1
+example3: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.9 30.0 40.0 0.4 -z -20 20 -i
+\------------------------------usage  end------------------------------------------/
+
+4. Re-formated some source code.
+  
+   
 2017/04/06
 1. Added subroutine PrepareHitPool() which is passing vector as arguments.
   //Added By Carlos, using vector instead of array, provide x,x,z in cm

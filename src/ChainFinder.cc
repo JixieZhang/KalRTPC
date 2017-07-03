@@ -13,7 +13,23 @@ extern const double kRTPC_R_GEM1 = 7.0;
 extern const double kRTPC_R_Cathode = 3.0;
 
 ///////////////////////////////////////////////////////////////////////
-#define _ChainFinderDebug_ 5
+//how to define _ChainFinderDebug_?
+//>=1: print hit pool
+//>=3: add printing stored chain information of 'hit-id' and 'ThrownTID'
+//>=4: add printing "Chain #: hit 'hit-id' is added to 'chain-position'" during searching a tree
+//>=5: add printing 2 more information of stored chain: 's' and 'phi'
+//     add printing "seed=0   seed_pre=0   hit=1  : separation=  0.31 cm, angle=    0.0 deg    Chain 0: hit 1 is added to 1"
+//>=6: add printing 1 more information of stored chain: 'TDC'  
+//==9: will call BenchmarkSort(), printing the sorting result of each sort algorithm
+//>=10:add printing chain buffer before and after sorting
+//     also add printing the following: 
+//"nhits=98 idxSmax=48  idxSmin=58  idxPhimax=58  idxPhimin=95
+//         Smax=4.87793  Smin=2.99306  S[idxPhimax]=2.99306  S[idxPhimin]=2.996
+//         Phimax=-16.8163  Phimin=-107.002  Phi[idxSmax]=-62.0518  Phi[idxSmin]=-16.8163"
+//>=11: add printing details of processing backward chains
+//>=12  add priting more information about insertion_sort
+//>=13: add printing most details of insertion_sort
+#define _ChainFinderDebug_ 11
 
 #ifdef _ChainFinderDebug_
 #include "GlobalDebuger.hh"
@@ -331,7 +347,7 @@ void ChainFinder::PrintHitPool(const char *keywords)
     for(int i=0;i<fHitNum;i++) { printf("%7.2f",fHitPool[i].S);}
     printf("\n");    
     printf("%9s: ","Phi");
-    for(int i=0;i<fHitNum;i++) { printf("%7.1f",fHitPool[i].Phi);}
+    for(int i=0;i<fHitNum;i++) { printf("%7.1f",fHitPool[i].Phi*rad2deg);}
     printf("\n");
   }
 #endif
@@ -1329,8 +1345,8 @@ void ChainFinder::SortAChain(int chainid)
 
   //determine track property: forward or backward
   //for postive track phi increasing
-  //for backward track, Smax locate in the mindle of the chain
-  //but this chain is not sorted yet ......
+  //for backward track, Smax locate in the middle of the chain
+  //but this chain buf is not sorted yet. so we have to sort it first ......
   bool bIsBackwardTrack=false;  
   //first of all, check coverage:
   double Sspan=Smax-Smin;
@@ -1350,7 +1366,7 @@ void ChainFinder::SortAChain(int chainid)
   else if (Smax-fHitPool[buf[idxPhimax]].S < 0.5) bIsBackwardTrack=false;
   //Smax and phimin stay together, it is a negative and forward track 
   else if ( Smax-fHitPool[buf[idxPhimin]].S < 0.5) bIsBackwardTrack=false; 
-  //take the differece os S between two ends of phi, is it is 0.5 cm less than Sspan, 
+  //take the differece of S between two ends of phi, if it is >0.5 cm less than Sspan, 
   //it must be curve-back track. For curve-back track, it is hard to determine which
   //end is head or tail
   else if (Sspan - fabs(fHitPool[buf[idxPhimin]].S-fHitPool[buf[idxPhimax]].S) > 0.5 ) {
@@ -1410,7 +1426,7 @@ void ChainFinder::SortAChain(int chainid)
     double tmpphi;
     double phi_pivot = phi[idxSmax];
 
-    // move all hits that have large phi to the backward part
+    // move all hits that have larger phi to the backward part
     // if it is negative chain, we should do in the opposite way, but 
     // we do not know the charge yet ...
     while (ii <= jj) {
@@ -1418,18 +1434,18 @@ void ChainFinder::SortAChain(int chainid)
       while ( phi[jj] > phi_pivot) jj--;
 
       if (ii <= jj) {
-	if(ii!=jj) {
+        if(ii!=jj) {
 #ifdef _ChainFinderDebug_
-	  if(_ChainFinderDebug_>=11) {
-	    cout<<"\tSplit backward chain: swap("<<ii<<", "<< jj<<")"<<endl;
-	  }
+          if(_ChainFinderDebug_>=11) {
+            cout<<"\tSplit backward chain: swap("<<ii<<", "<< jj<<")"<<endl;
+          }
 #endif
-	  tmp = buf[ii];  buf[ii] = buf[jj];  buf[jj] = tmp;
-	  tmpphi = phi[ii]; phi[ii] = phi[jj]; phi[jj] = tmpphi;
-	  count++;
-	}
-	ii++;
-	jj--;
+          tmp = buf[ii];  buf[ii] = buf[jj];  buf[jj] = tmp;
+          tmpphi = phi[ii]; phi[ii] = phi[jj]; phi[jj] = tmpphi;
+          count++;
+        }
+        ii++;
+        jj--;
       }
     }
     idxSmax = jj;
@@ -1440,7 +1456,7 @@ void ChainFinder::SortAChain(int chainid)
     }
 #endif
 
-    //take care forward part 
+    //take care of the forward part 
     //sorting by S inceasing order
     if(idxSmax<50) InsertSort_S(buf,idxSmax+1);
     else QuickSort_S(buf,0,idxSmax);   
@@ -1455,7 +1471,7 @@ void ChainFinder::SortAChain(int chainid)
 #endif
 
     /////////////////////////////////////////////////////////////////
-    //take care backward part
+    //take care of the backward part
     int n1 = nhits-idxSmax-1; 
     if(n1>0) {
       int *buf1 = new int [n1];

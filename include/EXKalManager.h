@@ -13,6 +13,7 @@
 #include "TKalTrackSite.h"    // from KalTrackLib
 #include "TKalTrack.h"        // from KalTrackLib
 
+#include "EXHYBTrack.h"
 #include "EXKalRTPC.h"
 #include "EXKalDetector.h"
 #include "EXEventGen.h"
@@ -20,6 +21,7 @@
 
 #include "ChainFinder.hh"
 #include "NtReader.h"
+#include "ReadGEMC.h"
 /////////////////////////////////////////////////////////////////
 //Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
 #ifndef MaxHit
@@ -37,11 +39,19 @@ class EXKalManager {
 
   void BeginOfRun(int eventtype);
   void EndOfRun();
+  
+  //read ntracks from GEMC output tree and fill it into ChainFinder's hit pool.
+  //return number of hits or -1 if reach the end of file or fail
+  //please note that the GEMC root tree use unit of mm and GeV
+  int  FillChainFinderHitPoolGEMC(int ntracks, bool bIncludeCurveBackHits=true);
+
+  //read a track from G4MC_RTPC12 output tree and fill into fKalHits
+  bool LoadAGEMCTrack(bool bIncludeCurveBackHits=false);
 
   //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
-  //return false if reach the end of file or fail
-  //please note that the G4 root tree use unit of mm 
-  bool FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHits=true);
+  //return number of hits or -1 if reach the end of file or fail
+  //please note that the G4 root tree use unit of mm and MeV
+  int  FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHits=true);
 
   //read a track from G4MC_RTPC12 output tree and fill into fKalHits
   bool LoadAG4Track(bool bIncludeCurveBackHits=false);
@@ -49,8 +59,8 @@ class EXKalManager {
   //run ChainFinder to search for chains
   //in each event, read multiple tracks from G4 root tree and store them into hit pool
   //job := 3, no fit; 4 call GHF; 5 call KF 
-  int  RunCFNFit(int job, int nevents, int ntracks, double space, double min_ang, 
-		 double max_ang, double ang_sep);
+  int  RunCFNFit(int treetype, int job, int nevents, int ntracks, double space, 
+		 double min_ang, double max_ang, double ang_sep);
 
 
   //run KalmanFilter only    
@@ -63,7 +73,7 @@ class EXKalManager {
  private:
 
   void  Tree_Init();
-  void  Tree_Fill(TKalTrack &kaltrack);
+  void  Tree_Fill(EXHYBTrack &kaltrack);
   void  Tree_Reset();
   void  Tree_Reset_CF();
   
@@ -86,6 +96,7 @@ class EXKalManager {
 
   char          fG4Inputfile[255];
   NtReader      *fNtReader;           
+  GEMCReader    *fGEMCReader;
 
  private:
   //This part is used to fill the root tree
@@ -134,6 +145,7 @@ class EXKalManager {
   //original hits info
   int npt0;   	   //npt0 is to store number of original hits 
   double step_x[MaxHit],step_y[MaxHit],step_z[MaxHit],step_phi[MaxHit],step_s[MaxHit];  
+  double  step_s_min, step_s_max;
 
   //smeared or reconstructed hits info
   int npt;         //npt is to store number of used hits by kalman filter 
