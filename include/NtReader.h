@@ -19,7 +19,10 @@ using namespace std;
 //print some information for debugging 
 //#define _NtReaderDebug_  2
 
-#define MaxHitInATrack  200
+//Maximum Number of Hits in an event, has been defined in "ChainFinder.h" 
+#ifndef  MAX_HITS_PER_EVENT
+#define MAX_HITS_PER_EVENT 5000
+#endif
 
 // Header file for the classes stored in the TTree if any.
 
@@ -75,21 +78,21 @@ public :
   Double_t        MeanBz;
   Double_t        dEdX;
   Int_t           HitNum;
-  Double_t        StepX[MaxHitInATrack];   //[HitNum]
-  Double_t        StepY[MaxHitInATrack];   //[HitNum]
-  Double_t        StepZ[MaxHitInATrack];   //[HitNum]
-  Double_t        StepS[MaxHitInATrack];   //[HitNum]
-  Double_t        StepPhi[MaxHitInATrack];   //[HitNum]
-  Double_t        StepdE[MaxHitInATrack];   //[HitNum]
-  Double_t        StepL[MaxHitInATrack];   //[HitNum]
-  Int_t           StepID[MaxHitInATrack];   //[HitNum]
-  Int_t           StepTDC[MaxHitInATrack];   //[HitNum]
-  Int_t           StepADC[MaxHitInATrack];   //[HitNum]
-  Double_t        StepX_rec[MaxHitInATrack];   //[HitNum]
-  Double_t        StepY_rec[MaxHitInATrack];   //[HitNum]
-  Double_t        StepZ_rec[MaxHitInATrack];   //[HitNum]
-  Double_t        StepS_rec[MaxHitInATrack];   //[HitNum]
-  Double_t        StepPhi_rec[MaxHitInATrack];   //[HitNum]
+  Double_t        StepX[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepY[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepZ[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepS[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepPhi[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepdE[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepL[MAX_HITS_PER_EVENT];   //[HitNum]
+  Int_t           StepID[MAX_HITS_PER_EVENT];   //[HitNum]
+  Int_t           StepTDC[MAX_HITS_PER_EVENT];   //[HitNum]
+  Int_t           StepADC[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepX_rec[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepY_rec[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepZ_rec[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepS_rec[MAX_HITS_PER_EVENT];   //[HitNum]
+  Double_t        StepPhi_rec[MAX_HITS_PER_EVENT];   //[HitNum]
   Double_t        R_sim;
   Double_t        A_sim;
   Double_t        B_sim;
@@ -98,14 +101,14 @@ public :
   Double_t        Z_sim;
   Double_t        DCA_sim;
   Int_t           HitNum_m;
-  Int_t           StepID_m[MaxHitInATrack];   //[HitNum_m]
-  Int_t           StepTDC_m[MaxHitInATrack];   //[HitNum_m]
-  Int_t           StepADC_m[MaxHitInATrack];   //[HitNum_m]
-  Double_t        StepX_rec_m[MaxHitInATrack];   //[HitNum_m]
-  Double_t        StepY_rec_m[MaxHitInATrack];   //[HitNum_m]
-  Double_t        StepZ_rec_m[MaxHitInATrack];   //[HitNum_m]
-  Double_t        StepS_rec_m[MaxHitInATrack];   //[HitNum_m]
-  Double_t        StepPhi_rec_m[MaxHitInATrack];   //[HitNum_m]
+  Int_t           StepID_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Int_t           StepTDC_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Int_t           StepADC_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Double_t        StepX_rec_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Double_t        StepY_rec_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Double_t        StepZ_rec_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Double_t        StepS_rec_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
+  Double_t        StepPhi_rec_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
   Double_t        R_rec;
   Double_t        A_rec;
   Double_t        B_rec;

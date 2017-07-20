@@ -31,7 +31,7 @@ public:
 
    //using TAttDrawable::Draw;
    using TCollection::Draw;
-   virtual void Draw(Int_t color, const Char_t *opt);
+   virtual void Draw(Int_t color, const Char_t *opt="");
 
    ClassDef(EXHYBTrack,1)  // Hybrid track class for Kalman Filter
 };

@@ -244,7 +244,7 @@ bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
       if(tmpS>Smax) Smax=tmpS;
       fKalHits_Forward->Add(hitp); npt++;
     }
-    if(npt>=MaxHit) break;
+    if(npt>=MAX_HITS_PER_TRACK) break;
     hitp = dynamic_cast<EXHit *>(next());
     idx++;
   }
@@ -429,7 +429,7 @@ double EXKalRTPC::DoGlobalHelixFit(double *x, double *y,double *z, int _npt_,
     fEventGen->StepPhi[j]=atan2(y[j],x[j]);
   }
 
-  if(npt<MinHit) return -1.0;
+  if(npt<MIN_HITS_PER_TRACK) return -1.0;
   //////////////////////////////////////////////////////////////////////
 
   //do the helix fit and store all results into the tree leaves buffer
@@ -875,7 +875,7 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
         EXEventGen::PrintHelix(&hel, "GenerateHelix(backward): swim thrown helix to last point:");
       }
 #endif
-      if(fKalHits->GetEntriesFast()>=MinHit) break;
+      if(fKalHits->GetEntriesFast()>=MIN_HITS_PER_TRACK) break;
       else fKalHits->Delete();
       pCounter++;
     }
@@ -884,7 +884,7 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
   else {
     while(pCounter<pMaxThrow) {
       fEventGen->GenerateCircle(pt_min,pt_max,costh_min,costh_max,z_min,z_max,bIncludeCurveBackHits);
-      if(fKalHits->GetEntriesFast()>=MinHit) break;
+      if(fKalHits->GetEntriesFast()>=MIN_HITS_PER_TRACK) break;
       else fKalHits->Delete();
       pCounter++;
     }
@@ -1511,7 +1511,7 @@ void EXKalRTPC::Example(int job, int nevents, double pt_min, double pt_max, doub
     bool bNeed2Iter = this->JudgeFor2ndIteration(bRemoveBackwardHits);
 
     //make sure there are at leat 5 hits in the buffer
-    if(fKalHits_Forward->GetEntriesFast()<MinHit)  continue;
+    if(fKalHits_Forward->GetEntriesFast()<MIN_HITS_PER_TRACK)  continue;
 
     // ============================================================
     //  Do KalmanFilter

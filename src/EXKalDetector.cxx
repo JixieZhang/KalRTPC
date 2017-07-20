@@ -6,41 +6,6 @@
 
 #include "TRandom.h" // from ROOT
 
-const int    kNDetDummyLayer = 6;
-#define RTPC_TIC 120    //TIC width is 200 ns
-
-#if (RTPC_TIC == 200)
-const int    kNDetLayer = 35;
-const double kDetLayerRList[] = {
-  6.916, 6.849, 6.779, 6.707, 6.632, 6.555, 6.474, 6.392, 6.306, 6.218, 
-  6.127, 6.033, 5.937, 5.838, 5.736, 5.632, 5.525, 5.415, 5.303, 5.187, 
-  5.070, 4.949, 4.826, 4.700, 4.572, 4.441, 4.307, 4.170, 4.031, 3.889, 
-  3.745, 3.597, 3.448, 3.295, 3.140
-};  // this list in unit of cm
-
-#elif (RTPC_TIC == 120) 
-const int    kNDetLayer = 42;
-const double kDetLayerRList[] = {
-  6.952, 6.857, 6.762, 6.667, 6.571, 6.476, 6.381, 6.286, 6.190, 6.095,
-  6.000, 5.905, 5.810, 5.714, 5.619, 5.524, 5.429, 5.333, 5.238, 5.143,
-  5.048, 4.952, 4.857, 4.762, 4.667, 4.571, 4.476, 4.381, 4.286, 4.190,
-  4.095, 4.000, 3.905, 3.810, 3.714, 3.619, 3.524, 3.429, 3.333, 3.238,
-  3.143, 3.048
-};  // this list in unit of cm
-
-#else 
-const int    kNDetLayer = 70;
-const double kDetLayerRList[] = {
-  6.944, 6.887, 6.831, 6.775, 6.718, 6.662, 6.606, 6.549, 6.493, 6.437,
-  6.380, 6.324, 6.268, 6.211, 6.155, 6.099, 6.042, 5.986, 5.930, 5.873,
-  5.817, 5.761, 5.704, 5.648, 5.592, 5.535, 5.479, 5.423, 5.366, 5.310,
-  5.254, 5.197, 5.141, 5.085, 5.028, 4.972, 4.915, 4.859, 4.803, 4.746,
-  4.690, 4.634, 4.577, 4.521, 4.465, 4.408, 4.352, 4.296, 4.239, 4.183,
-  4.127, 4.070, 4.014, 3.958, 3.901, 3.845, 3.789, 3.732, 3.676, 3.620,
-  3.563, 3.507, 3.451, 3.394, 3.338, 3.282, 3.225, 3.169, 3.113, 3.056
-};  // this list in unit of cm
-#endif
-
 ClassImp(EXKalDetector)
 
 
@@ -161,8 +126,8 @@ EXKalDetector::EXKalDetector(Int_t m)
   ////////////////////////////////////////////////////////////////////////////
   //start to build  detectors
 
-  Int_t    nlayers = kNDetLayer; // # sampling layers 
-  Double_t lhalf   = 20.;        // half length
+  Int_t    nlayers = kNDetLayer;      // # sampling layers 
+  Double_t lhalf   = kRTPC_Length/2.; // half length
 
   // Create dummy layers of the inner cylinder of the central tracker
   double r;   //in cm
@@ -171,17 +136,16 @@ EXKalDetector::EXKalDetector(Int_t m)
    Bool_t dummy  = EXMeasLayer::kDummy;
 
   //add target gas and target wall and He4 gas
-  Add(new EXMeasLayer(D2Gas, Kapton, r=0.3, lhalf, dummy));
-  //Add(new EXMeasLayer(Kapton, He4Gas, r=0.3028, lhalf, EXVMeasLayer::kDummy));
-  Add(new EXMeasLayer(Kapton, He4Gas, r=0.3050, lhalf, dummy));
+  Add(new EXMeasLayer(D2Gas, Kapton, r=kRTPC_R_Target, lhalf, dummy));
+  Add(new EXMeasLayer(Kapton, He4Gas, r=kRTPC_R_Target+0.0050, lhalf, dummy));
 
   //add first aluminized mylar foil
-  Add(new EXMeasLayer(He4Gas, AlMylar, r=2.0, lhalf, dummy));
-  Add(new EXMeasLayer(AlMylar, He4DME, r=2.000407, lhalf, dummy));
+  Add(new EXMeasLayer(He4Gas, AlMylar, r=kRTPC_R_Cathode-1.0, lhalf, dummy));
+  Add(new EXMeasLayer(AlMylar, He4DME, r=kRTPC_R_Cathode-1.0+0.000407, lhalf, dummy));
 
   //add 2nd aluminized mylar foil
-  Add(new EXMeasLayer(He4DME, AlMylar, r=3.0, lhalf, dummy));
-  Add(new EXMeasLayer(AlMylar, He4DME, r=3.000407, lhalf, dummy));
+  Add(new EXMeasLayer(He4DME, AlMylar, r=kRTPC_R_Cathode, lhalf, dummy));
+  Add(new EXMeasLayer(AlMylar, He4DME, r=kRTPC_R_Cathode+0.000407, lhalf, dummy));
 
   // Create measurement layers in the drift region
   for (Int_t layer = nlayers-1; layer >= 0; layer--) {

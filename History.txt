@@ -9,6 +9,12 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 4) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+2017/06/20
+1. Updated the visulization. Added visulization to ChainFider.
+2. Solved some bug about number of hits limit in ChainFinder.
+3. Modified ReadGEMC since its format changed.
+ 
+
 2017/06/14
 1. Added visulization feature. 
    A) Added 3 base class EXVKalDetector,EXVMeasLayer and EXHYBTrack. The purpose

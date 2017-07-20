@@ -2,6 +2,31 @@
 //originally from Carlos Ayerbe Gayoso and BoNuS6
 //Change this code to a class, add sorting algorithm
 //The whole class is in unit of cm and rad
+////////////////////////////////////////////////////////////////////////////////////
+//How the CF work?
+//parameter to search hits
+//double Ini_Sep;               //the distance for the initial seed, no angle is required
+//double Max_Sep, Max_Sep_Ang;  //maximum allowed distance but require smaller angle 
+//double Min_Sep, Min_Sep_Ang;  //maximum allowed angle but require smaller distance
+//default values: 
+// Ini_Sep=1.0cm, Max_Sep=1.1cm; Max_Sep_Ang=23.3deg; Min_Sep=0.4; Min_Sep_Ang=30.0deg
+//1) fill all hits into the hitpool
+//2) search chains:  
+//  A) add the first available hit into private  chain_buffer. using it as the 1st seed, 
+//     search hits within distance of "Ini_Sep" (no angle is required). Add all found hits
+//     into the chain_buffer and marked as used.  
+//  B) pick to next available hit in the private chain_buffer as current seed, together with
+//     its parent-seed, search hits satisfied these conditions:
+//     (distance > Min_Sep && angle < Max_Sep_Ang) || (distance <= Min_Sep && angle < Min_Sep_Ang) 
+//     where angle is the angle between vector1(parent-seed to seed) and vector2 (seed to hit).
+//     Add all found hits into the chain_buffer and marked as used. 
+//  C) repeat B) till all hits in the chain_buffer are used as seeds. 
+//  D) determine whether or not to store this chain into public chain buffer "fChainBuf". Do 
+//     not store if any of this is true: 
+    //  a) number of hits < 5, or b) Smin > kRTPC_R_GEM1-2cm, or 
+    //  c) Smax < kRTPC_R_Cathode+2cm, or d) Smax-Smin<2cm
+//  E) if there are still unused hits in the pool, repeat A) B) C) and D) above.
+////////////////////////////////////////////////////////////////////////////////////
 
 #include <vector> 
 using namespace std;
@@ -9,8 +34,12 @@ using namespace std;
 #ifndef _ChainFinder_H_
 #define _ChainFinder_H_ 1
 
+//If necessary, let MAX_HITS_PER_CHAIN be larger than MAX_HITS_PER_TRACK during chain 
+//search such that it will loop over all hits belong to this chain. 
+//However, store only MAX_HITS_PER_TRACK of hits into the final chain buffer (fChainBuf).     
 #define MAX_HITS_PER_EVENT  5000   
-#define MAX_CHAINS_PER_EVENT 100        
+#define MAX_CHAINS_PER_EVENT 100    
+#define MAX_HITS_PER_TRACK   200             
 #define MAX_HITS_PER_CHAIN   200       
 #define Min_HITS_PER_CHAIN   5   
 
@@ -33,8 +62,8 @@ using namespace std;
 
       
 //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
-//ChainInfo  = cccjjj,  where ccc is ChainIndex and jj is HitIndex 
-//ThrownTID  = cccjjj,  where ccc is TrackIndex and jj is HitIndex 
+//ChainInfo  = ccccjjjj,  where cc is ChainIndex and jj is HitIndex 
+//ThrownTID  = ccccjjjj,  where cc is TrackIndex and jj is HitIndex 
 typedef struct {
   int ID;
   int TDC;
@@ -81,7 +110,8 @@ public:
   void StoreAChain(int chainid);
 
   //incert a hit into hitpool at position==hitid
-  void InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z, int ThrownTID=-1, int ChainInfo=-1);
+  void InsertAHitToPool(int hitid, int id, int tdc, int adc, double x, double y, double z, 
+                        int ThrownTID=-1, int ChainInfo=-1);
   //return number of hit that removed
   int  RemoveAHitFromPool(int hitid);
   //return number of hit that removed
@@ -91,8 +121,11 @@ public:
   //sort hitpool to match this order
   void SortHitPoolByIDTDC();
 
-  
-  void SetParameters(double space, double min_ang, double max_ang, double ang_sep);
+  void SetParameters(double max_sep, double max_sep_ang, double min_sep, double min_sep_ang,
+                     double ini_sep=1.0);
+
+  void DrawPool();
+  void DrawChain();
 
 private:  
   
@@ -163,33 +196,29 @@ public:
   HitStruct fHitPool[MAX_HITS_PER_EVENT]; //Keep all hits in one event
 
 
+  //this is the public buffer to store the chains, only keep pointers
   int         fChainNum_Stored;
-  //this is the buffer to store the chains, only keep pointers
   ChainStruct fChainBuf[MAX_CHAINS_PER_EVENT];   //Keep all chains
 
 
 private:
-  //These line is used to indicate how to search chains
-  //int    anchor_hit, seed_hit, next_hit, seed_index;
-  
+  //parameter to search hits
+  double Ini_Sep;               //the distance for the initial seed, no angle is required
+  double Max_Sep, Max_Sep_Ang;  //maximum allowed distance but require smaller angle 
+  double Min_Sep, Min_Sep_Ang;  //maximum allowed angle but require smaller distance
+
   //to store which seed add this hit into the chain
   //this buffer is syncronized with fHitIDInAChain[][]
   //should only be operated by AddAHitToChain(int seed, int chainid, int hitid)
   int    fParentSeed[MAX_HITS_PER_CHAIN];
   double fDist2Seed[MAX_HITS_PER_CHAIN];
 
-  //this is another buffer to store the chains, only keep HitIndex
-  //It is not as convenience as fChainBuf because user have to put these id
-  //back to fHitPool to extract xyz info
+  //this is the private buffer to store the chains, only keep HitIndex
+  //user have to put these id back to fHitPool to extract xyz info
+  //note that not every chain is stored into the public buffer
   int    fChainNum;
   int    fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   int    fHitNumInAChain[MAX_CHAINS_PER_EVENT];  //keep number of hits on each chain
-  
-  double Max_Link_Sep;
-  double Max_Ang;
-  double Min_Ang;
-  double Ang_Sep;
-
 };
 
 #endif 

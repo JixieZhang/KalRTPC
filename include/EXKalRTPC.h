@@ -19,10 +19,10 @@
 #include "EXHit.h"
 
 /////////////////////////////////////////////////////////////////
-//Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
-#ifndef MaxHit
-#define MaxHit 200
-#define MinHit 5
+//Maximum Number of Hits in a track, has been defined in "EXEventGen.h"
+#ifndef MAX_HITS_PER_TRACK
+#define MAX_HITS_PER_TRACK 200
+#define MIN_HITS_PER_TRACK 5
 #endif
 /////////////////////////////////////////////////////////////////
 
@@ -36,8 +36,7 @@ class EXKalRTPC {
   virtual ~EXKalRTPC();
 
   //create a track, store everything into fKalHits
-  //prepare a track from xyz array, make sure in time increasing order  
-  
+  //prepare a track from xyz array, make sure in time increasing order    
   bool PrepareATrack_mm(double *x_mm, double *y_mm, double *z_mm, int npt,
                         bool smearing=false, bool bIncludeCurveBackHits=true);
   bool PrepareATrack(double *x, double *y,double *z, int npt, bool smearing=false,
@@ -45,7 +44,6 @@ class EXKalRTPC {
   bool PrepareATrack(int job, double pt_min, double pt_max, double costh_min,
                      double costh_max, double z_min=0.0, double z_max=0.0, 
                      bool bIncludeCurveBackHits=true);
-
 
   //Provide suggestion if need to apply 2nd iteration kalman filter
   //if bIncludeCurveBackHits==false,  it will remove backward hits, otherwise just 
@@ -133,10 +131,11 @@ class EXKalRTPC {
   //store reconstructed hits or detector smeared thrown hits, in unit of cm
   //will be filled in RemoveBackwardHits(), plan to use these array to fill tree 
   int HitNum;  
-  double StepX_rec[MaxHit],StepY_rec[MaxHit],StepZ_rec[MaxHit],StepPhi_rec[MaxHit],StepS_rec[MaxHit];
+  double StepX_rec[MAX_HITS_PER_TRACK],StepY_rec[MAX_HITS_PER_TRACK],StepZ_rec[MAX_HITS_PER_TRACK];
+  double StepPhi_rec[MAX_HITS_PER_TRACK],StepS_rec[MAX_HITS_PER_TRACK];
 
   //step_status is used tell if this site has been used by KF, will be updated by DoFitAndFilter()
-  int step_status[MaxHit];
+  int step_status[MAX_HITS_PER_TRACK];
 
   //store 3-point helix
   double P_3pt,Pt_3pt,Theta_3pt,R_3pt,A_3pt,B_3pt;

@@ -23,10 +23,15 @@
 #include "NtReader.h"
 #include "ReadGEMC.h"
 /////////////////////////////////////////////////////////////////
-//Maximum Number of Hit in a track, has been defined in "EXEventGen.h" 
-#ifndef MaxHit
-#define MaxHit 200
-#define MinHit 5
+//Maximum Number of Hits in a track, has been defined in "ChainFinder.hh" 
+#ifndef MAX_HITS_PER_TRACK
+#define MAX_HITS_PER_TRACK 200
+#define MIN_HITS_PER_TRACK 5
+#endif
+
+//Maximum Number of Hits in an event, has been defined in "ChainFinder.hh" 
+#ifndef MAX_HITS_PER_EVENT
+#define MAX_HITS_PER_EVENT 5000
 #endif
 /////////////////////////////////////////////////////////////////
 
@@ -43,7 +48,7 @@ class EXKalManager {
   //read ntracks from GEMC output tree and fill it into ChainFinder's hit pool.
   //return number of hits or -1 if reach the end of file or fail
   //please note that the GEMC root tree use unit of mm and GeV
-  int  FillChainFinderHitPoolGEMC(int ntracks, bool bIncludeCurveBackHits=true);
+  int  FillChainFinderHitPoolGEMC(int ntracks);
 
   //read a track from G4MC_RTPC12 output tree and fill into fKalHits
   bool LoadAGEMCTrack(bool bIncludeCurveBackHits=false);
@@ -51,7 +56,7 @@ class EXKalManager {
   //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
   //return number of hits or -1 if reach the end of file or fail
   //please note that the G4 root tree use unit of mm and MeV
-  int  FillChainFinderHitPool(int ntracks, bool bIncludeCurveBackHits=true);
+  int  FillChainFinderHitPool(int ntracks);
 
   //read a track from G4MC_RTPC12 output tree and fill into fKalHits
   bool LoadAG4Track(bool bIncludeCurveBackHits=false);
@@ -59,16 +64,18 @@ class EXKalManager {
   //run ChainFinder to search for chains
   //in each event, read multiple tracks from G4 root tree and store them into hit pool
   //job := 3, no fit; 4 call GHF; 5 call KF 
-  int  RunCFNFit(int treetype, int job, int nevents, int ntracks, double space, 
-		 double min_ang, double max_ang, double ang_sep);
-
+  int RunCFNFit(int treetype, int job, int nevents, int ntracks, double max_sep, 
+                double max_sep_ang, double min_sep, double min_sep_ang, double ini_sep);
 
   //run KalmanFilter only    
   int RunKF(int job, int nevents, double pt_min, double pt_max, double costh_min, 
-	    double costh_max, double z_min=0.0, double z_max=0.0);
+	          double costh_max, double z_min=0.0, double z_max=0.0);
 
   void SetCovMElement(double val) {fKalRTPC->SetCovMElement(val);};
   void SetG4InputFile(const char* val) {sprintf(fG4Inputfile, "%s",val);};
+  
+  void EventVisulization();
+  void EventVisulization2();
 
  private:
 
@@ -83,7 +90,9 @@ class EXKalManager {
   int IdentifyThrownTID(int chainid, double &likelyhood);
 
  public:
-
+ 
+  static TApplication* fApp;
+  
   TFile* fFile;
 
   ChainFinder   *fChainFinder;// RTPC ChainFinder
@@ -94,7 +103,7 @@ class EXKalManager {
   TObjArray     *fKalHits;    // hit buffer
   EXEventGen    *fEventGen;   // enevt generator
 
-  char          fG4Inputfile[255];
+  char           fG4Inputfile[255];
   NtReader      *fNtReader;           
   GEMCReader    *fGEMCReader;
 
@@ -144,15 +153,19 @@ class EXKalManager {
 
   //original hits info
   int npt0;   	   //npt0 is to store number of original hits 
-  double step_x[MaxHit],step_y[MaxHit],step_z[MaxHit],step_phi[MaxHit],step_s[MaxHit];  
-  double  step_s_min, step_s_max;
+  double step_x[MAX_HITS_PER_TRACK],step_y[MAX_HITS_PER_TRACK],step_z[MAX_HITS_PER_TRACK];
+  double step_phi[MAX_HITS_PER_TRACK],step_s[MAX_HITS_PER_TRACK];  
+  double step_s_min, step_s_max;
 
   //smeared or reconstructed hits info
   int npt;         //npt is to store number of used hits by kalman filter 
-  int step_status[MaxHit];
-  double step_x_rec[MaxHit],step_y_rec[MaxHit],step_z_rec[MaxHit],step_phi_rec[MaxHit],step_s_rec[MaxHit];
-  double step_x_exp[MaxHit],step_y_exp[MaxHit],step_z_exp[MaxHit],step_phi_exp[MaxHit],step_s_exp[MaxHit];
-  double step_x_fil[MaxHit],step_y_fil[MaxHit],step_z_fil[MaxHit],step_phi_fil[MaxHit],step_s_fil[MaxHit];
+  int step_status[MAX_HITS_PER_TRACK];
+  double step_x_rec[MAX_HITS_PER_TRACK],step_y_rec[MAX_HITS_PER_TRACK],step_z_rec[MAX_HITS_PER_TRACK];
+  double step_phi_rec[MAX_HITS_PER_TRACK],step_s_rec[MAX_HITS_PER_TRACK];
+  double step_x_exp[MAX_HITS_PER_TRACK],step_y_exp[MAX_HITS_PER_TRACK],step_z_exp[MAX_HITS_PER_TRACK];
+  double step_phi_exp[MAX_HITS_PER_TRACK],step_s_exp[MAX_HITS_PER_TRACK];
+  double step_x_fil[MAX_HITS_PER_TRACK],step_y_fil[MAX_HITS_PER_TRACK],step_z_fil[MAX_HITS_PER_TRACK];
+  double step_phi_fil[MAX_HITS_PER_TRACK],step_s_fil[MAX_HITS_PER_TRACK];
 
   //From EXKalRTPC
   double p_3pt,pt_3pt,th_3pt,r_3pt,a_3pt,b_3pt;

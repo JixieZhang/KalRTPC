@@ -46,5 +46,6 @@ void EXVKalDetector::Draw(Int_t color, const Char_t *opt)
       TAttDrawable *dp = dynamic_cast<TAttDrawable *>(objp);
       if (dp) dp->Draw(color, opt); 
    }
-   nodep->Draw("pad same");
+   //nodep->Draw("pad same");  //why use pad?
+   nodep->Draw("same");
 }

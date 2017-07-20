@@ -1,4 +1,6 @@
-
+//GEMC root file reader
+//It contains 2 trees, Rec and Gen, using std::vector other than array
+//The Gen Tree contains only single value leaves
 #include <iostream>
 #include <iomanip>
 using namespace std;
@@ -68,6 +70,9 @@ void ReadGEMC::Init()
   fChain->SetBranchAddress("Z_rec", &Z, &b_Z);
   fChain->SetBranchAddress("ADC", &ADC, &b_ADC);
   fChain->SetBranchAddress("Time", &TDC, &b_TDC);
+  if(fChain->FindBranch("TrackId")) {
+    fChain->SetBranchAddress("TrackId", &TrackId, &b_TrackId);
+  }
    
   fChainGen->SetBranchAddress("event_v", &event_v, &b_EventID);
   fChainGen->SetBranchAddress("z_v", &z_v, &b_z_v);
@@ -92,6 +97,7 @@ Int_t ReadGEMC::LoadATrack()
       Z->clear();
       ADC->clear();
       TDC->clear();
+      TrackId->clear();
     }
     fChain->GetEntry(++fCurrent);
     fChainGen->GetEntry(fCurrent);
@@ -99,13 +105,15 @@ Int_t ReadGEMC::LoadATrack()
     HitNum_m = TDC->size();
   }
   
+/*
   //print out for debug
-  cout<<"GEMC event "<<event_v<<",  Number of hits="<<HitNum_m<<endl;
+  cout<<"ReadGEMC:: GEMC event "<<event_v<<",  Number of hits="<<HitNum_m<<endl;
   for(int i=0;i<HitNum_m;i++) {
     cout<<(int)TDC->at(i)<<"  ";
     if( !((i+1)%10) ) cout<<endl;
   }
   cout<<endl;
+*/
 
   return HitNum_m;
 }

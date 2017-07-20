@@ -6,17 +6,13 @@
 
 /////////////////////////////////////////////////////////////////
 //-----------------------------------
-// RTPC Parameters
+// RTPC Track Parameters
 //-----------------------------------
-static const double kRTPC_R_GEM1 = 7.0;
-static const double kRTPC_R_Cathode = 3.0;
-
-//Maximum Number of Hit in a track 
-#define MaxHit 200
-#define MinHit 5
-//-----------------------------------
-// Track Parameters
-//-----------------------------------
+//Maximum Number of Hits in a track, has been defined in "ChainFinder.hh" 
+#ifndef MAX_HITS_PER_TRACK
+#define MAX_HITS_PER_TRACK 200
+#define MIN_HITS_PER_TRACK 5
+#endif
 
 /////////////////////////////////////////////////////////////////
 
@@ -73,7 +69,8 @@ public:
   
   //store the oringinal hit positions before smearing by detector resolution
   int StepNum;
-  double StepX[MaxHit],StepY[MaxHit],StepZ[MaxHit],StepPhi[MaxHit],StepS[MaxHit];
+  double StepX[MAX_HITS_PER_TRACK],StepY[MAX_HITS_PER_TRACK],StepZ[MAX_HITS_PER_TRACK];
+  double StepPhi[MAX_HITS_PER_TRACK],StepS[MAX_HITS_PER_TRACK];
 
   //record the generated helix at the 1st and last hit for studying Kalman filter
   //note that these values are not available for circle or geant4 track 

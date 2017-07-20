@@ -16,12 +16,25 @@ using namespace std;
 ClassImp(EXEventGen)
 
 //#define _ExEventGenDebug_ 9
-
+//if _ExEventGenDebug_ >= 9, do benchmark test to find out how much binary 
+//search will take to locate a detecter layer
 #ifdef _ExEventGenDebug_
 #include "TBenchmark.h"
 #endif
 
-  Double_t EXEventGen::fgT0 = 14.; // [nsec]
+///////////////////////////////////////////////////////////////////
+//The following have been defined in EXKalDetector.h
+//static const double kRTPC_R_Target = 0.3;
+//static const double kRTPC_R_Cathode = 3.0;
+//static const double kRTPC_R_GEM1 = 7.0;
+//static const double kRTPC_Length = 40.0;
+//static const int    kNDetDummyLayer = 6;
+//static const int    kNDetLayer ;      //=35?
+//static const double kDetLayerRList[]; //in decreasing order
+///////////////////////////////////////////////////////////////////
+
+//by jixie: I do not use fgT0 right now
+Double_t EXEventGen::fgT0 = 14.; // [nsec]
 
 EXEventGen::EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
   : fCradlePtr(&cradle), fHitBufPtr(&kalhits) 
@@ -88,7 +101,6 @@ THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
   this->Z0=z0;
   this->Theta0=acos(cs);
   this->P0=fabs(pt)/TMath::Sqrt((1-cs)*(1+cs));
-
 
 #ifdef _ExEventGenDebug_
   //just for debug
@@ -235,7 +247,7 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
       StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
       StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
       StepNum++;
-      if(StepNum>=MaxHit) break;
+      if(StepNum>=MAX_HITS_PER_TRACK) break;
 
       //here I try to store rho, tanLambda and fi0 for the 1st and last hit
       //But I can not tell when the track reach the last step.
@@ -327,7 +339,7 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
     StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
     StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
     StepNum++;
-    if(StepNum>=MaxHit) break;
+    if(StepNum>=MAX_HITS_PER_TRACK) break;
   }
 
   //swim backward
@@ -345,7 +357,7 @@ int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, 
         StepS[StepNum]=sqrt(StepX[StepNum]*StepX[StepNum]+StepY[StepNum]*StepY[StepNum]);
         StepPhi[StepNum]=atan2(StepY[StepNum],StepX[StepNum]);
         StepNum++;
-        if(StepNum>=MaxHit) break;
+        if(StepNum>=MAX_HITS_PER_TRACK) break;
       }
     }
   }
@@ -556,7 +568,7 @@ void EXEventGen::MakeHitsFromTraj(double *x, double *y, double *z, int _npt_,
       StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
       StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
       StepNum++;
-      if(StepNum>=MaxHit) break;
+      if(StepNum>=MAX_HITS_PER_TRACK) break;
 
 #ifdef _ExEventGenDebug_
       if( _ExEventGenDebug_ >= 4) {

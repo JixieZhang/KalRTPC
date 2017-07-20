@@ -32,6 +32,7 @@ class ReadGEMC {
   vector<double>  *Z;
   vector<double>  *ADC;
   vector<double>  *TDC;
+  vector<int>     *TrackId;
 
   // List of branches  for Rec tree
   TBranch        *b_ChanID;   //!
@@ -40,6 +41,7 @@ class ReadGEMC {
   TBranch        *b_Z;   //!
   TBranch        *b_ADC;   //!
   TBranch        *b_TDC;   //!
+  TBranch        *b_TrackId;   //!
   
    // Declaration of leaf types for Gen tree
    Int_t           event_v;

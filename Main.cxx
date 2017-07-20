@@ -17,7 +17,7 @@
 using namespace std;
 
 //new usage:  exe [-h] [-i] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] 
-//                [-c <space_cm=1.1> <max_ang_deg=30> <min_ang_deg=23.3> <ang_sep_cm=0.4>] 
+//                [-c <ntracks=1> [max_sep_cm=1.9] [max_sep_ang_deg=30] [min_sep_cm=0.4>] [min_sep_ang_deg=40.0] [ini_sep_cm=1.5>]]
 //                [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  
 //                [-t <costh_min=0> <costh_max=0>] 
 //                [-z <z_min_cm=0> <z_max_cm=0>]   
@@ -27,11 +27,13 @@ using namespace std;
 //      [costh_min=-0.00001] [costh_max=0.00001] [error=0.05] [z_min=0.0] [z_max=0.0] 
 //      [infile=infile.root] [g4type=0]
 
+//void SetParameters(double max_sep, double max_sep_ang, double min_sep, double min_sep_ang,
+//                   double ini_sep=1.0);
 void usage()
 {
   printf("/------------------------------usage start----------------------------------------\\ \n");
   printf("exe [-h] [-i] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \\\n");
-  printf("    [-c <ntracks=1> [space_cm=1.9] [min_ang_deg=30] [max_ang_deg=40.0] [ang_sep_cm=0.4>]] \\\n");
+  printf("    [-c <ntracks=1> [max_sep_cm=1.9] [max_sep_ang_deg=30] [min_sep_cm=0.4>] [min_sep_ang_deg=40.0] [ini_sep_cm=1.5>]] \\\n");
   printf("    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \\\n");
   printf("    [-t <costh_min=-0.00001> <costh_max=0.00001>] \\\n");
   printf("    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \\\n");  
@@ -61,8 +63,17 @@ void usage()
   cerr << "\t  g4type tells the type of the input file: 0, Jixie's Geant4 RTPC12 tree, 1 GEMC tree \n\n";
   cerr << "example1: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05 \n";
   cerr << "example2: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05 ' -20.0' 20.0 infile.root 1\n";
-  cerr << "example3: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.9 30.0 40.0 0.4 -z -20 20 -i \n";
+  cerr << "example3: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.9 30.0 0.4 40.0 1.5 -z -20 20 -i \n";
   printf("\\------------------------------usage  end------------------------------------------/ \n");
+  //
+  printf("exe [-h] [-i] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \\\n");
+  printf("    [-c <ntracks=1> [max_sep_cm=1.9] [max_sep_ang_deg=30] [min_sep_cm=0.4>] [min_sep_ang_deg=40.0] [ini_sep_cm=1.5>]] \\\n");
+  printf("    [-p <pt_min_gev=0.1> <pt_max_gev=0.1>]  \\\n");
+  printf("    [-t <costh_min=-0.00001> <costh_max=0.00001>] \\\n");
+  printf("    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \\\n");  
+  printf("    [-f <infile=\"infile.root\">] \\\n");   
+  printf("    [-g <g4type=0> \n\n");  
+  //
   abort();
 }
 
@@ -77,7 +88,7 @@ int main(int argc, char **argv)
   int    nevents=10000;
   double error=0.05;
   int    ntracks=1;  //how many track to dump into hitpool in an event
-  double space=1.9, min_ang=30.0/rad2deg, max_ang=40.0/rad2deg, ang_sep=0.4;
+  double max_sep=1.9, max_sep_ang=30.0/rad2deg, min_sep=0.4, min_sep_ang=40.0/rad2deg,ini_sep=1.5;
   double pt_min=0.1, pt_max=0.1;
   double costh_min=-0.00001, costh_max=0.00001;
   double z_min=0.0, z_max=0.0;
@@ -107,16 +118,17 @@ int main(int argc, char **argv)
       break;
     case 'x':
       optind--;
-      for(int i=0;i<4;i++){
+      for(int i=0;i<5;i++){
         if ( optind < argc && (argv[optind][0]!='-' || (argv[optind][0]=='-' && isdigit(argv[optind][1]))) ) {
           //fprintf(stderr, "\n-x option: argument_%d ='%s'\n",i,argv[optind]);
-          if(i==0) space=atof(argv[optind]);
-          if(i==1) max_ang=atof(argv[optind])/rad2deg;
-          if(i==2) min_ang=atof(argv[optind])/rad2deg;
-          if(i==3) ang_sep=atof(argv[optind]);
+          if(i==0) max_sep=atof(argv[optind]);
+          if(i==1) max_sep_ang=atof(argv[optind])/rad2deg;
+          if(i==2) min_sep=atof(argv[optind]);
+          if(i==3) min_sep_ang=atof(argv[optind])/rad2deg;
+          if(i==4) ini_sep=atof(argv[optind]);
           optind++;
         } else {  
-          fprintf(stderr, "\n-x option require 4 arguments \n\n");
+          fprintf(stderr, "\n-x option require 5 arguments \n\n");
           usage();
         }
       }
@@ -128,11 +140,12 @@ int main(int argc, char **argv)
       for( ;optind < argc && (argv[optind][0]!='-' || (argv[optind][0]=='-' && isdigit(argv[optind][1]))); optind++) {
         //printf("argu[0]=%c  argu[1]=%c\n",argv[optind][0],argv[optind][1]);
         //fprintf(stderr, "\n-c option argument_%d='%s'\n",optind-optmarker,argv[optind]);
-        if(optind-optmarker==1) space=atof(argv[optind]);
-        if(optind-optmarker==2) min_ang=atof(argv[optind])/rad2deg;
-        if(optind-optmarker==3) max_ang=atof(argv[optind])/rad2deg;
-        if(optind-optmarker==4) ang_sep=atof(argv[optind]);
-        if(optind-optmarker==4) {optind++; break;}
+        if(optind-optmarker==1) max_sep=atof(argv[optind]);
+        if(optind-optmarker==2) max_sep_ang=atof(argv[optind])/rad2deg;
+        if(optind-optmarker==3) min_sep=atof(argv[optind]);
+        if(optind-optmarker==4) min_sep_ang=atof(argv[optind])/rad2deg;
+        if(optind-optmarker==5) ini_sep=atof(argv[optind]);
+        if(optind-optmarker==5) {optind++; break;}
       }
       break;
     case 'p':
@@ -208,7 +221,8 @@ int main(int argc, char **argv)
   cout<<"arguments: job="<<job<<", nevents="<<nevents<<", error="<<error<<endl 
     <<"\t pt_min="<<pt_min<<", pt_max="<<pt_max<<", costh_min="<<costh_min<<", costh_max="<<costh_max<<endl
     <<"\t z_min="<<z_min<<", z_max="<<z_max<<", infile=\'"<<infile<<"\', g4type="<<g4type<<endl
-    <<"\t ntracks="<<ntracks<<", space="<<space<<" min_ang="<<min_ang*rad2deg<<", max_ang="<<max_ang*rad2deg<<", ang_sep="<<ang_sep<<endl
+    <<"\t ntracks="<<ntracks<<", max_sep="<<max_sep<<", max_sep_ang="<<max_sep_ang*rad2deg
+    <<", min_sep="<<min_sep<<", min_sep_ang="<<min_sep_ang*rad2deg<<", ini_sep="<<ini_sep<<endl
     <<endl;
 
 
@@ -217,7 +231,7 @@ int main(int argc, char **argv)
   aKalMan.SetCovMElement(error);
   aKalMan.SetG4InputFile(infile);
   if(job>=3 && job<=5 ) {
-    aKalMan.RunCFNFit(g4type, job, nevents,ntracks,space,min_ang,max_ang,ang_sep);
+    aKalMan.RunCFNFit(g4type, job, nevents,ntracks,max_sep,max_sep_ang,min_sep,min_sep_ang,ini_sep);
   } 
   else{
     aKalMan.RunKF(job,nevents,pt_min,pt_max,costh_min,costh_max,z_min,z_max);

@@ -9,14 +9,23 @@
 #include <algorithm>
 #include "ChainFinder.hh"
 
-extern const double kRTPC_R_GEM1 = 7.0;
-extern const double kRTPC_R_Cathode = 3.0;
+#include "TCanvas.h"
+#include "TPad.h"
+#include  "TPolyMarker3D.h"
+
+//kRTPC_R_GEM1 and kRTPC_R_Cathode have been defined in EXKalDetector.h
+#include "EXKalDetector.h"
+//use '#include "EXKalDetector.h"' if you do not want to have the following 3 lines
+//static const double kRTPC_R_GEM1 = 7.0;
+//static const double kRTPC_R_Cathode = 3.0;
+//static const double kRTPC_Length = 40.0;
 
 ///////////////////////////////////////////////////////////////////////
 //how to define _ChainFinderDebug_?
 //>=1: print hit pool
 //>=3: add printing stored chain information of 'hit-id' and 'ThrownTID'
 //>=4: add printing "Chain #: hit 'hit-id' is added to 'chain-position'" during searching a tree
+//     also print the chain before sorting, only 'hit-id' and 'ThrownTID'
 //>=5: add printing 2 more information of stored chain: 's' and 'phi'
 //     add printing "seed=0   seed_pre=0   hit=1  : separation=  0.31 cm, angle=    0.0 deg    Chain 0: hit 1 is added to 1"
 //>=6: add printing 1 more information of stored chain: 'TDC'  
@@ -43,7 +52,7 @@ extern const double kRTPC_R_Cathode = 3.0;
 void Example()
 {
   ChainFinder pTF;  
-  pTF->SetParameters(v1,v2,v3,v4);
+  pTF->SetParameters(v1,v2,v3,v4,v5);
   for(int ii;ii<nevents;ii++) {
     pTF.Reset();
     pTF.PrepareHitPool(vvv);
@@ -74,11 +83,12 @@ ChainFinder::ChainFinder()
     fHitNumInAChain[i] = 0;  
     for(int j=0;j<MAX_HITS_PER_CHAIN;j++) fHitIDInAChain[i][j]=-1;
   }
-  //default values for these parameters 
-  Max_Link_Sep = 1.1;             //cm
-  Max_Ang      = 30.0/rad2deg;    //rad
-  Min_Ang      = 23.3/rad2deg;    //rad
-  Ang_Sep      = 0.4;             //cm
+  //default values for these parameters
+  Ini_Sep     = 1.0;             //cm  
+  Max_Sep     = 1.1;             //cm
+  Max_Sep_Ang = 23.3/rad2deg;    //rad
+  Min_Sep     = 0.4;             //cm
+  Min_Sep_Ang = 30.0/rad2deg;    //rad
 }
 
 ChainFinder::~ChainFinder() 
@@ -391,31 +401,37 @@ void ChainFinder::QuickSort_IDTDC(int *arr, int left, int right)
 
 
 
-void ChainFinder::SetParameters(double space, double min_ang, double max_ang, double ang_sep)
+void ChainFinder::SetParameters(double max_sep, double max_sep_ang, double min_sep, 
+                                double min_sep_ang, double ini_sep)
 {
   // USER SHOULD PROVIDE THESE VARIABLES
-  Max_Link_Sep = space;
-  Min_Ang      = min_ang;
-  Max_Ang      = max_ang;
-  Ang_Sep      = ang_sep;
+  Ini_Sep     = ini_sep;
+  Max_Sep     = max_sep;
+  Max_Sep_Ang = max_sep_ang;
+  Min_Sep     = min_sep;
+  Min_Sep_Ang = min_sep_ang;
 
 #ifdef _ChainFinderDebug_
   if(_ChainFinderDebug_>=1) {
-  cout<<"\nChainFinder Parameters: space="<<space<<" cm, min_ang="<<min_ang*rad2deg
-      <<" deg,  max_ang="<<max_ang*rad2deg<<" deg; ang_sep="<<ang_sep<<" cm\n"<<endl;
+  cout<<"\nChainFinder Parameters:"
+      <<" Ini_Sep="<<Ini_Sep<<" cm, "
+      <<" Max_Sep="<<Max_Sep<<" cm, "
+      <<" Max_Sep_Ang="<<Max_Sep_Ang*rad2deg<<" deg,"
+      <<" Min_Sep="<<Min_Sep<<" cm, "
+      <<" Min_Sep_Ang="<<Min_Sep_Ang*rad2deg<<" deg.\n"<<endl;
   }
 #endif
 }
   
 
-//I need to determine the location that this hit should be incerted
+//I need to determine the location that this hit should be inserted
 //I should compare the distances of all hits behine this seed in the seed_list
 //By Jixie: this will slow down the search and not sure it can improve the result 
 //if the chain is full return 0, otherwise 1
 int  ChainFinder::AddAHitToChain(int seed, int chainid, int hitid, double space)
 {
-  if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {        
-    printf("Too many hits for the chain list. Skip...\n"); 
+  if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {
+    cout<<"warning: MAX_HITS_PER_CHAIN("<<MAX_HITS_PER_CHAIN<<") is too small, hits are potentially lost!\n";
     return 0;
   }
   
@@ -426,7 +442,7 @@ int  ChainFinder::AddAHitToChain(int seed, int chainid, int hitid, double space)
   while(t>1 && fParentSeed[t]==seed && fDist2Seed[t]>space) t--;
   
   int position = (t==n-1) ? n : t;
-  //if you want to always add this seed to the end of the list, set 
+  //if you want to always add this seed to the end of the list, set position = n;
   position = n;
   InsertAHitToChain(chainid,hitid,position,seed,space);
   return 1;
@@ -460,7 +476,6 @@ void ChainFinder::InsertAHitToChain(int chainid, int hitid, int position, int se
       <<" to "<<position<<"\n";
   }
 #endif 
-
 
 }
 
@@ -536,24 +551,24 @@ int ChainFinder::SearchHitsForASeed(int seed, int seed_pre)
     
     //check the distance    
     //for the first seed of a chain, do not require angle in range
-    //but require distance < 1.5 cm
+    //but require distance < 1.0 cm
     double separation = pV3Diff.Mag(); 
-    if((seed == seed_pre && separation > 1.5) || separation > Max_Link_Sep ) continue; 
+    if((seed == seed_pre && separation > Ini_Sep) || separation > Max_Sep ) continue; 
     
     //check the angle between pV3_diff and pV3_diff_pre
-    double acceptance = pV3Diff.Angle(pV3Diff_pre);
+    double angle = pV3Diff.Angle(pV3Diff_pre);
     //not very sure we need this line    
-    if(acceptance>90./rad2deg) acceptance = 180./rad2deg - acceptance;
+    if(angle>90./rad2deg) angle = 180./rad2deg - angle;
     
 #ifdef _ChainFinderDebug_
     if(_ChainFinderDebug_>=5) {
       printf("\t seed=%-3d seed_pre=%-3d hit=%-3d: separation=%6.2f cm, angle=%7.1f deg  ",
-	seed, seed_pre, i, separation, acceptance*rad2deg);
+              seed, seed_pre, i, separation, angle*rad2deg);
     }
 #endif
 
-    if( (separation >  Ang_Sep && acceptance < Min_Ang) || 
-       (separation <= Ang_Sep && acceptance < Max_Ang) ) {
+    if((separation >  Min_Sep && angle < Max_Sep_Ang) || 
+       (separation <= Min_Sep && angle < Min_Sep_Ang) ) {
       int ret = AddAHitToChain(seed,fChainNum,i,separation);
       if(ret == 0) break; // this chain is full
       found += 1;
@@ -596,69 +611,116 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
     }
         
     //SEARCH ALGORITHM----->
-    //search a chain: looping over all founded seeds
-    //Note that fHitNumInAChain[fChainNum] will self increasing if hits added into the chain
+    //search a chain: looping over all found seeds
+    //Note that fHitNumInAChain[fChainNum] will self increasing if a hit is added.
+    //currently MAX_HITS_PER_CHAIN=200, which is the maximum number of hits that the global 
+    //helix fitter will take.  
+    //If necessary, MAX_HITS_PER_CHAIN could be larger during chain search such that it will
+    //loop over all hits belong to this chain. However, store only 200 hits into the final 
+    //chain buffer (fChainBuf). 
     for (int seed_idx=0; seed_idx<fHitNumInAChain[fChainNum]; seed_idx++) {
-      if(seed_idx >= MAX_HITS_PER_CHAIN) break;
+      //thos sanity check is not necessary any more because I have check that in SearchHitsForASeed()
+      //I want to gain speed by removing this sanity check
+      //if(seed_idx >= MAX_HITS_PER_CHAIN) {
+      //  cout<<"warning: MAX_HITS_PER_CHAIN("<<MAX_HITS_PER_CHAIN<<") is too small, hits are potentially lost!\n";
+      //  break;
+      //}
       seed = fHitIDInAChain[fChainNum][seed_idx]; 
       seed_pre = fParentSeed[seed_idx];
-      int found = SearchHitsForASeed(seed, seed_pre);
+      int found = 0;
+      found = SearchHitsForASeed(seed, seed_pre);
       
-      //check any hits are found based on this seed, if no more hits found and not reach 
-      //the last hit of current chain yet, release this hit back to the pool
-      if(!found) {
-      /*
       //FIX me
-      By Jixie: this part is for cross chain, I do not know how to deal with it yet.
-
-	//Remove this seed from seed_list. This seed might be added back by other seeds, 
-	//which in consequence A) mess up the order b)can have multiple redundate copies 
-	//Therefore we have to remove redumdant seeds at the end of the search
-	//after that, do not forget to sort the chain
-        if(seed_idx+1<fHitNumInAChain[fChainNum]) {
-          //fHitPool[seed].Status &= ~HISUSED;
-          //RemoveAHitFromChain_At(fChainNum,seed_idx);
-          //seed_idx--;
-#ifdef _ChainFinderDebug_
-	      if(_ChainFinderDebug_>=4) {
-	       // cout<<"    seed="<<seed<<" seed_pre="<<seed_pre<<", hit "
-	       //     <<seed<<" is released back to the pool\n";
-	      }
-#endif
-	}
-	*/
-      }
+      //By Jixie: this part is for cross chain, I do not know how to deal with it yet.
+      //if(!found) {/**/;}
     }
     
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
-  if(_ChainFinderDebug_>=9) {
-    PrintAChain(fChainNum, "before sorting");
-  }
+    
+    //judge if this chain is valid or not
+    //do not deal with those chain if any of this is true: 
+    //  a) number of hits < 5, or b) Smin > kRTPC_R_GEM1-2cm, or 
+    //  c) Smax < kRTPC_R_Cathode+2cm, or d) Smax-Smin<2cm
+    
+    bool IsValidChain = false;
+    
+    //determine Smin Smax,
+    double Smin=9999.0, Smax=0.0;    
+    int *buf = fHitIDInAChain[fChainNum];   //just to make it short    
+    for(int i=0;i<fHitNumInAChain[fChainNum];i++) {
+      if (Smin > fHitPool[buf[i]].S) {Smin = fHitPool[buf[i]].S;}
+      if (Smax < fHitPool[buf[i]].S) {Smax = fHitPool[buf[i]].S;}  
+    }
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+        if(_ChainFinderDebug_>=4) {
+          cout<<"  Chain "<<fChainNum<<": "<<fHitNumInAChain[fChainNum]<<" hits,  Smax="
+              <<Smax<<",  Smin="<<Smin<<endl;
+        }
 #endif
     
+    if (fHitNumInAChain[fChainNum] < Min_HITS_PER_CHAIN) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+        if(_ChainFinderDebug_>=4) {
+          cout<<"\n***Warning: ignore this chain, it contains too few hits, HitNum="
+              <<fHitNumInAChain[fChainNum]<<endl;
+        }
+#endif
+    } else if (Smin > kRTPC_R_GEM1-2.0) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+      if(_ChainFinderDebug_>=4) {
+        cout<<"\n ***Warning: ignore this chain, Smin("<<Smin<<") > kRTPC_R_GEM1-2.0"<<endl;
+      }
+#endif
+    } else if (Smax < kRTPC_R_Cathode+2.0) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+      if(_ChainFinderDebug_>=4) {
+        cout<<"\n ***Warning: ignore this chain, Smax("<<Smax<<") < kRTPC_R_Cathode+2.0"<<endl;
+      }
+#endif
+    } else if (Smax - Smin < 2.0) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+      if(_ChainFinderDebug_>=4) {
+        cout<<"\n ***Warning: ignore this chain, Smax - Smin = "<<Smax - Smin<<endl;
+      }
+#endif
+    }
+    else IsValidChain = true;
+    
+    
     //judge if this chain is valid or not, do not store it if less than 5 hits
-    if( fHitNumInAChain[fChainNum] >= Min_HITS_PER_CHAIN) {
+    if(IsValidChain) {      
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
+      if(_ChainFinderDebug_>=4) {
+        PrintAChain(fChainNum, "Before sorting");
+      }
+#endif
       //now, sort the chain
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=9
-  if(_ChainFinderDebug_==9) BenchmarkSort(fChainNum);
+      if(_ChainFinderDebug_==9) BenchmarkSort(fChainNum);
 #endif
       if(do_sort) SortAChain(fChainNum);
       StoreAChain(fChainNum);
       fChainNum++;
+      if (fChainNum >= MAX_CHAINS_PER_EVENT) {
+        cout<<"***Warning: MAX_CHAINS_PER_EVENT("<<MAX_CHAINS_PER_EVENT<<") is too small, stop search...\n";
+        break;
+      }
     } else {
       //If you do not want to save this segment, clear the buffer for this chain
-      //not sure if we need to release hits back to the pool!
-      bool keep_all_segment = true;
+      bool keep_all_segment = false;
       if (keep_all_segment) {
-	    fChainNum++;
+        fChainNum++;
+        if (fChainNum >= MAX_CHAINS_PER_EVENT) {
+          cout<<"***Warning: MAX_CHAINS_PER_EVENT("<<MAX_CHAINS_PER_EVENT<<") is too small, stop search...\n";
+          break;
+        }
       } else {
-	for(int jj=0;jj<fHitNumInAChain[fChainNum];jj++) {
-	  fHitIDInAChain[fChainNum][jj]=-1;
-	}
-	fHitNumInAChain[fChainNum]=0;
+        for(int jj=0;jj<fHitNumInAChain[fChainNum];jj++) {
+          fHitIDInAChain[fChainNum][jj]=-1;
+        }
+        fHitNumInAChain[fChainNum]=0;
       }
     }
-  
+    
   }// for (int anchor_hit = 0 ......
 
 }
@@ -1322,9 +1384,9 @@ void ChainFinder::SortAChain(int chainid)
   double Smin,Smax,Phimin,Phimax;
   int idxSmin,idxSmax,idxPhimin,idxPhimax;
   
-  idxSmin=idxSmax=idxPhimin=idxPhimax=0;
-  Smin=Smax=fHitPool[buf[0]].S;
-  Phimin=Phimax=fHitPool[buf[0]].Phi;
+  idxSmin=idxSmax=idxPhimin=idxPhimax=0.0;
+  Smin=9999.0; Smax=0.0;
+  Phimin=9999.0;Phimax=-9999.0;
   for(int i=0;i<nhits;i++) {
     if(Smin >= fHitPool[buf[i]].S) {Smin = fHitPool[buf[i]].S; idxSmin=i;}
     else if(Smax - fHitPool[buf[i]].S < 1.0E-5) {Smax = fHitPool[buf[i]].S; idxSmax=i;}   
@@ -1376,15 +1438,15 @@ void ChainFinder::SortAChain(int chainid)
 
 #ifdef _ChainFinderDebug_
     if(_ChainFinderDebug_>=10) {
-      cout<<"nhits="<<nhits<<" idxSmax="<<idxSmax<<"  idxSmin="<<idxSmin<<"  idxPhimax="<<idxPhimax 
-	  <<"  idxPhimin="<<idxPhimin <<endl
-	  <<"\t Smax="<<Smax<<"  Smin="<<Smin<<"  S[idxPhimax]="<<fHitPool[buf[idxPhimax]].S
-	  <<"  S[idxPhimin]="<<fHitPool[buf[idxPhimin]].S<<endl
-	  <<"\t Phimax="<<Phimax*rad2deg<<"  Phimin="<<Phimin*rad2deg<<"  Phi[idxSmax]="<<phi[idxSmax]*rad2deg
-	  <<"  Phi[idxSmin]="<<phi[idxSmin]*rad2deg<<endl
-	  <<endl;
+      cout<<"SortAChain():: overall information: nhits="<<nhits<<" idxSmax="<<idxSmax<<"  idxSmin="<<idxSmin<<"  idxPhimax="<<idxPhimax 
+          <<"  idxPhimin="<<idxPhimin <<endl
+          <<"\t Smax="<<Smax<<"  Smin="<<Smin<<"  S[idxPhimax]="<<fHitPool[buf[idxPhimax]].S
+          <<"  S[idxPhimin]="<<fHitPool[buf[idxPhimin]].S<<endl
+          <<"\t Phimax="<<Phimax*rad2deg<<"  Phimin="<<Phimin*rad2deg<<"  Phi[idxSmax]="<<phi[idxSmax]*rad2deg
+          <<"  Phi[idxSmin]="<<phi[idxSmin]*rad2deg<<endl
+          <<endl;
       printf("***************  Chain #%02d is a %s chain  ***************\n\n",
-	fChainNum, (bIsBackwardTrack ? "backward":"forward") );
+              fChainNum, (bIsBackwardTrack ? "backward":"forward") );
     }
 #endif
 
@@ -1506,30 +1568,85 @@ void ChainFinder::SortAChain(int chainid)
     }//end of if(n1>0) {
   }
   delete phi;
-
 }
 
 void ChainFinder::StoreAChain(int chainid)
 {
-  for (int jj=0; jj<fHitNumInAChain[chainid]; jj++){
-      //Fill the pointer of found chain
-      int hitid=fHitIDInAChain[chainid][jj];
-      fChainBuf[chainid].Hits[jj] = &(fHitPool[hitid]);
-     
-      //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
-      //ChainInfo  = cccjjj,  where ccc is ChainIndex and jj is HitIndex 
-      fHitPool[hitid].ChainInfo = chainid*1.0E3 + jj;
-    }
+  //store only MAX_HITS_PER_TRACK of hits into the primary chain buffer
+  int n = fHitNumInAChain[chainid];
+  if(n>MAX_HITS_PER_TRACK) n=MAX_HITS_PER_TRACK;
+  
+  for (int jj=0; jj<n; jj++){
+    //Fill the pointer of found chain
+    int hitid=fHitIDInAChain[chainid][jj];
+    fChainBuf[chainid].Hits[jj] = &(fHitPool[hitid]);
+   
+    //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
+    //ChainInfo  = cccjjjj,  where ccc is ChainIndex and jj is HitIndex 
+    fHitPool[hitid].ChainInfo = chainid*1.0E4 + jj;
+  }
 
-  fChainBuf[chainid].HitNum = fHitNumInAChain[chainid]; //number of hits in the chain
+  fChainBuf[chainid].HitNum = n; //number of hits in the chain
   fChainBuf[chainid].ID = chainid;  //this chain index 
   fChainNum_Stored++;
   
 #ifdef _ChainFinderDebug_
   if(_ChainFinderDebug_>=3) {
-    printf("\n ***** Store chain #%d: %d hits ***** \n", chainid,fHitNumInAChain[chainid]);
-    PrintAChain(chainid,"stored into fChainBuf[#]!!!");
+    printf("\n ***** Store chain #%d: %d/%d hits ***** \n", chainid,n,fHitNumInAChain[chainid]);
+    char strmsg[255];
+    sprintf(strmsg,"stored into fChainBuf[%d]!!!",fChainNum_Stored-1);
+    PrintAChain(chainid,strmsg);
   }
 #endif
 
 }
+
+void ChainFinder::DrawPool()
+{
+  if (!gPad || !fHitNum) return;
+  gPad->cd();
+
+  TPolyMarker3D *pm3dp = new TPolyMarker3D(fHitNum);
+  pm3dp->SetBit(kCanDelete);
+  pm3dp->SetMarkerColor(40);
+  pm3dp->SetMarkerStyle(1);
+
+  for (int hh=0;hh<fHitNum;hh++) { 
+    pm3dp->SetPoint(hh, fHitPool[hh].X, fHitPool[hh].Y, fHitPool[hh].Z);
+  }
+  pm3dp->Draw("same");
+  gPad->Update();
+}
+
+void ChainFinder::DrawChain()
+{
+  if (!gPad || !fChainNum_Stored) return;
+  gPad->cd();
+
+  TPolyMarker3D *pm3dp = 0;
+  for (int cc=0;cc<fChainNum_Stored;cc++) {    
+    //FixMe:  should there be memory leak here?  
+    //TPolyMarker3D is created for every chain, but nowhere to clean it up
+    pm3dp = new TPolyMarker3D(fChainBuf[cc].HitNum);
+    pm3dp->SetBit(kCanDelete);
+    pm3dp->SetMarkerColor(cc+3);
+    pm3dp->SetMarkerStyle(6);
+
+    //identify the true track whose tid==0 then change its color and marker style
+    double tid=0; 
+    for(int hh=0;hh<fChainBuf[cc].HitNum;hh++) {
+      pm3dp->SetPoint(hh, fChainBuf[cc].Hits[hh]->X, fChainBuf[cc].Hits[hh]->Y, 
+        fChainBuf[cc].Hits[hh]->Z);
+      tid += int(fChainBuf[cc].Hits[hh]->ThrownTID/10000.0);  
+    }
+    tid /= fChainBuf[cc].HitNum;
+    if(tid<0.1) {
+      pm3dp->SetMarkerColor(1);
+      pm3dp->SetMarkerStyle(2);
+    }
+    
+    pm3dp->Draw("same");
+    gPad->Update();
+  }
+}
+
