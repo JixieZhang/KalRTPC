@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // By Jixie:  ntuple reader to read ep tree, which is currently
-// the stage1 tree of RTPC12 G4 sim. progrom
-// Please note that the unit in this reader are
-// mm for length, MeV for Edep,  GeV for momentum  
+// the output tree of RTPC12 G4 digitization progrom 'AnaRTPC'
+// The unit in this reader are mm for length, MeV for Edep and
+// GeV for momentum  
 //////////////////////////////////////////////////////////
 
 #ifndef NtReader_h
@@ -351,7 +351,7 @@ Int_t NtReader::LoadATrack()
   // otherwise return  HitNum_m
   HitNum_m = 0;
 
-  while (HitNum_m<4 || Smax<40.) {
+  while (HitNum_m<1 || Smax<30.1) {
     fChain->GetEntry(++fCurrent);
 #ifdef _NtReaderDebug_
     if(_NtReaderDebug_>=2) {

@@ -158,9 +158,9 @@ void EXKalRTPC::ReconVertex(TVKalState &state, double &p, double &pt, double &pz
 #ifdef _EXKalRTPCDebug_
   //debug the vertex reconstruction
   if(Global_Debug_Level>=1) {
-    TVector3 xv=hel.GetPivot();
+    TVector3 x_pv=hel.GetPivot();
     TVector3 x_fil=hel.CalcXAt(0.0);
-    cout<<"   LastHit=("<<xv.X()<<", "<<xv.y()<<", "<<xv.Z()<<")"
+    cout<<"   LastHit=("<<x_pv.X()<<", "<<x_pv.y()<<", "<<x_pv.Z()<<")"
       <<"   LastHit_fil=("<<x_fil.X()<<", "<<x_fil.y()<<", "<<x_fil.Z()<<")"
       <<",   Xc="<<hel.GetXc()<<",  Yc="<<hel.GetYc()<<endl;
 
@@ -206,8 +206,8 @@ void EXKalRTPC::Reset()
 //if bIncludeCurveBackHits==false,  it will remove backward hits, otherwise just 
 //copy all hits pointer into fKalHits_Forward
 //It will also fill the smeared hit position array
-//Note that the hit buffer must be sorted by time in increasing order
-bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
+//Note that the hit buffer must be sorted by time increasing order
+bool EXKalRTPC::JudgeFor2ndIteration(bool bRemoveBackwardHits)
 {
   //since the hits obj already exist in fKalHits, I simplely add their
   //pointers into fKalHits_Forward
@@ -226,19 +226,19 @@ bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
     //xv = hitp->GetRawXv();
     const EXMeasLayer &ml = dynamic_cast<const EXMeasLayer &>(hitp->GetMeasLayer());
     xv = ml.HitToXv(*hitp);
-
     StepX_rec[npt]=xv.X();StepY_rec[npt]=xv.Y();StepZ_rec[npt]=xv.Z();
     StepPhi_rec[npt]=xv.Phi();StepS_rec[npt]=xv.Perp();
+    
     tmpS=xv.Perp();
     if(tmpS+0.1 < Smax) {
       bNeed2ndIter=true;
-      if(bIncludeCurveBackHits) {			
+      if(!bRemoveBackwardHits) {                        
         fKalHits_Forward->Add(hitp); npt++;
       } else {
-#ifdef _EXKalRTPCDebug_	
+#ifdef _EXKalRTPCDebug_        
         if(Global_Debug_Level>=7) 
           cout<<"Hit "<<setw(3)<<idx<<" removed! tmpS="<<tmpS<<"  Smax="<<Smax<<"\n";
-#endif		
+#endif                
       }
     } else {
       if(tmpS>Smax) Smax=tmpS;
@@ -250,7 +250,7 @@ bool EXKalRTPC::JudgeFor2ndIteration(bool bIncludeCurveBackHits)
   }
   HitNum=npt;
 
-  //this objarry does not own these hits
+  //this objarry does not own these hits, avoid double delete
   fKalHits_Forward->SetOwner(false);
 
   return bNeed2ndIter;
@@ -871,6 +871,9 @@ bool EXKalRTPC::PrepareATrack(int job, double pt_min, double pt_max, double cost
 #endif
       fEventGen->Swim(hel,bIncludeCurveBackHits,kMpr);
 #ifdef _EXKalRTPCDebug_
+      //please note that if this track die inside the drift region, we can not
+      //extract its parameters any more (the kappa,rho,A,B will return NAN)
+      //But it will not affect these program
       if(Global_Debug_Level >= 4) {
         EXEventGen::PrintHelix(&hel, "GenerateHelix(backward): swim thrown helix to last point:");
       }
@@ -1471,13 +1474,13 @@ void EXKalRTPC::Example(int job, int nevents, double pt_min, double pt_max, doub
   double costh_max, double z_min, double z_max)
 {
 
-  // setup input|output root tree here 	
+  // setup input|output root tree here         
   //BeginOfRun();
 
   // ===================================================================
   //  set covariant matrix element if needed
   // ===================================================================
-  // if you think 0.05 is not good, change it as you like	
+  // if you think 0.05 is not good, change it as you like        
   //this->SetCovMElement(0.05);
 
 
@@ -1526,3 +1529,30 @@ void EXKalRTPC::Example(int job, int nevents, double pt_min, double pt_max, doub
   //save the output
   //EndOfRun();
 }
+
+#include "TPolyMarker3D.h"
+#include "TCanvas.h"
+void EXKalRTPC::DrawRawHits(Int_t color, const Char_t *opt)
+{
+  int nn = fKalHits->GetEntries();
+  if (!gPad || !nn) return;
+  gPad->cd();
+
+  TPolyMarker3D *pm3dp = new TPolyMarker3D(nn);
+  pm3dp->SetBit(kCanDelete);
+  pm3dp->SetMarkerColor(color);
+  pm3dp->SetMarkerStyle(2);
+
+  TIter next(fKalHits, kDir);
+  
+  int nhits = 0;
+  EXHit *hitp = 0;
+  while (hitp = dynamic_cast<EXHit *>(next())) {
+    TVector3 pos = hitp->GetRawXv();
+    pm3dp->SetPoint(nhits, pos.X(), pos.Y(), pos.Z());
+    nhits++;
+  }
+  pm3dp->Draw(opt);
+  gPad->Update();
+}
+

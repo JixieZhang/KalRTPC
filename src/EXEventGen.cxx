@@ -15,7 +15,7 @@ using namespace std;
 
 ClassImp(EXEventGen)
 
-//#define _ExEventGenDebug_ 9
+#define _ExEventGenDebug_ 1
 //if _ExEventGenDebug_ >= 9, do benchmark test to find out how much binary 
 //search will take to locate a detecter layer
 #ifdef _ExEventGenDebug_
@@ -59,8 +59,7 @@ EXEventGen::~EXEventGen()
 //This routine will create parameters for a THelicalTrack,
 //There are no hits inside, just a abstract track 
 THelicalTrack EXEventGen::GenerateHelix(double pt_min, double pt_max,
-  double cosmin, double cosmax, 
-  double z_min, double z_max)
+  double cosmin, double cosmax, double z_min, double z_max)
 {
   const double kPi=acos(0.0)*2;
   // ---------------------------
@@ -247,6 +246,11 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
       StepX[StepNum]=xx.X();StepY[StepNum]=xx.Y();StepZ[StepNum]=xx.Z();
       StepPhi[StepNum]=xx.Phi();StepS[StepNum]=xx.Perp();
       StepNum++;
+      
+#if defined _ExEventGenDebug_ && (_ExEventGenDebug_ >= 4)
+      cout<<"EXEventGen::Swim():: StepNum="<<StepNum<<"  layer name="<<ml.GetMLName().Data()<<endl;
+#endif
+      
       if(StepNum>=MAX_HITS_PER_TRACK) break;
 
       //here I try to store rho, tanLambda and fi0 for the 1st and last hit
@@ -279,8 +283,8 @@ void EXEventGen::Swim(THelicalTrack &heltrk, Bool_t bIncludeCurveBackHits, Doubl
 //This routine has been fully debuged, it generates helix
 //without energy loss or MSC, from (0,0,z0=0)
 //One could use random z0 too 
-int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min, double costh_max,
-  double z_min, double z_max, bool bIncludeCurveBackHits)
+int  EXEventGen::GenerateCircle(double pt_min, double pt_max, double costh_min,
+   double costh_max, double z_min, double z_max, bool bIncludeCurveBackHits)
 {
   const double kPi = atan(1.)*4;
   double bfield_tesla = dynamic_cast<const EXKalDetector &>

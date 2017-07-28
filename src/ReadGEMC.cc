@@ -72,6 +72,7 @@ void ReadGEMC::Init()
   fChain->SetBranchAddress("Time", &TDC, &b_TDC);
   if(fChain->FindBranch("TrackId")) {
     fChain->SetBranchAddress("TrackId", &TrackId, &b_TrackId);
+    fChain->SetBranchAddress("TimeShift", &TimeShift, &b_TimeShift);
   }
    
   fChainGen->SetBranchAddress("event_v", &event_v, &b_EventID);
@@ -90,6 +91,7 @@ Int_t ReadGEMC::LoadATrack()
   int HitNum_m = 0;
 
   while (HitNum_m<5) {
+   
     if(TDC) {
       ChanID->clear();
       X->clear();
@@ -97,23 +99,24 @@ Int_t ReadGEMC::LoadATrack()
       Z->clear();
       ADC->clear();
       TDC->clear();
-      TrackId->clear();
     }
+    
     fChain->GetEntry(++fCurrent);
     fChainGen->GetEntry(fCurrent);
     if(fCurrent>=int(fChain->GetEntriesFast()))  return -1;
     HitNum_m = TDC->size();
   }
   
-/*
+
   //print out for debug
   cout<<"ReadGEMC:: GEMC event "<<event_v<<",  Number of hits="<<HitNum_m<<endl;
+  /*
   for(int i=0;i<HitNum_m;i++) {
     cout<<(int)TDC->at(i)<<"  ";
     if( !((i+1)%10) ) cout<<endl;
   }
   cout<<endl;
-*/
+  */
 
   return HitNum_m;
 }

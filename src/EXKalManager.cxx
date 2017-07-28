@@ -269,14 +269,14 @@ void EXKalManager::BeginOfRun(int eventtype)
   // ===================================================================
   //  Prepare a Root tree input
   // ===================================================================
-  if(eventtype==10 || eventtype==1) {
+  if(eventtype==1 || (eventtype>=3 && eventtype<=5)) {
     fNtReader = new NtReader(fG4Inputfile);
     if(! fNtReader->fChain ) {
       cout<<"Error: can not open input root file, I quit ..."<<endl;
       exit(-2);  
     }
   }
-  else if(eventtype==11) {
+  else if(eventtype==11 || (eventtype>=13 && eventtype<=15)) {
     fGEMCReader = new GEMCReader(fG4Inputfile);
     if(! fGEMCReader->fChain ) {
       cout<<"Error: can not open input root file, I quit ..."<<endl;
@@ -299,7 +299,7 @@ void EXKalManager::EndOfRun()
 //please note that the G4 root tree use unit of mm 
 int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
 {
-  int nhits = 0;
+  int totalhits = 0;
 
   int id[MAX_HITS_PER_EVENT],tdc[MAX_HITS_PER_EVENT],adc[MAX_HITS_PER_EVENT];
   int throwntid[MAX_HITS_PER_EVENT];
@@ -310,11 +310,16 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
     int n = fGEMCReader->LoadATrack();
     if( n == -1 ) {
       cout<<"Reach the end of input root file \n";
-      return -1;
+      if(totalhits < MIN_HITS_PER_TRACK) return -1;
+      else break;
     }
 
-    nhits=0;
     int HitNum_m = fGEMCReader->TDC->size();
+    if(HitNum_m==0) continue;
+    CF_ntrack_read++;
+    if(HitNum_m>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
+    
+    int nhits=0;
     for(int i=0;i<HitNum_m;i++) {
       if(fGEMCReader->ChanID->at(i)>0) {
         //if negative means this hit is invalid
@@ -327,18 +332,14 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
         zz[nhits] = fGEMCReader->Z->at(i)/10.;
         throwntid[nhits] = fGEMCReader->TrackId->at(i)*1.0E4+i;
         nhits++;
+        totalhits++;
         if(nhits >= MAX_HITS_PER_EVENT) break;
       }
     }
-    if(nhits==0) continue;
-
-    CF_ntrack_read++;
-    if(nhits>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
 
     //append this track into the hit pool
     int append=1;
     fChainFinder->PrepareHitPool(id, tdc, adc, xx, yy, zz, nhits, throwntid, append);
-
 
 #ifdef _EXKalManDebug_
     //just for debug
@@ -371,7 +372,7 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
     CF_P0[t]=fGEMCReader->p_v/1000.;
   }
 
-  return nhits;
+  return totalhits;
 }
 
 
@@ -449,8 +450,7 @@ bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
 //please note that the G4 root tree use unit of mm 
 int EXKalManager::FillChainFinderHitPool(int ntracks)
 {
-  int nhits = 0;
-
+  int totalhits = 0;
   int id[MAX_HITS_PER_EVENT],tdc[MAX_HITS_PER_EVENT],adc[MAX_HITS_PER_EVENT];
   int throwntid[MAX_HITS_PER_EVENT];
   double xx[MAX_HITS_PER_EVENT],yy[MAX_HITS_PER_EVENT],zz[MAX_HITS_PER_EVENT];
@@ -460,10 +460,15 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
     int n = fNtReader->LoadATrack();
     if( n == -1 ) {
       cout<<"Reach the end of input root file \n";
-      return -1;
+      if(totalhits < MIN_HITS_PER_TRACK) return -1;
+      else break;
     }
 
-    nhits=0;
+    if(fNtReader->HitNum_m==0) continue;
+    CF_ntrack_read++;
+    if(fNtReader->HitNum_m>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
+    
+    int nhits=0;
     for(int i=0;i<fNtReader->HitNum_m;i++) {
       if(fNtReader->StepID_m[i]>0) {
         //if negative means this hit is invalid
@@ -475,20 +480,16 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
         yy[nhits] = fNtReader->StepY_rec_m[i]/10.;
         zz[nhits] = fNtReader->StepZ_rec_m[i]/10.;
         throwntid[nhits] = t*1.0E4+i;
-        throwntid[nhits] = fNtReader->StepADC_m[i]*1.0E4+i;  //just for debug
+        //throwntid[nhits] = fNtReader->StepADC_m[i]*1.0E4+i;  //just for debug
         nhits++;
+        totalhits++;
         if(nhits >= MAX_HITS_PER_EVENT) break;
       }
     }
-    if(nhits==0) continue;
-
-    CF_ntrack_read++;
-    if(nhits>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
 
     //append this track into the hit pool
     int append=1;
     fChainFinder->PrepareHitPool(id, tdc, adc, xx, yy, zz, nhits, throwntid, append);
-
 
 #ifdef _EXKalManDebug_
     //just for debug
@@ -522,7 +523,7 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
     CF_P0[t]=fNtReader->P0_p;
   }
 
-  return nhits;
+  return totalhits;
 }
 
 
@@ -643,8 +644,9 @@ int EXKalManager::IdentifyThrownTID(int chainid, double &likelyhood)
 
 //run ChainFinder to search for chains then do fitting
 //in each event, read multiple tracks from G4 root tree and store them into hit pool
-//job := 3, no fit; 4 call GHF; 5 call KF;
-int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, double max_sep, 
+//(job%10) := 3, no fit; 4 call GHF; 5 call KF 
+//(job/10) := 0, using RTPC12 tree, 1 use GEMC tree
+int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double max_sep, 
   double max_sep_ang, double min_sep, double min_sep_ang, double ini_sep)
 {
   double xx[MAX_HITS_PER_TRACK],yy[MAX_HITS_PER_TRACK],zz[MAX_HITS_PER_TRACK];
@@ -654,7 +656,10 @@ int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, dou
 
   //BeginOfRun() will base on _eventtype_ to determine if or not to start NtReader
   //therefore we have to set _eventtype_ value here
-  _eventtype_= 10+treetype;
+  int treetype = job/10;
+  //cout<<"********treetype="<<treetype<<"*********\n";
+  int jobtype = job%10;
+  _eventtype_= job;
   BeginOfRun(_eventtype_);
 
   //void SetParameters(double max_sep, double max_sep_ang, double min_sep, double min_sep_ang,
@@ -678,23 +683,23 @@ int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, dou
     Tree_Reset_CF();
     Tree_Reset();
     fKalRTPC->Reset();
-
+    
     // ===================================================================
     //execute Chain Finder
     fChainFinder->Reset();
     int ret=0;
     if(treetype==0)  ret=FillChainFinderHitPool(ntracks);   
-    else  ret=FillChainFinderHitPoolGEMC(ntracks);  
+    else  ret=FillChainFinderHitPoolGEMC(ntracks);
     if(ret == -1) break;
     else if(ret<MIN_HITS_PER_TRACK) continue;
     fChainFinder->RemoveBadHitsFromPool();
     if(fChainFinder->fHitNum < MIN_HITS_PER_TRACK) continue;
-    fChainFinder->SortHitPoolByIDTDC();
+    //fChainFinder->SortHitPoolByIDTDC(); //do not sort for RTPC12, its pattern is not known yet
     fChainFinder->SearchChains();
-
+    
     // ===================================================================
     //judge if to do fitting to the found chains
-    if(job==3) {
+    if(jobtype==3) {
       Tree_Fill(*(fKalRTPC->fKalTrack));
     } else {
       // ===================================================================
@@ -716,12 +721,12 @@ int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, dou
         if(CF_ntrack_read<2) {trackid=0;CF_ThrownTID_like=1.0;}
         else trackid = IdentifyThrownTID(i, CF_ThrownTID_like); 
 
-        if(job==4) {
+        if(jobtype==4) {
           // ============================================================
           //  call global helix fit
           // ============================================================
           fKalRTPC->DoGlobalHelixFit(xx,yy,zz,CF_npt,bIncludeCurveBackHits);       
-        } else if(job==5) {
+        } else if(jobtype==5) {
           // ============================================================
           //  call KalmanFilter
           // ============================================================
@@ -730,7 +735,7 @@ int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, dou
           bool bTrackReady = false;
           bool smearing = false; 
           //bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz,CF_npt,smearing,bIncludeCurveBackHits);
-          bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz,CF_npt,smearing,false);
+          bTrackReady = fKalRTPC->PrepareATrack(xx,yy,zz,CF_npt,smearing,true);
           if(!bTrackReady) continue;
 
           //Remove backward hits also judge whether or not need 2nd iteration
@@ -757,7 +762,7 @@ int EXKalManager::RunCFNFit(int treetype, int job, int nevents, int ntracks, dou
         fKalRTPC->Reset();
         Tree_Reset();
       } //end of for(int i=0;i<fChainFinder->fChainNum;i++)
-    } //end of if(job==3)
+    } //end of if(jobtype==3)
 
 #ifdef _EXKalManDebug_
     Stop4Debug(_index_);
@@ -793,16 +798,22 @@ void EXKalManager::EventVisulization2()
     vwp->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
     vwp->SetView(10.,80.,80.,ierr);   
 #else
-    xmin=ymin=zmin=-(kRTPC_R_GEM1+1.0);
-    xmax=ymax=zmax=kRTPC_R_GEM1+1.0;
+    xmin=ymin=zmin=-(kRTPC_R_GEM1-2.0);
+    xmax=ymax=zmax=kRTPC_R_GEM1-2.0;
     vwp->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
     //vwp->SetView(0.,0.,0.,ierr);  //side view      
     vwp->SetView(0.,0.,90.,ierr);   //beam view
 #endif
 
     fKalRTPC->fDetector->Draw(40);
-    fKalRTPC->fKalTrack->Draw(2,"");         
-
+    if(fChainFinder->fHitNum>0) {
+      fChainFinder->DrawPool();
+      fChainFinder->DrawChain();
+    } else {
+      fKalRTPC->DrawRawHits(4,"same");
+    }    
+    fKalRTPC->fKalTrack->Draw(2,"same");
+    
     cout << "Next? [y(yes)/n(no, abort)/e(edit)/q(quit)] " << flush;
     static const Int_t kMaxLen = 255;
     Char_t temp[kMaxLen];
@@ -842,8 +853,8 @@ void EXKalManager::EventVisulization()
     cvp->cd(1);
     TView *vwp1 = TView::CreateView(1,0,0);
     //TView3D   *vwp1 = new TView3D();
-    xmin=ymin=zmin=-kRTPC_Length/2.0;
-    xmax=ymax=zmax=kRTPC_Length/2.0;
+    xmin=ymin=zmin=-(kRTPC_Length/2.0-4.0);
+    xmax=ymax=zmax=kRTPC_Length/2.0-4.0;
     vwp1->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
     vwp1->SetView(10.,80.,80.,ierr);   
     //vwp1->SetView(0.,90.,90.,ierr);  //side view  
@@ -853,13 +864,17 @@ void EXKalManager::EventVisulization()
     cvp->cd(2);
     TView *vwp2 = TView::CreateView(1,0,0);
     //TView3D   *vwp2 = new TView3D();
-    xmin=ymin=zmin=-(kRTPC_R_GEM1+1.0);
-    xmax=ymax=zmax=kRTPC_R_GEM1+1.0;
+    xmin=ymin=zmin=-(kRTPC_R_GEM1-2.0);
+    xmax=ymax=zmax=kRTPC_R_GEM1-2.0;
     vwp2->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
     vwp2->SetView(0.,0.,90.,ierr);   //beam view
     fKalRTPC->fDetector->Draw(40);
-    fChainFinder->DrawPool();
-    fChainFinder->DrawChain();       
+    if(fChainFinder->fHitNum>0) {
+      fChainFinder->DrawPool();
+      fChainFinder->DrawChain();
+    } else {
+      fKalRTPC->DrawRawHits(4,"same");
+    }    
     fKalRTPC->fKalTrack->Draw(2,"same");  
   
     cvp->cd(0);
@@ -893,6 +908,8 @@ int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, doub
 
   //BeginOfRun() will base on _eventtype_ to determine if or not to start NtReader
   //therefore we have to set _eventtype_ value here
+  int treetype = job/10;
+  int jobtype = job%10;
   _eventtype_= job;
   BeginOfRun(_eventtype_);
 
@@ -925,11 +942,13 @@ int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, doub
     bool bTrackReady = false;
     bool bIncludeCurveBackHits = true;  //this only work for EXEventGen
 
-    if(_eventtype_ == 0 || _eventtype_ == 2)
+    if(jobtype == 0 || jobtype == 2)
       bTrackReady = fKalRTPC->PrepareATrack(_eventtype_, pt_min, pt_max, costh_min, 
       costh_max, z_min, z_max, bIncludeCurveBackHits);
-    else if(_eventtype_ == 1)
-      bTrackReady=LoadAG4Track(bIncludeCurveBackHits);
+    else if(jobtype == 1) {
+      if(treetype==0) bTrackReady=LoadAG4Track(bIncludeCurveBackHits);
+      else bTrackReady=LoadAGEMCTrack(bIncludeCurveBackHits);
+    }
     else {
       cout<<"This _eventtype_("<<_eventtype_<<") is not yet supported! I quit..."<<endl;
       exit(-3);
@@ -955,7 +974,7 @@ int EXKalManager::RunKF(int job, int nevents, double pt_min, double pt_max, doub
     // ============================================================
     //  Very Primitive Event Display
     // ============================================================
-    EventVisulization();
+    EventVisulization2();
    
 
 #ifdef _EXKalManDebug_

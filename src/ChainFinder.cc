@@ -38,7 +38,7 @@
 //>=11: add printing details of processing backward chains
 //>=12  add priting more information about insertion_sort
 //>=13: add printing most details of insertion_sort
-#define _ChainFinderDebug_ 11
+#define _ChainFinderDebug_ 3
 
 #ifdef _ChainFinderDebug_
 #include "GlobalDebuger.hh"
@@ -248,9 +248,9 @@ int  ChainFinder::RemoveAHitFromPool(int hitid)
   return found;
 }
 
-//This is for changing status for hits before search
-//For example, if we want to remove bad hits or redundate hit
-//if we want fast speed, we should remove these hits
+//This is to change status for hits before searching
+//For example, if we want to remove bad hits or redundate hits
+//to gain fast speed, we should remove these hits
 int  ChainFinder::RemoveBadHitsFromPool()
 {
   TVector3 pV3(0,0,0);
@@ -277,8 +277,14 @@ int  ChainFinder::RemoveBadHitsFromPool()
   return 0;
 }
 
+//By Jixie: ----do not call this routine----
+//RTPC12 will not use the same channel map as BoNuS6, therefore the order
+//of HitPool is not identical to BoNuS6
+//In RTPC12, we can only sort by connecter row increasing order. For the same 
+//connector row, chan id increases along z
 //the real data in bonus6 it in channel ID increasing order, for the same ID,
-//TDC in decreasing order. This routine is only for simulation
+//TDC in decreasing order. This routine is only for simulation with BoNuS6 data
+//
 //sort hitpool to match this order
 void ChainFinder::SortHitPoolByIDTDC()
 {
@@ -396,29 +402,27 @@ void ChainFinder::QuickSort_IDTDC(int *arr, int left, int right)
   // recursion 
   if (left < j) QuickSort_IDTDC(arr, left, j);
   if (i < right) QuickSort_IDTDC(arr, i, right);
-
 }
-
 
 
 void ChainFinder::SetParameters(double max_sep, double max_sep_ang, double min_sep, 
                                 double min_sep_ang, double ini_sep)
 {
   // USER SHOULD PROVIDE THESE VARIABLES
-  Ini_Sep     = ini_sep;
   Max_Sep     = max_sep;
   Max_Sep_Ang = max_sep_ang;
   Min_Sep     = min_sep;
   Min_Sep_Ang = min_sep_ang;
+  Ini_Sep     = ini_sep;
 
 #ifdef _ChainFinderDebug_
   if(_ChainFinderDebug_>=1) {
   cout<<"\nChainFinder Parameters:"
-      <<" Ini_Sep="<<Ini_Sep<<" cm, "
       <<" Max_Sep="<<Max_Sep<<" cm, "
       <<" Max_Sep_Ang="<<Max_Sep_Ang*rad2deg<<" deg,"
       <<" Min_Sep="<<Min_Sep<<" cm, "
-      <<" Min_Sep_Ang="<<Min_Sep_Ang*rad2deg<<" deg.\n"<<endl;
+      <<" Min_Sep_Ang="<<Min_Sep_Ang*rad2deg<<" deg,"
+      <<" Ini_Sep="<<Ini_Sep<<" cm.\n"<<endl;
   }
 #endif
 }
@@ -431,7 +435,8 @@ void ChainFinder::SetParameters(double max_sep, double max_sep_ang, double min_s
 int  ChainFinder::AddAHitToChain(int seed, int chainid, int hitid, double space)
 {
   if (fHitNumInAChain[chainid] >= MAX_HITS_PER_CHAIN) {
-    cout<<"warning: MAX_HITS_PER_CHAIN("<<MAX_HITS_PER_CHAIN<<") is too small, hits are potentially lost!\n";
+    cout<<"warning: MAX_HITS_PER_CHAIN("<<MAX_HITS_PER_CHAIN
+        <<") is too small, hits are potentially lost!\n";
     return 0;
   }
   
@@ -650,35 +655,35 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
       if (Smin > fHitPool[buf[i]].S) {Smin = fHitPool[buf[i]].S;}
       if (Smax < fHitPool[buf[i]].S) {Smax = fHitPool[buf[i]].S;}  
     }
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
-        if(_ChainFinderDebug_>=4) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+        if(_ChainFinderDebug_>=3) {
           cout<<"  Chain "<<fChainNum<<": "<<fHitNumInAChain[fChainNum]<<" hits,  Smax="
               <<Smax<<",  Smin="<<Smin<<endl;
         }
 #endif
     
     if (fHitNumInAChain[fChainNum] < Min_HITS_PER_CHAIN) {
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
-        if(_ChainFinderDebug_>=4) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+        if(_ChainFinderDebug_>=3) {
           cout<<"\n***Warning: ignore this chain, it contains too few hits, HitNum="
               <<fHitNumInAChain[fChainNum]<<endl;
         }
 #endif
     } else if (Smin > kRTPC_R_GEM1-2.0) {
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
-      if(_ChainFinderDebug_>=4) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+      if(_ChainFinderDebug_>=3) {
         cout<<"\n ***Warning: ignore this chain, Smin("<<Smin<<") > kRTPC_R_GEM1-2.0"<<endl;
       }
 #endif
     } else if (Smax < kRTPC_R_Cathode+2.0) {
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
-      if(_ChainFinderDebug_>=4) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+      if(_ChainFinderDebug_>=3) {
         cout<<"\n ***Warning: ignore this chain, Smax("<<Smax<<") < kRTPC_R_Cathode+2.0"<<endl;
       }
 #endif
     } else if (Smax - Smin < 2.0) {
-#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=4
-      if(_ChainFinderDebug_>=4) {
+#if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
+      if(_ChainFinderDebug_>=3) {
         cout<<"\n ***Warning: ignore this chain, Smax - Smin = "<<Smax - Smin<<endl;
       }
 #endif
@@ -1364,9 +1369,9 @@ void ChainFinder::BenchmarkSort(int chainid)
 //For curve back tracks, sorting by S then phi will not work.
 //Here is my solution:  
 //1) spilt the whole chain into two parts: forward part + backward part
-//2) sort both part by S then phi. 
-//   Forward part: S increasing, if S equal phi increasing;
-//   Backward part: S decreasing, if S equal phi increasing;
+//2) sort both parts by S then phi. 
+//   Forward part: S increasing, if S equal then phi increasing;
+//   Backward part: S decreasing, if S equal then phi increasing;
 //3) Finally merge these 2 parts together 
 void ChainFinder::SortAChain(int chainid) 
 {  
@@ -1384,52 +1389,54 @@ void ChainFinder::SortAChain(int chainid)
   double Smin,Smax,Phimin,Phimax;
   int idxSmin,idxSmax,idxPhimin,idxPhimax;
   
-  idxSmin=idxSmax=idxPhimin=idxPhimax=0.0;
+  idxSmin=idxSmax=idxPhimin=idxPhimax=0;
   Smin=9999.0; Smax=0.0;
   Phimin=9999.0;Phimax=-9999.0;
   for(int i=0;i<nhits;i++) {
     if(Smin >= fHitPool[buf[i]].S) {Smin = fHitPool[buf[i]].S; idxSmin=i;}
-    else if(Smax - fHitPool[buf[i]].S < 1.0E-5) {Smax = fHitPool[buf[i]].S; idxSmax=i;}   
+    if(Smax - fHitPool[buf[i]].S < 1.0E-5) {Smax = fHitPool[buf[i]].S; idxSmax=i;}   
     if(Phimin >= fHitPool[buf[i]].Phi) {Phimin = fHitPool[buf[i]].Phi; idxPhimin=i;}
-    else if(Phimax - fHitPool[buf[i]].Phi < 1.0E-5) {Phimax = fHitPool[buf[i]].Phi; idxPhimax=i;}
+    if(Phimax - fHitPool[buf[i]].Phi < 1.0E-5) {Phimax = fHitPool[buf[i]].Phi; idxPhimax=i;}
   }
   
   //this track aross the 180 deg line, need to check for phimin phimax again
-  if(Phimax-Phimin > kPi) {    
-    Phimin=Phimax;
-    Phimax=0.0;
+  if(Phimax-Phimin > kPi) {
+    Phimin=9999.0;
+    Phimax=-9999.0;
     for(int i=0;i<nhits;i++) { 
       if (phi[i]<0.0) phi[i] += 2*kPi;
       if(Phimax <= phi[i]) {Phimax = phi[i]; idxPhimax=i;}   
-      else if(Phimin >= phi[i]) {Phimin = phi[i]; idxPhimin=i;}
+      if(Phimin >= phi[i]) {Phimin = phi[i]; idxPhimin=i;}
     }
   }
 
   //determine track property: forward or backward
-  //for postive track phi increasing
+  //for positive track phi increasing
   //for backward track, Smax locate in the middle of the chain
   //but this chain buf is not sorted yet. so we have to sort it first ......
   bool bIsBackwardTrack=false;  
   //first of all, check coverage:
   double Sspan=Smax-Smin;
   double Phispan=Phimax-Phimin;
-  //In theory, Phispan = Phi_at_cathode - Phi_at_GEM1 
-  //Phi_at_D = kPi/2-atan(D/2./R), where R = P_GeV/(0.3B) 
+  //Theoretically, Phispan = Phi_at_cathode - Phi_at_GEM1, for 5T field and 4cm driftdisctance 
+  //Phi_at_S = kPi/2-atan(S/2./R), where R = P_GeV/(0.3B) 
   //For Pt=0.30 GeV, Phispan = 5.7 deg
   //For Pt=0.20 GeV, Phispan = 8.3 deg
   //For Pt=0.15 GeV, Phispan = 10.8 deg
   //For Pt=0.053 GeV, Phispan = 66.8 deg
-  //If Phispan small, it is a high Pt chain, which never curve back
-  //If Phispan very large, it is a small Pt chain, which is very likely to curve back
+  //If Phispan is too small, it is a high Pt chain, which never curve back
+  //If Phispan is very large, it is a small Pt chain, which is very likely to be a curve back.
+  //I use 80 deg here to set a curve back track. Please note that this value depends on the
+  //drift-path of the electron, we need to verify with garfield. 
   //Note that the phi uncertainty is about 2 deg
   
   if(Phispan < 12.0/rad2deg ) bIsBackwardTrack=false;
   //Smax and phimax stay together, it is a positive and forward track 
   else if (Smax-fHitPool[buf[idxPhimax]].S < 0.5) bIsBackwardTrack=false;
   //Smax and phimin stay together, it is a negative and forward track 
-  else if ( Smax-fHitPool[buf[idxPhimin]].S < 0.5) bIsBackwardTrack=false; 
+  else if (Smax-fHitPool[buf[idxPhimin]].S < 0.5) bIsBackwardTrack=false; 
   //take the differece of S between two ends of phi, if it is >0.5 cm less than Sspan, 
-  //it must be curve-back track. For curve-back track, it is hard to determine which
+  //it must be a curve-back track. For a curve-back track, it is hard to determine which
   //end is head or tail
   else if (Sspan - fabs(fHitPool[buf[idxPhimin]].S-fHitPool[buf[idxPhimax]].S) > 0.5 ) {
     bIsBackwardTrack=true;
@@ -1438,8 +1445,8 @@ void ChainFinder::SortAChain(int chainid)
 
 #ifdef _ChainFinderDebug_
     if(_ChainFinderDebug_>=10) {
-      cout<<"SortAChain():: overall information: nhits="<<nhits<<" idxSmax="<<idxSmax<<"  idxSmin="<<idxSmin<<"  idxPhimax="<<idxPhimax 
-          <<"  idxPhimin="<<idxPhimin <<endl
+      cout<<"SortAChain():: overall information: nhits="<<nhits<<" idxSmax="<<idxSmax<<"  idxSmin="<<idxSmin
+          <<"  idxPhimax="<<idxPhimax<<"  idxPhimin="<<idxPhimin <<endl
           <<"\t Smax="<<Smax<<"  Smin="<<Smin<<"  S[idxPhimax]="<<fHitPool[buf[idxPhimax]].S
           <<"  S[idxPhimin]="<<fHitPool[buf[idxPhimin]].S<<endl
           <<"\t Phimax="<<Phimax*rad2deg<<"  Phimin="<<Phimin*rad2deg<<"  Phi[idxSmax]="<<phi[idxSmax]*rad2deg
@@ -1640,7 +1647,7 @@ void ChainFinder::DrawChain()
       tid += int(fChainBuf[cc].Hits[hh]->ThrownTID/10000.0);  
     }
     tid /= fChainBuf[cc].HitNum;
-    if(tid<0.1) {
+    if(tid<0.01) {
       pm3dp->SetMarkerColor(1);
       pm3dp->SetMarkerStyle(2);
     }

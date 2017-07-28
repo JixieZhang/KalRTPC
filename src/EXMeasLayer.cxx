@@ -3,14 +3,9 @@
 //*  EXMeasLayer Class
 //* ===================
 //*
-//* (Description)
-//*   Sample measurement layer class used by EXHit.
-//* (Requires)
-//* (Provides)
-//*     class EXMeasLayer
 //* (Update Recored)
-//*   2016/02/23  Jixie Zhang, Modify for RTPC
-//*   2003/09/30  Y.Nakashima       Original version.
+//*   2016/02/23  Jixie Zhang, Modify for RTPC12
+//*   2003/09/30  Y.Nakashima, Original version.
 //*
 //*************************************************************************
 //
@@ -41,7 +36,7 @@ EXMeasLayer::EXMeasLayer(
   Double_t   lhalf,    // half length of the cylindrical layer
   Bool_t     isactive, // flag to tell the layer is active
   const Char_t    *name)
-  : EXVMeasLayer(min, mout, isactive),
+  : EXVMeasLayer(min, mout, isactive, name),
   TCylinder(r0, lhalf)
 {
   //Lorentz angle:  Phi(S) = 0.0278*S^2 - 0.5334*S + 2.3475  //in rad and cm
@@ -67,13 +62,13 @@ EXMeasLayer::EXMeasLayer(
   if(_EXMeasLayerDebug_>=2) {
     if(isactive) {
       cout<<"Construct active measurement layer:"
-	<<"  TDC="<<setw(2)<<int(t/0.2)<<fixed
-	<<"  r="<<setw(6)<<setprecision(4)<<S 
-	<<"  dr="<<setw(6)<<setprecision(4)<<dS//<<endl
-	<<"  dPhi="<<setw(6)<<setprecision(4)<<dPhi*57.3<<"(deg)"
-	<<"  d(rphi)="<<setw(7)<<setprecision(5)<<fSigmaX
-	<<"  dz="<<setw(5)<<setprecision(3)<<fSigmaZ
-	<< setprecision(7)<< resetiosflags(ios::showpoint)<<endl;
+          <<"  TDC="<<setw(2)<<int(t/0.2)<<fixed
+          <<"  r="<<setw(6)<<setprecision(4)<<S 
+          <<"  dr="<<setw(6)<<setprecision(4)<<dS//<<endl
+          <<"  dPhi="<<setw(6)<<setprecision(4)<<dPhi*57.3<<"(deg)"
+          <<"  d(rphi)="<<setw(7)<<setprecision(5)<<fSigmaX
+          <<"  dz="<<setw(5)<<setprecision(3)<<fSigmaZ
+          << setprecision(7)<< resetiosflags(ios::showpoint)<<endl;
     }
   }
 #endif
@@ -86,7 +81,7 @@ EXMeasLayer::~EXMeasLayer()
 TKalMatrix EXMeasLayer::XvToMv(const TVector3 &xv) const
 {
   // Calculate hit coordinate information:
-  //	mv(0,0) = r * phi 
+  //   mv(0,0) = r * phi 
   //     (1,0) = z
 
   TKalMatrix mv(kMdim,1);
@@ -96,7 +91,7 @@ TKalMatrix EXMeasLayer::XvToMv(const TVector3 &xv) const
 }
 
 TKalMatrix EXMeasLayer::XvToMv(const TVTrackHit &,
-  const TVector3   &xv) const
+                               const TVector3   &xv) const
 {
   return XvToMv(xv);
 }
@@ -113,11 +108,10 @@ TVector3 EXMeasLayer::HitToXv(const TVTrackHit &vht) const
   return TVector3(x,y,z);
 }
 
-void EXMeasLayer::CalcDhDa(
-  const TVTrackHit &,          // Hit: not used in this example
-  const TVector3   &xxv,       // hit position vector
-  const TKalMatrix &dxphiada,  // @x(\phi(a),a)/@a
-  TKalMatrix &H)  const  // projector matrix = @h/@a
+void EXMeasLayer::CalcDhDa(const TVTrackHit &,          // Hit: not used in this example
+                           const TVector3   &xxv,       // hit position vector
+                           const TKalMatrix &dxphiada,  // @x(\phi(a),a)/@a
+                                 TKalMatrix &H)  const  // projector matrix = @h/@a
 {
   // Calculate
   //    H = (@h/@a) = (@phi/@a, @z/@a)^t
@@ -147,8 +141,9 @@ void EXMeasLayer::CalcDhDa(
   }
 }
 
-void EXMeasLayer::ProcessHit(const TVector3    &xx,
-  TObjArray   &hits, bool smearing)
+void EXMeasLayer::ProcessHit(const TVector3 &xx,
+                             TObjArray &hits,
+                             bool smearing)
 {
   //By Jixie:
   //XvToMv() will use phi angle from vector xx and radius r from 
@@ -195,18 +190,20 @@ void EXMeasLayer::ProcessHit(const TVector3    &xx,
 //
 void EXMeasLayer::Draw(Int_t color, const Char_t *opt)
 {
-   if (!gPad) return;
-   if (!IsActive()) return;
-   if (!GetNodePtr()) {
-      const Char_t *name  = GetMLName().Data();
-      const Char_t *nname = (GetMLName() + "Node").Data();
-      Double_t r    = GetR();
-      Double_t hlen = GetZmax();
-      TTUBE *tubep = new TTUBE(name,name,"void",r,r,hlen);
-      tubep->SetBit(kCanDelete);
-      TNode *nodep = new TNode(nname,nname,name);
-      nodep->SetLineColor(color);
-      nodep->SetLineWidth(0);
-      SetNodePtr(nodep);
-   }
+  //if (this->IsActive()) return; //I do not want to draw active layers
+  if(fabs(GetR()-0.4)>0.1 && fabs(GetR()-3.0)>0.1) return;
+  if (!gPad) return;
+  if (!IsActive()) return;
+  if (!GetNodePtr()) {
+    const Char_t *name  = GetMLName().Data();
+    const Char_t *nname = (GetMLName() + "Node").Data();
+    Double_t r    = GetR();
+    Double_t hlen = GetZmax();
+    TTUBE *tubep = new TTUBE(name,name,"void",r,r,hlen);
+    tubep->SetBit(kCanDelete);
+    TNode *nodep = new TNode(nname,nname,name);
+    nodep->SetLineColor(color);
+    nodep->SetLineWidth(0);
+    SetNodePtr(nodep);
+  }
 }

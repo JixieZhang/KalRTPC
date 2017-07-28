@@ -29,7 +29,7 @@ private:
    //By Jixie: add this vector here to store the raw (x,y,z)
    TVector3 fRawXv;
 
-   ClassDef(EXHit,1)      // Sample hit class
+   ClassDef(EXHit,1)
 };
 
 #endif

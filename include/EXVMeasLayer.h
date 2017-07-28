@@ -5,14 +5,9 @@
 //*  EXVMeasLayer Class
 //* ===================
 //*
-//* (Description)
-//*   Sample measurement layer class used by TVTrackHit.
-//* (Requires)
-//* (Provides)
-//*     class EXVMeasLayer
-//* (Update Recored)
-//*   2003/09/30  Y.Nakashima       Original version.
-//*
+//* The abstract measurement layer class which also inheriated from TAttDrawable.
+//* TAttDrawable makes the measurement layer drawable.
+//* 
 //*************************************************************************
 //
 #include "TVector3.h"
@@ -28,31 +23,30 @@ class TNode;
 
 class EXVMeasLayer : public TVMeasLayer, public TAttDrawable {
 public:
-   static Bool_t kActive;
-   static Bool_t kDummy;
+  static Bool_t kActive;
+  static Bool_t kDummy;
 
-   // Ctors and Dtor
+  // Ctors and Dtor
+  EXVMeasLayer(TMaterial &min,
+               TMaterial &mout,
+               Bool_t     type = EXVMeasLayer::kActive,
+               const Char_t    *name = "MeasL");
+  virtual ~EXVMeasLayer();
 
-   EXVMeasLayer(TMaterial &min,
-                TMaterial &mout,
-                Bool_t     type = EXVMeasLayer::kActive,
-          const Char_t    *name = "MeasL");
-   virtual ~EXVMeasLayer();
+  virtual void ProcessHit(const TVector3  &xx,
+                          TObjArray &hits,
+                          bool smearing=true) = 0;
 
-   virtual void ProcessHit(const TVector3  &xx,
-                                 TObjArray &hits,
-				 bool smearing=true) = 0;
+  inline TString GetMLName() const { return fName; }
+  inline TNode  *GetNodePtr() const { return fNodePtr; }
 
-   inline TString GetMLName () const { return fName;    }
-   inline TNode  *GetNodePtr() const { return fNodePtr; }
-
-   inline void    SetNodePtr(TNode *nodep) { fNodePtr = nodep; }
+  inline void    SetNodePtr(TNode *nodep) { fNodePtr = nodep; }
 
 private:
-   TString  fName;      // layer name
-   TNode   *fNodePtr;   // node pointer
+  TString  fName;      // layer name
+  TNode   *fNodePtr;   // node pointer
 
-   ClassDef(EXVMeasLayer,1) 	// Sample measurement layer class
+  ClassDef(EXVMeasLayer,1)
 };
 
 #endif

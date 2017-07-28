@@ -38,7 +38,7 @@ void usage()
   printf("    [-t <costh_min=-0.00001> <costh_max=0.00001>] \\\n");
   printf("    [-z <z_min_cm=0.0> <z_max_cm=0.0>] \\\n");  
   printf("    [-f <infile=\"infile.root\">] \\\n");   
-  printf("    [-g <g4type=0> \n\n");  
+  printf("    [-g <g4type=0>]\n\n");  
 
   cerr << "-------------------The following old usage is also supported----------------------"<<endl;
   cerr <<"exe <job=0|1|2|3|4|5|6> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1] \\"<<endl 
@@ -230,11 +230,11 @@ int main(int argc, char **argv)
   EXKalManager aKalMan;
   aKalMan.SetCovMElement(error);
   aKalMan.SetG4InputFile(infile);
-  if(job>=3 && job<=5 ) {
-    aKalMan.RunCFNFit(g4type, job, nevents,ntracks,max_sep,max_sep_ang,min_sep,min_sep_ang,ini_sep);
-  } 
-  else{
-    aKalMan.RunKF(job,nevents,pt_min,pt_max,costh_min,costh_max,z_min,z_max);
+  int thisjob=g4type*10+job;
+  if(job>=3 && job<=5) {
+    aKalMan.RunCFNFit(thisjob,nevents,ntracks,max_sep,max_sep_ang,min_sep,min_sep_ang,ini_sep);
+  } else{
+    aKalMan.RunKF(thisjob,nevents,pt_min,pt_max,costh_min,costh_max,z_min,z_max);
   }
 
   return 0;

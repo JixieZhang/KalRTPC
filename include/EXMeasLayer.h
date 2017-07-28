@@ -1,17 +1,8 @@
 #ifndef EXMEASLAYER_H
 #define EXMEASLAYER_H
 //*************************************************************************
-//* ===================
-//*  EXMeasLayer Class
-//* ===================
 //*
-//* (Description)
-//*   Sample measurement layer class used by EXHit.
-//* (Requires)
-//* (Provides)
-//*     class EXMeasLayer
-//* (Update Recored)
-//*   2003/09/30  Y.Nakashima       Original version.
+//*  Measurement layer class used by RTPC12 and allows Draw() function.
 //*
 //*************************************************************************
 //
@@ -24,10 +15,9 @@
 
 class TVTrackHit;
 
-class EXMeasLayer : public EXVMeasLayer, public TCylinder{
+class EXMeasLayer : public EXVMeasLayer, public TCylinder {
 public:
    // Ctors and Dtor
-
    EXMeasLayer(TMaterial &min,
                TMaterial &mout,
                Double_t   r0,
@@ -37,7 +27,6 @@ public:
    virtual ~EXMeasLayer();
 
    // Parrent's pure virtuals that must be implemented
-
    virtual TKalMatrix XvToMv    (const TVTrackHit &ht,
                                  const TVector3   &xv) const;
    virtual TKalMatrix XvToMv    (const TVector3   &xv) const;
@@ -49,8 +38,8 @@ public:
 
    // Methods for MC event generation
    virtual void       ProcessHit(const TVector3    &xx,
-				 TObjArray   &hits,
-				 bool smearing=true);
+                                       TObjArray   &hits,
+                                       bool smearing=true);
 
    void     SetSigmaX(Double_t v)  { fSigmaX=v; }
    void     SetSigmaZ(Double_t v)  { fSigmaZ=v; }
@@ -59,14 +48,14 @@ public:
    inline Double_t GetSigmaZ() const { return fSigmaZ; }
    
    using TObject::Draw;
-   //using TAttDrawable::Draw;
+   //using TAttDrawable::Draw;  //this line conflicts with a previous using declaration
    virtual void Draw(Int_t color, const Char_t *opt);
 
 private:
    Double_t fSigmaX;   // rphi resolution
    Double_t fSigmaZ;   // z  resolution
 
-   ClassDef(EXMeasLayer,1) 	// Sample measurement layer class
+   ClassDef(EXMeasLayer,1)
 };
 
 #endif

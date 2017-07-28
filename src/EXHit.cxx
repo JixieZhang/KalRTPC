@@ -20,10 +20,10 @@ EXHit::EXHit(Int_t m)
 }
 
 EXHit::EXHit(const EXMeasLayer &ms,    // measurement layer
-  Double_t    *x,     // coordinate array
-  Double_t    *dx,    // coordinate error array
-  Double_t     b,     // magnetic field
-  Int_t        m)     // dimension of meas. vector
+                   Double_t    *x,     // coordinate array
+                   Double_t    *dx,    // coordinate error array
+                   Double_t     b,     // magnetic field
+                   Int_t        m)     // dimension of meas. vector
   : TVTrackHit(ms, x, dx, b, m)
 {
 }

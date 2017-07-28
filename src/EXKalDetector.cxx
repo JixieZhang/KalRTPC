@@ -132,13 +132,19 @@ EXKalDetector::EXKalDetector(Int_t m)
   // Create dummy layers of the inner cylinder of the central tracker
   double r;   //in cm
  
-   Bool_t active = EXMeasLayer::kActive;
-   Bool_t dummy  = EXMeasLayer::kDummy;
+  Bool_t active = EXMeasLayer::kActive;
+  Bool_t dummy  = EXMeasLayer::kDummy;
+  char name[255]; 
 
   //add target gas and target wall and He4 gas
   Add(new EXMeasLayer(D2Gas, Kapton, r=kRTPC_R_Target, lhalf, dummy));
+  //Add(new EXMeasLayer(Kapton, He4Gas, r=kRTPC_R_Target+0.0028, lhalf, dummy));
   Add(new EXMeasLayer(Kapton, He4Gas, r=kRTPC_R_Target+0.0050, lhalf, dummy));
 
+  //add a layer outside target wall such that the fit to include a point near the beam line
+  sprintf(name,"RTPC_Layer%d_s%.3f",0,kRTPC_R_Target+0.1);
+  Add(new EXMeasLayer(He4Gas, He4Gas, r=kRTPC_R_Target+0.1, lhalf, active,name));
+  
   //add first aluminized mylar foil
   Add(new EXMeasLayer(He4Gas, AlMylar, r=kRTPC_R_Cathode-1.0, lhalf, dummy));
   Add(new EXMeasLayer(AlMylar, He4DME, r=kRTPC_R_Cathode-1.0+0.000407, lhalf, dummy));
@@ -149,8 +155,8 @@ EXKalDetector::EXKalDetector(Int_t m)
 
   // Create measurement layers in the drift region
   for (Int_t layer = nlayers-1; layer >= 0; layer--) {
-    EXMeasLayer* ml = new EXMeasLayer(He4DME, He4DME, kDetLayerRList[layer], lhalf, 
-      active);
+    sprintf(name,"RTPC_Layer%d_s%.3f",kNDetDummyLayer+nlayers-1-layer,kDetLayerRList[layer]);
+    EXMeasLayer* ml = new EXMeasLayer(He4DME, He4DME, kDetLayerRList[layer], lhalf, active,name);
     ml->SetIndex(kNDetDummyLayer+nlayers-1-layer);
     Add(ml);
   }

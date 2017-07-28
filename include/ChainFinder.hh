@@ -77,14 +77,14 @@ typedef struct {
   double Phi;     //from -pi to pi
   int ThrownTID;  //To tell which track it was originally from
   int ChainInfo;  //to tell which chain this hit belongs to
-}HitStruct;
+} HitStruct;
 
 
 typedef struct {
   int ID;     //Chain ID
   int HitNum; //Number of hits in this chain
   HitStruct* Hits[MAX_HITS_PER_CHAIN];
-}ChainStruct;
+} ChainStruct;
 
 
 class ChainFinder {

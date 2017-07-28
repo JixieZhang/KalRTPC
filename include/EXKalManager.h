@@ -35,7 +35,6 @@
 #endif
 /////////////////////////////////////////////////////////////////
 
-
 class EXKalManager {
 
  public:
@@ -63,9 +62,10 @@ class EXKalManager {
 
   //run ChainFinder to search for chains
   //in each event, read multiple tracks from G4 root tree and store them into hit pool
-  //job := 3, no fit; 4 call GHF; 5 call KF 
-  int RunCFNFit(int treetype, int job, int nevents, int ntracks, double max_sep, 
-                double max_sep_ang, double min_sep, double min_sep_ang, double ini_sep);
+  //(job%10) := 3, no fit; 4 call GHF; 5 call KF 
+  //(job/10) := 0, using RTPC12 tree, 1 use GEMC tree
+  int RunCFNFit(int job, int nevents, int ntracks, double max_sep, double max_sep_ang,  
+                double min_sep, double min_sep_ang, double ini_sep);
 
   //run KalmanFilter only    
   int RunKF(int job, int nevents, double pt_min, double pt_max, double costh_min, 
