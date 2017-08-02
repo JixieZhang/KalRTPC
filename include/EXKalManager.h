@@ -128,6 +128,7 @@ class EXKalManager {
   //as the original G4 tree, therefore I do not know how to incert these values
   double CF_X0[MAX_CHAINS_PER_EVENT], CF_Y0[MAX_CHAINS_PER_EVENT], CF_Z0[MAX_CHAINS_PER_EVENT];
   double CF_Theta0[MAX_CHAINS_PER_EVENT], CF_Phi0[MAX_CHAINS_PER_EVENT], CF_P0[MAX_CHAINS_PER_EVENT];
+  int  CF_ShiftTime[MAX_CHAINS_PER_EVENT];
 
   double CF_ThrownTID_like;  //to tell how likely this chain to be thrown track with id==trackid 
 
@@ -144,6 +145,7 @@ class EXKalManager {
 
   //thrown info, from EXEventGen
   double p0,pt0,pz0,th0,ph0,_x0_,_y0_,_z0_;
+  int shifttime;
 
   //KF result
   double p_rec,pt_rec,pz_rec,th_rec,ph_rec,x_rec,y_rec,z_rec;

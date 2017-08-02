@@ -35,8 +35,8 @@ public:
   void MakeHitsFromTraj_mm(double *x_mm, double *y_mm, double *z_mm, int npt, bool smearing=false,
 			   bool bIncludeCurveBackHits=true);
 
-  static void     SetT0(Double_t t0) { fgT0 = t0;   }
-  static Double_t GetT0()            { return fgT0; }
+  void     SetShiftTime(Double_t t0) { ShiftTime = t0;   }
+  Double_t GetShiftTime() { return ShiftTime; }
 
   static void PrintHelix(THelicalTrack *aTrack, const char *title="helix");
   
@@ -52,8 +52,6 @@ public:
 private:
   TKalDetCradle *fCradlePtr;     // pointer to detector system
   TObjArray     *fHitBufPtr;     // pointer to hit array
-
-  static Double_t  fgT0;         // t0
     
   //use to store the detector layer boundaries
   //fDetLayerRBoundary[0]=kRTPC_R_GEM1, 
@@ -63,6 +61,8 @@ private:
 
 public:
 
+  double ShiftTime;              // the time compared to trigger, in ns
+  
   //some buff to hold some thrown variables, they will be used to fill root tree
   double X0,Y0,Z0;               //at vertex
   double P0,Theta0,Phi0;         //at vertex  
@@ -78,7 +78,6 @@ public:
   double Rho_last, TanLambda_last, Phi0_last;
 
   ClassDef(EXEventGen,1)   // Event Generator
-    
 };
 
 #endif

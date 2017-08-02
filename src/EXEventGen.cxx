@@ -33,12 +33,10 @@ ClassImp(EXEventGen)
 //static const double kDetLayerRList[]; //in decreasing order
 ///////////////////////////////////////////////////////////////////
 
-//by jixie: I do not use fgT0 right now
-Double_t EXEventGen::fgT0 = 14.; // [nsec]
-
 EXEventGen::EXEventGen(TKalDetCradle &cradle, TObjArray &kalhits)
   : fCradlePtr(&cradle), fHitBufPtr(&kalhits) 
 {
+  ShiftTime = 0; // [nsec]
   //double fDetLayerRBoundary[kNDetLayer+1];
   //fDetLayerRBoundary[0]=kRTPC_R_GEM1, 
   //fDetLayerRBoundary[kNDetLayer]=kRTPC_R_Cathode, 

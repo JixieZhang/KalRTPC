@@ -1589,7 +1589,7 @@ void ChainFinder::StoreAChain(int chainid)
     fChainBuf[chainid].Hits[jj] = &(fHitPool[hitid]);
    
     //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
-    //ChainInfo  = cccjjjj,  where ccc is ChainIndex and jj is HitIndex 
+    //ChainInfo  = ccccjjjj,  where ccc is ChainIndex and jj is HitIndex 
     fHitPool[hitid].ChainInfo = chainid*1.0E4 + jj;
   }
 

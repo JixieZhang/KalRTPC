@@ -15,6 +15,9 @@ bad performance.  ---------------------------done by jixie, March 26 2016
 2. Solved bug in ChainFinder::SearchChains()
 3. Added a measurement layer 1 mm outside the target wall to force the fit
    to include one hit close to the beam line. (not finished yet.) 
+4. Added ShiftTime into the program, also store it into output tree. I plan
+   to use it to indentify the real track from background tracks. Multiple files
+   affected.
 
 2017/06/20
 1. Updated the visulization. Added visulization to ChainFider.

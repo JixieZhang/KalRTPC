@@ -25,7 +25,8 @@ TGeoVolume *gWorld=0;
 
 int thisevent=0;
 
-void set_color_env(){   
+void set_color_env()
+{   
   //******************************************************************
   //code to improve the color palette
   //from the root web page and color codes from:
@@ -125,7 +126,6 @@ void Construct()
   gem3_vol->SetLineColor(kRed);
   gGeoManager->GetVolume("gem3_vol")->SetTransparency(trans_lvl);   
 
-   
   //--- draw the ROOT box.
   // by default the picture will appear in the standard ROOT TPad.
   //if you have activated the following line in system.rootrc,
@@ -141,7 +141,7 @@ void Construct()
   gWorld = top;
 }
 
-int  GLDisplay(int ievent=0)
+int  GLDisplay(int ievent=0, int NumTracksPerEvent=1)
 {
   set_color_env();
   // gStyle->SetOptFit(1111);
@@ -152,11 +152,9 @@ int  GLDisplay(int ievent=0)
   
   gStyle->SetOptStat(0);
   
-  const int NumTracksPerEvent = 1;
-  
   Int_t    steps;
   Int_t    rsteps;
-  Int_t    steps_temp;//I need this variable 
+  Int_t    steps_temp;  //I need this variable 
   Int_t    index;
   Int_t    npt;
 
@@ -169,7 +167,7 @@ int  GLDisplay(int ievent=0)
   Double_t x_exp[500],y_exp[500],z_exp[500];
   Double_t x_fil[500],y_fil[500],z_fil[500];
 
-  //   TFile *infile=new TFile("nt_out_nowire.root");
+  //TFile *infile=new TFile("nt_out_nowire.root");
 
   //TFile *infile=new TFile("infile.root");
   //TTree *t=(TTree*)infile->Get("ep");
@@ -206,104 +204,99 @@ int  GLDisplay(int ievent=0)
 
   //NumTracksPerEvent is set to 25;
   for(Int_t i = 0; i < NumTracksPerEvent; i++)
+  {
+    if(p+i>=Entries) return -1;
+    t->GetEntry(p+i);
+    
+    cout<<"RootFileTrack = "<< p+i<<",  NumHits = "<<npt<<endl;
+    if(npt<5) continue;
+
+    npt_rec = 0;
+    for (Int_t k=0;k<npt;k++)
     {
-      if(p+i>=Entries) return -1;
-      t->GetEntry(p+i);
-      
-      cout<<"RootFileTrack = "<< p+i<<",  NumHits = "<<npt<<endl;
-      if(npt<5) continue;
+      //remove discard hits
+      if (step_status[k]>=0) 
+      {              
+        x_exp[npt_rec] = step_x_exp[k];
+        y_exp[npt_rec] = step_y_exp[k];
+        z_exp[npt_rec] = step_z_exp[k];
 
-      
-      npt_rec = 0;
-      for (Int_t k=0;k<npt;k++)
-	{
-	  //remove discard hits
-	  if (step_status[k]>=0) 
-	    {	      
-	      x_exp[npt_rec] = step_x_exp[k];
-	      y_exp[npt_rec] = step_y_exp[k];
-	      z_exp[npt_rec] = step_z_exp[k];
+        x_fil[npt_rec] = step_x_fil[k];
+        y_fil[npt_rec] = step_y_fil[k];
+        z_fil[npt_rec] = step_z_fil[k];
 
-	      x_fil[npt_rec] = step_x_fil[k];
-	      y_fil[npt_rec] = step_y_fil[k];
-	      z_fil[npt_rec] = step_z_fil[k];
-
-	      npt_rec++;
-	    }
-	  else
-	    {
-	      cout<<"***discraed site "<<k
-		  <<",  xyz("<<step_x[k]<<", "<<step_y[k]
-		  <<", "<<step_z[k]<<")\n";
-	    }
-	  
-	}
-
-
-      TPolyLine3D *track3D = new TPolyLine3D(npt,step_x,step_y,step_z);
-      TPolyLine3D *track3D_exp = new TPolyLine3D(npt_rec,x_exp,y_exp,z_exp);
-      TPolyLine3D *track3D_fil = new TPolyLine3D(npt_rec,x_fil,y_fil,z_fil);
-   
-      track3D->SetLineWidth(2);
-      track3D->SetLineColor(1);
-      //track3D->Draw("same");
-
-      track3D_fil->SetLineWidth(2);
-      track3D_fil->SetLineColor(kRed);
-      track3D_fil->Draw("same");
-
-      track3D_exp->SetLineWidth(2);
-      track3D_exp->SetLineColor(4);
-      //track3D_exp->Draw("same");
-
-	  
-      TPolyMarker3D *pm3d = new TPolyMarker3D(npt);
-      for (Int_t k=0;k<npt;k++)
-	{
-	  pm3d->SetPoint(k, step_x[k], step_y[k], step_z[k]);
-	}  
-      pm3d->SetMarkerSize(0.3);
-      pm3d->SetMarkerColor(4);
-      pm3d->SetMarkerStyle(4);
-      pm3d->Draw("same");
-
-	  
-      TPolyMarker3D *pm3d_fil = new TPolyMarker3D(npt_rec);
-      for (Int_t k=0;k<npt_rec;k++)
-	{
-	  pm3d_fil->SetPoint(k, x_fil[k], y_fil[k], z_fil[k]);
-	}
-      pm3d_fil->SetMarkerSize(1);
-      pm3d_fil->SetMarkerColor(2);
-      pm3d_fil->SetMarkerStyle(2);
-      pm3d_fil->Draw("same");
-
+        npt_rec++;
+      }
+      else
+      {
+        cout<<"***discraed site "<<k
+            <<",  xyz("<<step_x[k]<<", "<<step_y[k]
+            <<", "<<step_z[k]<<")\n";
+      }
     }
+
+
+    TPolyLine3D *track3D = new TPolyLine3D(npt,step_x,step_y,step_z);
+    TPolyLine3D *track3D_exp = new TPolyLine3D(npt_rec,x_exp,y_exp,z_exp);
+    TPolyLine3D *track3D_fil = new TPolyLine3D(npt_rec,x_fil,y_fil,z_fil);
+ 
+    track3D->SetLineWidth(2);
+    track3D->SetLineColor(1);
+    //track3D->Draw("same");
+
+    track3D_fil->SetLineWidth(2);
+    track3D_fil->SetLineColor(kRed);
+    track3D_fil->Draw("same");
+
+    track3D_exp->SetLineWidth(2);
+    track3D_exp->SetLineColor(4);
+    //track3D_exp->Draw("same");
+
+        
+    TPolyMarker3D *pm3d = new TPolyMarker3D(npt);
+    for (Int_t k=0;k<npt;k++)
+    {
+      pm3d->SetPoint(k, step_x[k], step_y[k], step_z[k]);
+    }  
+    pm3d->SetMarkerSize(0.3);
+    pm3d->SetMarkerColor(4);
+    pm3d->SetMarkerStyle(4);
+    pm3d->Draw("same");
+
+        
+    TPolyMarker3D *pm3d_fil = new TPolyMarker3D(npt_rec);
+    for (Int_t k=0;k<npt_rec;k++)
+    {
+      pm3d_fil->SetPoint(k, x_fil[k], y_fil[k], z_fil[k]);
+    }
+    pm3d_fil->SetMarkerSize(1);
+    pm3d_fil->SetMarkerColor(2);
+    pm3d_fil->SetMarkerStyle(2);
+    pm3d_fil->Draw("same");
+  }
 
   gPad->Update();
   gPad->SaveAs(Form("Movie/GLEvent_%03d.png",ievent));
-
 
   return 0;
 }
 
 
-void go(int n=1, int s=1, int istart=0)
+void go(int n=1, int NumTracksPerEvent=1, int s=1, int istart=0)
 {
   if(istart>0) thisevent=istart;
   for(int i=0;i<n;i++)
-    {
-      int ret=GLDisplay(thisevent++);
-      if(ret==-1) break;
-      gSystem->Sleep(s*1000);
-
-    }
-  
+  {
+    int ret=GLDisplay(thisevent++,NumTracksPerEvent);
+    if(ret==-1) break;
+    gSystem->Sleep(s*1000);
+  }
 }
+
 void save()
 {
-      gPad->Update();
-      gPad->SaveAs(Form("Movie/GLEvent_%03d.png",thisevent-1));
-      gPad->SaveAs(Form("Movie/GLEvent_%03d.gif",thisevent-1));
+  gPad->Update();
+  gPad->SaveAs(Form("Movie/GLEvent_%03d.png",thisevent-1));
+  gPad->SaveAs(Form("Movie/GLEvent_%03d.gif",thisevent-1));
 }
-   
+

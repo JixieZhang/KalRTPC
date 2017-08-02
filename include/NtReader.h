@@ -100,6 +100,7 @@ public :
   Double_t        Phi_sim;
   Double_t        Z_sim;
   Double_t        DCA_sim;
+  Int_t           ShiftTDC;
   Int_t           HitNum_m;
   Int_t           StepID_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
   Int_t           StepTDC_m[MAX_HITS_PER_EVENT];   //[HitNum_m]
@@ -184,6 +185,7 @@ public :
   TBranch        *b_Phi_sim;   //!
   TBranch        *b_Z_sim;   //!
   TBranch        *b_DCA_sim;   //!
+  TBranch        *b_ShiftTDC;   //!
   TBranch        *b_HitNum_m;   //!
   TBranch        *b_StepID_m;   //!
   TBranch        *b_StepTDC_m;   //!
@@ -327,6 +329,7 @@ void NtReader::Init()
   fChain->SetBranchAddress("Phi_sim", &Phi_sim, &b_Phi_sim);
   fChain->SetBranchAddress("Z_sim", &Z_sim, &b_Z_sim);
   fChain->SetBranchAddress("DCA_sim", &DCA_sim, &b_DCA_sim);
+  fChain->SetBranchAddress("ShiftTDC", &ShiftTDC, &b_ShiftTDC);
   fChain->SetBranchAddress("HitNum_m", &HitNum_m, &b_HitNum_m);
   fChain->SetBranchAddress("StepID_m", StepID_m, &b_StepID_m);
   fChain->SetBranchAddress("StepTDC_m", StepTDC_m, &b_StepTDC_m);
@@ -351,19 +354,19 @@ Int_t NtReader::LoadATrack()
   // otherwise return  HitNum_m
   HitNum_m = 0;
 
-  while (HitNum_m<1 || Smax<30.1) {
+  while (HitNum_m<1 /*|| Smax<30.1*/) {
     fChain->GetEntry(++fCurrent);
 #ifdef _NtReaderDebug_
     if(_NtReaderDebug_>=2) {
       cout<<"Ntuple Event "<<setw(5)<<Index<<":  HitNum_m="<<setw(2)<<HitNum_m
-	<<",  Smax="<<setw(8)<<Smax<<",  Smin="<<setw(8)<<Smin<<endl;
+          <<",  Smax="<<setw(8)<<Smax<<",  Smin="<<setw(8)<<Smin<<endl;
       if(HitNum_m>5) {
-	cout<<"\t P0="<<setw(8)<<P0_p<<",  Theta0="<<setw(8)<<Theta0_p*57.3
-	  <<",  Phi0="<<setw(8)<<Phi0_p*57.3<<",  Z0="<<setw(8)<<Z0<<endl;
+        cout<<"\t P0="<<setw(8)<<P0_p<<",  Theta0="<<setw(8)<<Theta0_p*57.3
+            <<",  Phi0="<<setw(8)<<Phi0_p*57.3<<",  Z0="<<setw(8)<<Z0<<endl;
       }
-    }       
+    }
 #endif
-    if(fCurrent>=int(fChain->GetEntries()))  return -1;
+    if(fCurrent>=int(fChain->GetEntriesFast()))  return -1;
   }
   return HitNum_m;
 }

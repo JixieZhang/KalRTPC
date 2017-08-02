@@ -14,6 +14,8 @@
 #include "BonusHelixFit.hh"
 #include "GlobalDebuger.hh"
 #include "CircleFitter_LM.h"
+#include "TPolyMarker3D.h"
+#include "TCanvas.h"
 
 #include <iomanip>
 #include <iostream>
@@ -1530,8 +1532,6 @@ void EXKalRTPC::Example(int job, int nevents, double pt_min, double pt_max, doub
   //EndOfRun();
 }
 
-#include "TPolyMarker3D.h"
-#include "TCanvas.h"
 void EXKalRTPC::DrawRawHits(Int_t color, const Char_t *opt)
 {
   int nn = fKalHits->GetEntries();
@@ -1547,7 +1547,7 @@ void EXKalRTPC::DrawRawHits(Int_t color, const Char_t *opt)
   
   int nhits = 0;
   EXHit *hitp = 0;
-  while (hitp = dynamic_cast<EXHit *>(next())) {
+  while ((hitp = dynamic_cast<EXHit *>(next()))) {
     TVector3 pos = hitp->GetRawXv();
     pm3dp->SetPoint(nhits, pos.X(), pos.Y(), pos.Z());
     nhits++;

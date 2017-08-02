@@ -60,6 +60,7 @@ EXKalManager::EXKalManager()
   fApp = new TApplication("EXKalRTPC", 0, 0, 0, 0);
 }
 
+
 EXKalManager::~EXKalManager()
 {
   delete fKalRTPC;
@@ -83,7 +84,7 @@ void EXKalManager::Tree_Init()
   t->Branch("trackid",&trackid,"trackid/I");
   t->Branch("ntrack",&ntrack,"ntrack/I");
 
-  // For Chain Finder
+  // For Chain Finder HitPool
   t->Branch("CF_ntrack_read",&CF_ntrack_read,"CF_ntrack_read/I");
   t->Branch("CF_ntrack_good",&CF_ntrack_good,"CF_ntrack_good/I");
   t->Branch("CF_HitNum",&CF_HitNum,"CF_HitNum/I");
@@ -100,13 +101,16 @@ void EXKalManager::Tree_Init()
   t->Branch("CF_ThrownTID",CF_ThrownTID,"CF_ThrownTID[CF_HitNum]/I");
   t->Branch("CF_ChainInfo",CF_ChainInfo,"CF_ChainInfo[CF_HitNum]/I");
 
+  // For Chain Finder thrown tracks
   t->Branch("CF_X0",CF_X0,"CF_X0[CF_ntrack_read]/D");
   t->Branch("CF_Y0",CF_Y0,"CF_Y0[CF_ntrack_read]/D");
   t->Branch("CF_Z0",CF_Z0,"CF_Z0[CF_ntrack_read]/D");
   t->Branch("CF_Theta0",CF_Theta0,"CF_Theta0[CF_ntrack_read]/D");
   t->Branch("CF_Phi0",CF_Phi0,"CF_Phi0[CF_ntrack_read]/D");
   t->Branch("CF_P0",CF_P0,"CF_P0[CF_ntrack_read]/D");
+  t->Branch("CF_ShiftTime",CF_ShiftTime,"CF_ShiftTime[CF_ntrack_read]/I");
 
+  //to tell how likely this chain to be thrown track with id==trackid
   t->Branch("CF_ThrownTID_like",&CF_ThrownTID_like,"CF_ThrownTID_like/D");
 
   // thrown parameters
@@ -118,6 +122,7 @@ void EXKalManager::Tree_Init()
   t->Branch("x0",&_x0_,"x0/D");
   t->Branch("y0",&_y0_,"y0/D");
   t->Branch("z0",&_z0_,"z0/D");
+  t->Branch("shifttime",&shifttime,"shifttime/I");
 
   //KF result
   t->Branch("p_rec",&p_rec,"p_rec/D");
@@ -135,7 +140,7 @@ void EXKalManager::Tree_Init()
   t->Branch("chi2",&chi2,"chi2/D");
   t->Branch("cl",&cl,"cl/D");
 
-  //original hits info, from 
+  //original hits info 
   t->Branch("npt0",&npt0,"npt0/I");
   t->Branch("step_x",step_x,"step_x[npt0]/D");
   t->Branch("step_y",step_y,"step_y[npt0]/D");
@@ -205,7 +210,6 @@ void EXKalManager::Tree_Init()
   t->Branch("rho_kal_ini",&rho_kal_ini,"rho_kal_ini/D");
   t->Branch("tnl_kal_ini",&tnl_kal_ini,"tnl_kal_ini/D");
   t->Branch("phi0_kal_ini",&phi0_kal_ini,"phi0_kal_ini/D");
-
 }
 
 void EXKalManager::Tree_Reset_CF()
@@ -220,6 +224,7 @@ void EXKalManager::Tree_Reset_CF()
 
   for(int i=0;i<CF_ntrack_read;i++) {
     CF_X0[i]=CF_Y0[i]=CF_Z0[i]=CF_Theta0[i]=CF_Phi0[i]=CF_P0[i]=0.0;
+    CF_ShiftTime[i]=-9999;
   }
 
   CF_ntrack_read=CF_ntrack_good=0;  
@@ -227,10 +232,12 @@ void EXKalManager::Tree_Reset_CF()
   CF_ThrownTID_like=0.0;
 }
 
+
 void EXKalManager::Tree_Reset()
 {
   //The following are KF buffer
   p0=pt0=pz0=th0=ph0=_x0_=_y0_=_z0_=0.0;
+  shifttime=-9999;
 
   p_rec=pt_rec=pz_rec=th_rec=ph_rec=x_rec=y_rec=z_rec=0.0;
   r_rec=a_rec=b_rec=0.0;
@@ -264,6 +271,7 @@ void EXKalManager::Tree_Reset()
   rho_kal_ini=tnl_kal_ini=phi0_kal_ini=0;
 }
 
+
 void EXKalManager::BeginOfRun(int eventtype)
 {
   // ===================================================================
@@ -290,10 +298,12 @@ void EXKalManager::BeginOfRun(int eventtype)
   Tree_Init();
 }
 
+
 void EXKalManager::EndOfRun()
 {
   fFile->Write("",TObject::kOverwrite);
 }
+
 
 //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
 //please note that the G4 root tree use unit of mm 
@@ -370,6 +380,7 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
     CF_Theta0[t]=3.14159/2-fGEMCReader->th_v;
     CF_Phi0[t]=fGEMCReader->phi_v ;
     CF_P0[t]=fGEMCReader->p_v/1000.;
+    CF_ShiftTime[t]=fGEMCReader->TimeShift->at(0);
   }
 
   return totalhits;
@@ -442,9 +453,11 @@ bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
   fEventGen->Theta0=3.14159/2-fGEMCReader->th_v;
   fEventGen->Phi0=fGEMCReader->phi_v ;
   fEventGen->P0=fGEMCReader->p_v/1000.;
+  fEventGen->ShiftTime=fGEMCReader->TimeShift->at(0);
 
   return true;
 }
+
 
 //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
 //please note that the G4 root tree use unit of mm 
@@ -521,6 +534,7 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
     CF_Theta0[t]=fNtReader->Theta0_p;
     CF_Phi0[t]=fNtReader->Phi0_p ;
     CF_P0[t]=fNtReader->P0_p;
+    CF_ShiftTime[t]=fNtReader->ShiftTDC*120;  //turn TIC into ns
   }
 
   return totalhits;
@@ -591,26 +605,28 @@ bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
   fEventGen->Theta0=fNtReader->Theta0_p;
   fEventGen->Phi0=fNtReader->Phi0_p ;
   fEventGen->P0=fNtReader->P0_p;
-
+  fEventGen->ShiftTime=fNtReader->ShiftTDC*120;
+  
   return true;
 }
 
 //To identify which thrown track this chain corresponding to
 //return the ThrownTID, also return the likelyhood, which is
-//defined as occurance/total-hits
+//defined as occurance/total_hits
 int EXKalManager::IdentifyThrownTID(int chainid, double &likelyhood) 
 {
   int n = fChainFinder->fChainBuf[chainid].HitNum;
-  int *thrownTID_list = new int [n];
-  int *thrownTID_occur = new int [n];
+  int *thrownTID_list = new int [n];  //store all thrownTID in this chain
+  int *thrownTID_occur = new int [n]; //store how many hits belong to this thrownTID
 
-  int nSource = 0;
-  thrownTID_list[nSource]=fChainFinder->fChainBuf[chainid].Hits[0]->ThrownTID/1000;
+  int nSource = 0;  //store how many thrown tracks
+  thrownTID_list[nSource]=fChainFinder->fChainBuf[chainid].Hits[0]->ThrownTID/1.0E4;
   thrownTID_occur[nSource++]=1;
 
   //first need to check how many thrownTID exist
+  //for each thrownTID, check if it is in thrownTID_list[] 
   for(int j=1;j<n;j++) {
-    int thrownTID = fChainFinder->fChainBuf[chainid].Hits[j]->ThrownTID/1000;
+    int thrownTID = fChainFinder->fChainBuf[chainid].Hits[j]->ThrownTID/1.0E4;
     int found = 0;
     for(int t=0;t<nSource;t++) {
       if(thrownTID == thrownTID_list[t]) {
@@ -774,6 +790,7 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double max_sep,
   return 1;
 }
 
+
 void EXKalManager::EventVisulization2()
 {
   // ============================================================
@@ -805,7 +822,7 @@ void EXKalManager::EventVisulization2()
     vwp->SetView(0.,0.,90.,ierr);   //beam view
 #endif
 
-    fKalRTPC->fDetector->Draw(40);
+    fKalRTPC->fDetector->Draw(40,"ogl");
     if(fChainFinder->fHitNum>0) {
       fChainFinder->DrawPool();
       fChainFinder->DrawChain();
@@ -893,6 +910,7 @@ void EXKalManager::EventVisulization()
     }
   } // end of event display
 }
+
 
 //test the KF only
 //cerr << "Usage: "<<argv[0] <<" <job=0|1|2> <nevent> [pt_min_gev=0.1] [pt_max_gev=0.1]" << endl;
@@ -1023,14 +1041,16 @@ void EXKalManager::Tree_Fill(EXHYBTrack &kaltrack)
     _z0_=CF_Z0[trackid];
     p0=CF_P0[trackid];
     th0=CF_Theta0[trackid];
-    ph0=CF_Phi0[trackid]; 
-  }else {
+    ph0=CF_Phi0[trackid];
+    shifttime=CF_ShiftTime[trackid];
+  } else {
     _x0_=fEventGen->X0;
     _y0_=fEventGen->Y0;
     _z0_=fEventGen->Z0;
     p0=fEventGen->P0;
     th0=fEventGen->Theta0;
     ph0=fEventGen->Phi0; 
+    shifttime=fEventGen->ShiftTime;
   }
   if(ph0> kPi) ph0-=2*kPi;
   if(ph0<-kPi) ph0+=2*kPi;
