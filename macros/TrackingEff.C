@@ -85,5 +85,5 @@ void TrackingEff()
   c2->SetRightMargin(0.12);
   h2thp_eff->SetMinimum(50);
   h2thp_eff->Draw("TEXT colz");
-  c1->SaveAs("Tracking_Eff_2D.png");
+  c2->SaveAs("Tracking_Eff_2D.png");
 }

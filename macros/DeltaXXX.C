@@ -133,17 +133,24 @@ void DeltaXXX(const char* infile="h.root",
 	//1) dX vs z0
 	const int nDelta=8;
 	const int nVar=4;
-	const char *strYVar[]={"(pt_rec-pt0)*1000","(th_rec-th0)*1000","(ph_rec-ph0)*1000","z_rec-z0",
-		"(pt_hel-pt0)*1000","(th_hel-th0)*1000","(ph_hel-ph0)*1000","z_hel-z0"};
+	const char *strYVar[]={"(pt_rec-pt0)/pt0","(th_rec-th0)*1000","(ph_rec-ph0)*1000","z_rec-z0",
+		"(pt_hel-pt0)/pt0","(th_hel-th0)*1000","(ph_hel-ph0)*1000","z_hel-z0"};
+	//const char *strYVar[]={"(pt_rec-pt0)*1000","(th_rec-th0)*1000","(ph_rec-ph0)*1000","z_rec-z0",
+	//	"(pt_hel-pt0)*1000","(th_hel-th0)*1000","(ph_hel-ph0)*1000","z_hel-z0"};
 	//const char *strYVar[]={"(pt_rec-rho_1st*0.015)*1000","(th_rec-th0)*1000","(ph_rec-ph0)*1000","z_rec-z0",
 	//	"(pt_hel-rho_1st*0.015)*1000","(th_hel-th0)*1000","(ph_hel-ph0)*1000","z_hel-z0"};
-	const char *strYTitle[]={"#deltaPt (MeV/c)","#delta#theta (mrad)","#delta#phi (mrad)","#deltaZ (mm)",
-		"#deltaPt_hel (MeV/c)","#delta#theta_hel (mrad)","#delta#phi_hel (mrad)","#deltaZ_hel (mm)"};
-	const char *strYName[]={"dPt","dTheta","dPhi","dZ","dPt_hel","dTheta_hel","dPhi_hel","dZ_hel"};
-	const char *strYUnit[]={"(MeV/c)","(mrad)","(mrad)","(mm)","(MeV/c)","(mrad)","(mrad)","(mm)"};
+	const char *strYTitle[]={"#deltaPt/Pt","#delta#theta (mrad)","#delta#phi (mrad)","#deltaZ (mm)",
+		"#deltaPt_hel/Pt","#delta#theta_hel (mrad)","#delta#phi_hel (mrad)","#deltaZ_hel (mm)"};
+	//const char *strYTitle[]={"#deltaPt (MeV/c)","#delta#theta (mrad)","#delta#phi (mrad)","#deltaZ (mm)",
+	//	"#deltaPt_hel (MeV/c)","#delta#theta_hel (mrad)","#delta#phi_hel (mrad)","#deltaZ_hel (mm)"};
+	const char *strYName[]={"dPtOverPt","dTheta","dPhi","dZ","dPt_helOverPt","dTheta_hel","dPhi_hel","dZ_hel"};
 	int    YBinNum[]={40,50,50,40,40,50,50,40};
-	double YBinMin[]={-20,-50.,-50.,-10.,-20,-50.,-50.,-10.};
-	double YBinMax[]={ 20, 50., 50., 10., 20, 50., 50., 10.};
+	double YBinMin[]={-0.4,-50.,-50.,-10.,-0.4,-50.,-50.,-10.};
+	double YBinMax[]={ 0.4, 50., 50., 10., 0.4, 50., 50., 10.};
+	//int    YBinNum[]={40,50,50,40,40,50,50,40};
+	//double YBinMin[]={-20,-50.,-50.,-10.,-20,-50.,-50.,-10.};
+	//double YBinMax[]={ 20, 50., 50., 10., 20, 50., 50., 10.};
+
 
 	double YSigmaFactor[nDelta]={5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0};   //sigma factor to cut on Y when plot 2-D 
 	double YMean[nDelta],YSigma[nDelta];
@@ -155,7 +162,6 @@ void DeltaXXX(const char* infile="h.root",
 	const char *strXTitle[]={"Thrown Pt (MeV/c)","Thrown #theta (rad)","Thrown #phi (rad)",
 		"Thrown Z (mm)"};
 	const char *strXName[]={"pt","th","ph","z"};
-	const char *strXUnit[]={"(MeV/c)","(mrad)","(mrad)","(mm)"};
 	int    XBinNum[]={50,60,36,40};
 	double XBinMin[]={ 30.,  0*deg,-180*deg,-200.};
 	double XBinMax[]={280.,180*deg, 180*deg, 200.};
@@ -182,7 +188,8 @@ void DeltaXXX(const char* infile="h.root",
 		sprintf(hTitle,"%s ;%s",strYName[dd],strYTitle[dd]);
 		sprintf(strTg,"%s",strYVar[dd]);
 
-		cout<<"Name = "<<hName<<"    var = "<<strTg<<"    Title = "<<hTitle<<endl;
+		//cout<<"Name = "<<hName<<"    var = "<<strTg<<endl;
+		//cout<<"Title = "<<hTitle<<endl;
 
 		int UseGivenRange=0;
 		if(UseGivenRange)
@@ -212,7 +219,7 @@ void DeltaXXX(const char* infile="h.root",
 			FitGaus(h1,Mean,Sigma);
 			double pCut=(YSigmaFactor[dd]+1.0)*Sigma;
 			
-			cout<<hName<<":  Mean="<<Mean<<"  RMS="<<h1->GetRMS()<<"  Sigma="<<Sigma<<endl;
+			//cout<<hName<<":  Mean="<<Mean<<"  RMS="<<h1->GetRMS()<<"  Sigma="<<Sigma<<endl;
 			//iteration two, plot again using sigmato get better range 
 			delete h1;
 			sprintf(strTg,"%s >> %s(100,%.5f,%.5f)",strYVar[dd],hName,Mean-pCut,Mean+pCut);
@@ -250,8 +257,6 @@ void DeltaXXX(const char* infile="h.root",
 
 	/////////////////////////////////////////////////////////
 	//plot 2-D
-	//const char *strYUnit[]={"(MeV/c)","(mrad)","(mrad)","(mm)","(MeV/c)","(mrad)","(mrad)","(mm)"}
-    
 	for(int dd=0;dd<nDelta;dd++)
 	{
 		char tmpName[100],tmpTitle[100];
@@ -281,8 +286,8 @@ void DeltaXXX(const char* infile="h.root",
 			hMean  = (TH1F*) gROOT->FindObject(hName_1);
 			hSigma = (TH1F*) gROOT->FindObject(hName_2);
 			
-			hMean->SetYTitle(Form("Mean_{%s} %s",strYName[dd],strYUnit[dd]));
-			hSigma->SetYTitle(Form("#sigma_{%s}",strYName[dd],strYUnit[dd]));
+			hMean->SetYTitle(Form("Mean_%s",strYName[dd]));
+			hSigma->SetYTitle(Form("#sigma_{%s}",strYName[dd]));
 			
 			hMean->SetMarkerStyle(20); hMean->SetMarkerColor(1);
 			hSigma->SetMarkerStyle(22); hSigma->SetMarkerColor(2);hSigma->SetLineColor(2);
@@ -310,7 +315,7 @@ void DeltaXXX(const char* infile="h.root",
 	{
 		char tmpName[100],tmpTitle[100];
 		sprintf(tmpName,"c33_%s_VS_%s",strYName[dd],strYName[dd+kNDelta]);
-		sprintf(tmpTitle,"c33_%s VS %s",strYName[dd],strYName[dd+kNDelta]);
+		sprintf(tmpTitle,"%s VS %s",strYName[dd],strYName[dd+kNDelta]);
 		TCanvas *c33 = new TCanvas(tmpName,tmpTitle,(1+dd)*30,(1+dd)*30,900,800);
 		int pCol=int(ceil(nVar/3.0));
 		int pRow=int(ceil(double(nVar)/double(pCol)));
@@ -322,8 +327,8 @@ void DeltaXXX(const char* infile="h.root",
 			hSigmaList[dd+kNDelta][vv]->SetMarkerColor(4);
 			hSigmaList[dd+kNDelta][vv]->SetMarkerStyle(20);
 			
-			hSigmaList[dd][vv]->SetYTitle(Form("#sigma_{%s} %s",strYName[dd],strYUnit[dd]));
-			hSigmaList[dd+kNDelta][vv]->SetYTitle(Form("#sigma_{%s} %s",strYName[dd],strYUnit[dd]));
+			hSigmaList[dd][vv]->SetYTitle(Form("#sigma_{%s}",strYName[dd]));
+			hSigmaList[dd+kNDelta][vv]->SetYTitle(Form("#sigma_{%s}",strYName[dd]));
 			hSigmaList[dd][vv]->SetTitle("KF(red) vs GHF(blue)");
 			hSigmaList[dd+kNDelta][vv]->SetTitle("KF(red) vs GHF(blue)");
 			
