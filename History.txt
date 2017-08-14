@@ -18,6 +18,11 @@ bad performance.  ---------------------------done by jixie, March 26 2016
 4. Added ShiftTime into the program, also store it into output tree. I plan
    to use it to indentify the real track from background tracks. Multiple files
    affected.
+5. Added 'fTrueTID' into ChainFinder to identify which track is true track. Subroutine
+   IdentifyThrownTID(int chainid, double &likelyhood)
+   is added. I also replaced tab key by 8 spaces to reformat this class, including
+   its header file.
+
 
 2017/06/20
 1. Updated the visulization. Added visulization to ChainFider.

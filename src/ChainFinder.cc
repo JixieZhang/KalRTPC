@@ -161,8 +161,8 @@ void ChainFinder::PrepareHitPool(int *id, int *tdc, int *adc, double *x, double 
 //By Carlos: VECTOR CONTAINER ROUTINE
 //provide x,x,z in cm
 void ChainFinder::PrepareHitPool(vector<int> *id, vector<int> *tdc, vector<int> *adc, 
-				   vector<double> *x, vector<double> *y, vector<double> *z, 
-				   int n, vector<int> *throwntid, int append)
+                                   vector<double> *x, vector<double> *y, vector<double> *z, 
+                                   int n, vector<int> *throwntid, int append)
 {
   TVector3 pV3;
   if(append==0) fHitNum=0; 
@@ -496,15 +496,15 @@ int  ChainFinder::RemoveAHitFromChain(int chainid, int hitid)
   int n = fHitNumInAChain[chainid];
   for(int i=0;i<n;i++) { 
     if(fHitIDInAChain[chainid][i] == hitid) {
-       found = 1;
-       idx = i;
-       break;
+      found = 1;
+      idx = i;
+      break;
     }
   }
   if(!found) return 0;
   //shift all hits in the back by 1 position
   for(int i=idx;i<n-1;i++) {
-      fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
+    fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
   }
   //shrink the chain buffer
   fHitIDInAChain[chainid][n-1] = -1;
@@ -523,7 +523,7 @@ int  ChainFinder::RemoveAHitFromChain_At(int chainid, int position)
 
   //shift all hits in the back by 1 position
   for(int i=position;i<n-1;i++) {
-      fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
+    fHitIDInAChain[chainid][i] = fHitIDInAChain[chainid][i+1];
   }
   //shrink the chain buffer
   fHitIDInAChain[chainid][n-1] = -1;
@@ -656,18 +656,18 @@ void ChainFinder::SearchChains(int do_sort) //HitStruct *fHitPool, int nhits)
       if (Smax < fHitPool[buf[i]].S) {Smax = fHitPool[buf[i]].S;}  
     }
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
-        if(_ChainFinderDebug_>=3) {
-          cout<<"  Chain "<<fChainNum<<": "<<fHitNumInAChain[fChainNum]<<" hits,  Smax="
-              <<Smax<<",  Smin="<<Smin<<endl;
-        }
+    if(_ChainFinderDebug_>=3) {
+      cout<<"  Chain "<<fChainNum<<": "<<fHitNumInAChain[fChainNum]<<" hits,  Smax="
+          <<Smax<<",  Smin="<<Smin<<endl;
+    }
 #endif
     
     if (fHitNumInAChain[fChainNum] < Min_HITS_PER_CHAIN) {
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
-        if(_ChainFinderDebug_>=3) {
-          cout<<"\n***Warning: ignore this chain, it contains too few hits, HitNum="
-              <<fHitNumInAChain[fChainNum]<<endl;
-        }
+      if(_ChainFinderDebug_>=3) {
+        cout<<"\n***Warning: ignore this chain, it contains too few hits, HitNum="
+            <<fHitNumInAChain[fChainNum]<<endl;
+      }
 #endif
     } else if (Smin > kRTPC_R_GEM1-2.0) {
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=3
@@ -842,10 +842,10 @@ void ChainFinder::BubbleSort_S(int *arr, int size)
   for(i=0; i<size; i++) { // Make a pass through the array for each element
     for(j=1; j<(size-i); j++) { // Go through the array beginning to end
       if(fHitPool[arr[j-1]].S > fHitPool[arr[j]].S) {
-	// If the the previous number is greater, swap it 
-	tmp = arr[j-1];
-	arr[j-1] = arr[j];
-	arr[j] = tmp;
+        // If the the previous number is greater, swap it 
+        tmp = arr[j-1];
+        arr[j-1] = arr[j];
+        arr[j] = tmp;
       }
     }
   }
@@ -934,7 +934,7 @@ void ChainFinder::QuickSort_SPhi(int *arr, int left, int right)
   
   //this track aross the 180 deg line, need to check for phimin phimax again
   if(Phimax-Phimin > kPi) {   
-  for(int i=left;i<=right;i++) {
+    for(int i=left;i<=right;i++) {
       if (phi[i]<0.0) phi[i] += 2*kPi;
       if(Phimax <= phi[i]) {Phimax = phi[i]; idxPhimax=i;}   
       else if(Phimin >= phi[i]) {Phimin = phi[i]; idxPhimin=i;}
@@ -1066,10 +1066,10 @@ void ChainFinder::ShellSort2_S(int *arr, int size)
     for (int i = gap; i < size; ++i) {
       for (int j = i; j >= gap && fHitPool[arr[j]].S < fHitPool[arr[j-gap]].S; j -= gap) {
       //for (int j = i; j >= gap && arr[j] < arr[j-gap]; j -= gap) {
-	//swap j and j-gap
-	int tmp = arr[j];
-	arr[j] = arr[j - gap];
-	arr[j - gap] = tmp;
+        //swap j and j-gap
+        int tmp = arr[j];
+        arr[j] = arr[j - gap];
+        arr[j - gap] = tmp;
       }
     } 
   }
@@ -1084,14 +1084,14 @@ void ChainFinder::ShellSort_Seq_S(int *arr, int size)
   static const int gap_sequence[] = { 13, 9, 5, 2, 1 }; 
   for(int gg=0;gg<5;gg++) {
     int gap = gap_sequence[gg];
-    if( gap < size )
-    {
-      for(int i = gap ; i < size; ++i )
-	for (int j = i-gap; j >= 0 && fHitPool[arr[j]].S > fHitPool[arr[j+gap]].S; j -= gap) {
-	  int tmp = arr[j];
-	  arr[j] = arr[j + gap];
-	  arr[j + gap] = tmp;
-	}
+    if( gap < size ) {
+      for(int i = gap ; i < size; ++i ) {
+        for (int j = i-gap; j >= 0 && fHitPool[arr[j]].S > fHitPool[arr[j+gap]].S; j -= gap) {
+          int tmp = arr[j];
+          arr[j] = arr[j + gap];
+          arr[j + gap] = tmp;
+        }
+      }
     }
   }
  
@@ -1119,29 +1119,29 @@ void  ChainFinder::InsertSort_Phi(int *arr, int size)
 
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=11
   //print the array before shorting
-      if(_ChainFinderDebug_>=13)
-        cout<<"\tInsertSort_Phi(): before sorting ...**************************"<<endl;
-      
-      if(_ChainFinderDebug_>=13) {
-	printf("%9s:","TDC");
-	for(int t=0;t<size;t++) { 
-	  printf("%7d",fHitPool[arr[t]].TDC);
-	  if(!((t+1)%15)) printf("\n%10s","");
-	}
-	printf("\n");
-	printf("%9s:","phi_deg");
-	for(int t=0;t<size;t++) { 
-	    printf("%7.1f",phi[t]*57.3); 
-	  if(!((t+1)%15)) printf("\n%10s","");
-	}
-	printf("\n");
-	printf("%9s:","ThrownTID");
-	for(int t=0;t<size;t++) { 
-	    printf("%7d",fHitPool[arr[t]].ThrownTID); 
-	  if(!((t+1)%15)) printf("\n%10s","");
-	}
-	printf("\n");
-      }
+  if(_ChainFinderDebug_>=13)
+    cout<<"\tInsertSort_Phi(): before sorting ...**************************"<<endl;
+  
+  if(_ChainFinderDebug_>=13) {
+    printf("%9s:","TDC");
+    for(int t=0;t<size;t++) { 
+      printf("%7d",fHitPool[arr[t]].TDC);
+      if(!((t+1)%15)) printf("\n%10s","");
+    }
+    printf("\n");
+    printf("%9s:","phi_deg");
+    for(int t=0;t<size;t++) { 
+        printf("%7.1f",phi[t]*57.3); 
+      if(!((t+1)%15)) printf("\n%10s","");
+    }
+    printf("\n");
+    printf("%9s:","ThrownTID");
+    for(int t=0;t<size;t++) { 
+        printf("%7d",fHitPool[arr[t]].ThrownTID); 
+      if(!((t+1)%15)) printf("\n%10s","");
+    }
+    printf("\n");
+  }
 #endif
 
   //do sorting now 
@@ -1157,28 +1157,28 @@ void  ChainFinder::InsertSort_Phi(int *arr, int size)
       tmpphi = phi[j];
       phi[j] = phi[j-1];
       phi[j-1] = tmpphi;
-	     
+             
 #if defined _ChainFinderDebug_ && _ChainFinderDebug_>=10
       if(_ChainFinderDebug_>=11)
         cout<<"\tInsertSort_Phi(): swap("<<j<<", "<<j-1<<") ..."<<endl;
       
       if(_ChainFinderDebug_>=12) {
-	printf("%9s:","TDC");
-	for(int t=0;t<=j;t++) {
-	  //if(t==j-1 || t==j) printf("%7d",fHitPool[arr[t]].TDC);
-	  //else printf("%7s",".");
-	  printf("%7d",fHitPool[arr[t]].TDC);
-	  if(!((t+1)%15)) printf("\n%10s","");
-	}
-	printf("\n");
-	printf("%9s:","phi_deg");
-	for(int t=0;t<=j;t++) {
-	  //if(t==j-1 || t==j) printf("%7.1f",phi[t]*57.3);
-	  //else printf("%7s","."); 
-	  printf("%7.1f",phi[t]*57.3);
-	  if(!((t+1)%15)) printf("\n%10s","");
-	}
-	printf("\n");
+        printf("%9s:","TDC");
+        for(int t=0;t<=j;t++) {
+          //if(t==j-1 || t==j) printf("%7d",fHitPool[arr[t]].TDC);
+          //else printf("%7s",".");
+          printf("%7d",fHitPool[arr[t]].TDC);
+          if(!((t+1)%15)) printf("\n%10s","");
+        }
+        printf("\n");
+        printf("%9s:","phi_deg");
+        for(int t=0;t<=j;t++) {
+          //if(t==j-1 || t==j) printf("%7.1f",phi[t]*57.3);
+          //else printf("%7s","."); 
+          printf("%7.1f",phi[t]*57.3);
+          if(!((t+1)%15)) printf("\n%10s","");
+        }
+        printf("\n");
       }
 #endif
 
@@ -1561,15 +1561,15 @@ void ChainFinder::SortAChain(int chainid)
 
   #ifdef _ChainFinderDebug_
       if(_ChainFinderDebug_>=11) {
-	printf("*****Backward part of the backward chain: after sortting by S then Phi: *****\n");
-	PrintAChain(&buf[idxSmax], n1+1, "Backward chain: after backward part sorted");
+        printf("*****Backward part of the backward chain: after sortting by S then Phi: *****\n");
+        PrintAChain(&buf[idxSmax], n1+1, "Backward chain: after backward part sorted");
       }
   #endif
 
   #ifdef _ChainFinderDebug_
       if(_ChainFinderDebug_>=10) {
-	printf("*****Backward chain: after sortting by S then Phi: *****\n");
-	PrintAChain(&buf[0], nhits, "Backward chain: after forward+backward sorted");
+        printf("*****Backward chain: after sortting by S then Phi: *****\n");
+        PrintAChain(&buf[0], nhits, "Backward chain: after forward+backward sorted");
       }
   #endif
     }//end of if(n1>0) {
@@ -1625,6 +1625,70 @@ void ChainFinder::DrawPool()
   gPad->Update();
 }
 
+//To identify which thrown track this chain corresponding to
+//return the ThrownTID, also return the likelyhood, which is
+//defined as occurance/total_hits
+int ChainFinder::IdentifyThrownTID(int chainid, double &likelyhood) 
+{
+  int n = this->fChainBuf[chainid].HitNum;
+  int *thrownTID_list = new int [n];  //store all thrownTID in this chain
+  int *thrownTID_occur = new int [n]; //store how many hits belong to this thrownTID
+
+  int nSource = 0;  //store how many thrown tracks
+  thrownTID_list[nSource]=this->fChainBuf[chainid].Hits[0]->ThrownTID/1.0E4;
+  thrownTID_occur[nSource++]=1;
+
+  //first need to check how many thrownTID exist
+  //for each thrownTID, check if it is in thrownTID_list[] 
+  for(int j=1;j<n;j++) {
+    int thrownTID = this->fChainBuf[chainid].Hits[j]->ThrownTID/1.0E4;
+    int found = 0;
+    for(int t=0;t<nSource;t++) {
+      if(thrownTID == thrownTID_list[t]) {
+        thrownTID_occur[t]++;
+        found = 1;
+        break;
+      }
+    }
+    if(!found) {
+      thrownTID_list[nSource] = thrownTID;
+      thrownTID_occur[nSource++]=1;
+    }
+  }
+
+  //check which thrownTID dominate, store it
+  int theThrownTID = thrownTID_list[0];
+  int occurMax = thrownTID_occur[0];
+  for(int t=1;t<nSource;t++) {
+    if(occurMax < thrownTID_occur[t]) {
+      occurMax = thrownTID_occur[t];
+      theThrownTID = thrownTID_list[t];
+    }
+  }
+
+  likelyhood = double(occurMax)/double(n);
+
+#ifdef _ChainFinderDebug_
+  if(_ChainFinderDebug_>=3) {
+    
+#if(_ChainFinderDebug_==3) 
+    if (fTrueTID == theThrownTID) {
+#endif      
+      cout<<"  TureTID="<<fTrueTID
+          <<", the thrownTID for chain["<<chainid<<"] is "<<theThrownTID
+          <<", nhits="<<n<<", likelyhood="<<likelyhood<<endl;
+#if(_ChainFinderDebug_==3) 
+    }
+#endif      
+  }
+#endif
+  
+  delete thrownTID_list;
+  delete thrownTID_occur;
+  return theThrownTID;
+}
+
+//Draw all Found chains for visulization, the true track uses different marker
 void ChainFinder::DrawChain()
 {
   if (!gPad || !fChainNum_Stored) return;
@@ -1638,16 +1702,15 @@ void ChainFinder::DrawChain()
     pm3dp->SetBit(kCanDelete);
     pm3dp->SetMarkerColor(cc+3);
     pm3dp->SetMarkerStyle(6);
-
-    //identify the true track whose tid==0 then change its color and marker style
-    double tid=0; 
     for(int hh=0;hh<fChainBuf[cc].HitNum;hh++) {
       pm3dp->SetPoint(hh, fChainBuf[cc].Hits[hh]->X, fChainBuf[cc].Hits[hh]->Y, 
         fChainBuf[cc].Hits[hh]->Z);
-      tid += int(fChainBuf[cc].Hits[hh]->ThrownTID/10000.0);  
     }
-    tid /= fChainBuf[cc].HitNum;
-    if(tid<0.01) {
+    
+    //identify the true track whose tid==fTureTID then change its color and marker style
+    double likelyhood = 0.0;
+    int tid = this->IdentifyThrownTID(cc,likelyhood); 
+    if(tid==fTrueTID && likelyhood>0.5) {
       pm3dp->SetMarkerColor(1);
       pm3dp->SetMarkerStyle(2);
     }

@@ -381,6 +381,7 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
     CF_Phi0[t]=fGEMCReader->phi_v ;
     CF_P0[t]=fGEMCReader->p_v/1000.;
     CF_ShiftTime[t]=fGEMCReader->TimeShift->at(0);
+    if(CF_ShiftTime[t]==0) fChainFinder->SetTrueTID(t);
   }
 
   return totalhits;
@@ -493,7 +494,6 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
         yy[nhits] = fNtReader->StepY_rec_m[i]/10.;
         zz[nhits] = fNtReader->StepZ_rec_m[i]/10.;
         throwntid[nhits] = t*1.0E4+i;
-        //throwntid[nhits] = fNtReader->StepADC_m[i]*1.0E4+i;  //just for debug
         nhits++;
         totalhits++;
         if(nhits >= MAX_HITS_PER_EVENT) break;
@@ -535,6 +535,7 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
     CF_Phi0[t]=fNtReader->Phi0_p ;
     CF_P0[t]=fNtReader->P0_p;
     CF_ShiftTime[t]=fNtReader->ShiftTDC*120;  //turn TIC into ns
+    if(CF_ShiftTime[t]==0) fChainFinder->SetTrueTID(t);
   }
 
   return totalhits;
@@ -717,6 +718,7 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double max_sep,
     //judge if to do fitting to the found chains
     if(jobtype==3) {
       Tree_Fill(*(fKalRTPC->fKalTrack));
+      EventVisulization2();
     } else {
       // ===================================================================
       //now call GHF or KF to do fitting
@@ -766,12 +768,15 @@ int EXKalManager::RunCFNFit(int job, int nevents, int ntracks, double max_sep,
         // ============================================================
         //fill output tree
         // ============================================================
-        Tree_Fill(*(fKalRTPC->fKalTrack));
-        
+        Tree_Fill(*(fKalRTPC->fKalTrack));        
         
         // ============================================================
         //  Very Primitive Event Display
         // ============================================================
+#ifdef _EXKalManDebug_
+        if(_EXKalManDebug_ >= 3)
+          cout<<"\n  *************chain["<<i<<"]*************\n";
+#endif        
         EventVisulization();
         
         //  Reset the buffer
@@ -902,7 +907,7 @@ void EXKalManager::EventVisulization()
     TString opts(temp);
     opts.ToLower();
     if (!opts.Length()) { /*continue*/;}
-    else if (opts[0] == 'n' || opts[0] == 'q') { abort(); } 
+    else if (opts[0] == 'n' || opts[0] == 'q') { abort(); }
     else if (opts[0] == 'e') {
       cout << "Select \"Quit ROOT\" from \"File\" to display next" << endl;
       cout << "\"CTRL+C\" to really quit" << endl;

@@ -282,14 +282,14 @@ int  GLDisplay(int ievent=0, int NumTracksPerEvent=1)
 }
 
 
-void go(int n=1, int NumTracksPerEvent=1, int s=1, int istart=0)
+void go(int n=1, int NumTracksPerEvent=1, int isleep=1, int istart=0)
 {
   if(istart>0) thisevent=istart;
   for(int i=0;i<n;i++)
   {
     int ret=GLDisplay(thisevent++,NumTracksPerEvent);
     if(ret==-1) break;
-    gSystem->Sleep(s*1000);
+    gSystem->Sleep(isleep*1000);
   }
 }
 

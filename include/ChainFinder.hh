@@ -60,7 +60,7 @@ using namespace std;
 #define HBADPAD 0x800 /* hit is on a pad marked as bad */
 #define HITUNAV (HISUSED|HDISEAR|HDISLAT|HABSORB|HSMALLQ|FAKE_HIT|HBADPAD) /* reasons to NOT use a hit in the chain-linker */
 
-      
+
 //By Jixie:  I add ChainInfo to tell ChainIndex cc and HitIndex jj
 //ChainInfo  = ccccjjjj,  where cc is ChainIndex and jj is HitIndex 
 //ThrownTID  = ccccjjjj,  where cc is TrackIndex and jj is HitIndex 
@@ -102,8 +102,8 @@ public:
                       
   //Added By Carlos, using vector instead of array, provide x,x,z in cm
   void PrepareHitPool(vector<int> *id, vector<int> *tdc, vector<int> *adc, 
-		      vector<double> *x, vector<double> *y,  vector<double> *z, 
-		      int n, vector<int> *throwntid=0,  int append=0);
+                      vector<double> *x, vector<double> *y,  vector<double> *z, 
+                      int n, vector<int> *throwntid=0,  int append=0);
   
   int  SearchHitsForASeed(int seed, int seed_pre); 
   void SearchChains(int do_sort=1);  
@@ -126,6 +126,9 @@ public:
 
   void DrawPool();
   void DrawChain();
+
+  int  IdentifyThrownTID(int chainid, double &likelyhood);
+  void SetTrueTID(int v) {fTrueTID=v;};
 
 private:  
   
@@ -172,7 +175,7 @@ private:
   
   //after sorting by S, sort fHitIDInAChain[][] by Phi increaseing order
   //only sort these hits with the same TDC
-  void  InsertSort_Phi(int *arr, int size);
+  void InsertSort_Phi(int *arr, int size);
 
   //sort fHitIDInAChain[][], by S increaseing order, if S equal, by phi increasing order
   void QuickSort_SPhi(int *arr, int left, int right);
@@ -219,6 +222,8 @@ private:
   int    fChainNum;
   int    fHitIDInAChain[MAX_CHAINS_PER_EVENT][MAX_HITS_PER_CHAIN];
   int    fHitNumInAChain[MAX_CHAINS_PER_EVENT];  //keep number of hits on each chain
+
+  int    fTrueTID;   //to store true TrackID, only used in simulation
 };
 
 #endif 
