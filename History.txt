@@ -10,6 +10,9 @@ iteration, which is fitting from outside to inside. ----done by jixie, March 26 
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
 
+2017/09/22
+1. Updated visulization for chain finder to view how a chain is found hit by hits.
+
 2017/07/28
 1. Updated visulization.
 2. Solved bug in ChainFinder::SearchChains()

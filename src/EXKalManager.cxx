@@ -830,11 +830,12 @@ void EXKalManager::EventVisulization2()
     fKalRTPC->fDetector->Draw(40,"ogl");
     if(fChainFinder->fHitNum>0) {
       fChainFinder->DrawPool();
-      fChainFinder->DrawChain();
+      //fChainFinder->DrawChain();
+      fChainFinder->DrawChain_stepbystep();
     } else {
       fKalRTPC->DrawRawHits(4,"same");
     }    
-    fKalRTPC->fKalTrack->Draw(2,"same");
+    fKalRTPC->fKalTrack->Draw(2,"same");    
     
     cout << "Next? [y(yes)/n(no, abort)/e(edit)/q(quit)] " << flush;
     static const Int_t kMaxLen = 255;
@@ -865,6 +866,7 @@ void EXKalManager::EventVisulization()
     } else {
       cvp->cd();cvp->Clear();
       cvp->Divide(1,2);
+      cvp->Update();
     }
     
     cvp->cd();
@@ -881,6 +883,7 @@ void EXKalManager::EventVisulization()
     vwp1->SetView(10.,80.,80.,ierr);   
     //vwp1->SetView(0.,90.,90.,ierr);  //side view  
     fKalRTPC->fDetector->Draw(40);
+    fChainFinder->DrawChain();
     fKalRTPC->fKalTrack->Draw(2,"");   
 
     cvp->cd(2);
@@ -894,6 +897,7 @@ void EXKalManager::EventVisulization()
     if(fChainFinder->fHitNum>0) {
       fChainFinder->DrawPool();
       fChainFinder->DrawChain();
+      //fChainFinder->DrawChain_stepbystep();
     } else {
       fKalRTPC->DrawRawHits(4,"same");
     }    

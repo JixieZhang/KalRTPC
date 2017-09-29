@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "ChainFinder.hh"
 
+#include "TSystem.h"
 #include "TCanvas.h"
 #include "TPad.h"
 #include  "TPolyMarker3D.h"
@@ -1718,5 +1719,49 @@ void ChainFinder::DrawChain()
     pm3dp->Draw("same");
     gPad->Update();
   }
+}
+
+//Draw all Found chains for visulization, the true track uses different marker
+//Draw hits by hits, using TSystem::Sleep(milisecond) function to delay each hit
+void ChainFinder::DrawChain_stepbystep()
+{
+  if (!gPad || !fChainNum_Stored) return;
+  gPad->cd();
+
+  TPolyMarker3D *pm3dp = 0;
+  for (int cc=0;cc<fChainNum_Stored;cc++) {    
+    //FixMe:  should there be memory leak here?  
+    //TPolyMarker3D is created for every chain, but nowhere to clean it up
+    pm3dp = new TPolyMarker3D(fChainBuf[cc].HitNum);
+    pm3dp->SetBit(kCanDelete);
+    
+    //identify the true track whose tid==fTureTID then change its color and marker style
+    double likelyhood = 0.0;
+    int tid = this->IdentifyThrownTID(cc,likelyhood); 
+    if(tid==fTrueTID && likelyhood>0.5) {
+      pm3dp->SetMarkerColor(1);
+      pm3dp->SetMarkerStyle(2);
+    } else {
+      pm3dp->SetMarkerColor(cc+3);
+      pm3dp->SetMarkerStyle(7);
+    }
+    
+    //Initialized this 3-D line using only first hits
+    for(int hh=0;hh<fChainBuf[cc].HitNum;hh++) {
+      pm3dp->SetPoint(hh, fChainBuf[cc].Hits[0]->X, fChainBuf[cc].Hits[0]->Y, 
+        fChainBuf[cc].Hits[0]->Z);
+    }
+    
+    //Now loop over each founded hit in sequence, paused for 0.05 second each hit 
+    for(int hh=1;hh<fChainBuf[cc].HitNum;hh++) {
+      pm3dp->SetPoint(hh, fChainBuf[cc].Hits[hh]->X, fChainBuf[cc].Hits[hh]->Y, 
+        fChainBuf[cc].Hits[hh]->Z);
+          
+      pm3dp->Draw("same");
+      gPad->Update();
+      gSystem->Sleep(50);
+    }
+  }
+  gSystem->Sleep(100);
 }
 

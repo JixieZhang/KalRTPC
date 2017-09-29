@@ -126,6 +126,7 @@ public:
 
   void DrawPool();
   void DrawChain();
+  void DrawChain_stepbystep();
 
   int  IdentifyThrownTID(int chainid, double &likelyhood);
   void SetTrueTID(int v) {fTrueTID=v;};
