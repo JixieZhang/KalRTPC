@@ -125,10 +125,11 @@ class EXKalManager {
   //them into the output tree. in unit of cm.
   //Fix me:
   //the chain finder might not put the track it found in the same order
-  //as the original G4 tree, therefore I do not know how to incert these values
+  //as the original G4 tree, therefore CF_TID0[] is used to store the
+  //thrown trackid
   double CF_X0[MAX_CHAINS_PER_EVENT], CF_Y0[MAX_CHAINS_PER_EVENT], CF_Z0[MAX_CHAINS_PER_EVENT];
   double CF_Theta0[MAX_CHAINS_PER_EVENT], CF_Phi0[MAX_CHAINS_PER_EVENT], CF_P0[MAX_CHAINS_PER_EVENT];
-  int  CF_ShiftTime[MAX_CHAINS_PER_EVENT];
+  int  CF_ShiftTime[MAX_CHAINS_PER_EVENT], CF_TID0[MAX_CHAINS_PER_EVENT];
 
   double CF_ThrownTID_like;  //to tell how likely this chain to be thrown track with id==trackid 
 
@@ -154,13 +155,13 @@ class EXKalManager {
   double chi2,cl;
 
   //original hits info
-  int npt0;   	   //npt0 is to store number of original hits 
+  int npt0;      //npt0 is to store number of original hits 
   double step_x[MAX_HITS_PER_TRACK],step_y[MAX_HITS_PER_TRACK],step_z[MAX_HITS_PER_TRACK];
   double step_phi[MAX_HITS_PER_TRACK],step_s[MAX_HITS_PER_TRACK];  
   double step_s_min, step_s_max;
 
   //smeared or reconstructed hits info
-  int npt;         //npt is to store number of used hits by kalman filter 
+  int npt;       //npt is to store number of used hits by kalman filter 
   int step_status[MAX_HITS_PER_TRACK];
   double step_x_rec[MAX_HITS_PER_TRACK],step_y_rec[MAX_HITS_PER_TRACK],step_z_rec[MAX_HITS_PER_TRACK];
   double step_phi_rec[MAX_HITS_PER_TRACK],step_s_rec[MAX_HITS_PER_TRACK];

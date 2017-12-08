@@ -63,19 +63,18 @@ void ReadGEMC::Init()
   // Set branch addresses and branch pointers
   fCurrent = -1;
   fChain->SetMakeClass(1);
-
+  fChain->SetBranchAddress("Event", &EventID, &b_EventID);
   fChain->SetBranchAddress("ChanID", &ChanID, &b_ChanID);
+  fChain->SetBranchAddress("TrackID", &TrackId, &b_TrackId);
   fChain->SetBranchAddress("X_rec", &X, &b_X);
   fChain->SetBranchAddress("Y_rec", &Y, &b_Y);
   fChain->SetBranchAddress("Z_rec", &Z, &b_Z);
   fChain->SetBranchAddress("ADC", &ADC, &b_ADC);
   fChain->SetBranchAddress("Time", &TDC, &b_TDC);
-  if(fChain->FindBranch("TrackId")) {
-    fChain->SetBranchAddress("TrackId", &TrackId, &b_TrackId);
-    fChain->SetBranchAddress("TimeShift", &TimeShift, &b_TimeShift);
-  }
+  fChain->SetBranchAddress("TimeShift", &TimeShift, &b_TimeShift);
    
-  fChainGen->SetBranchAddress("event_v", &event_v, &b_EventID);
+  fChainGen->SetBranchAddress("event_v", &event_v, &b_event_v);
+  fChainGen->SetBranchAddress("TrackID", &trackid_v, &b_trackid_v);
   fChainGen->SetBranchAddress("z_v", &z_v, &b_z_v);
   fChainGen->SetBranchAddress("p_v", &p_v, &b_p_v);
   fChainGen->SetBranchAddress("pt_v", &pt_v, &b_pt_v);
@@ -99,24 +98,41 @@ Int_t ReadGEMC::LoadATrack()
       Z->clear();
       ADC->clear();
       TDC->clear();
+      TrackId->clear();
+      TimeShift->clear();
     }
     
     fChain->GetEntry(++fCurrent);
     fChainGen->GetEntry(fCurrent);
     if(fCurrent>=int(fChain->GetEntriesFast()))  return -1;
+    if(EventID!=event_v) {
+      cout<<"\n***Warning: GEMMC root tree \'Rec\' is not syncronized with Gen tree***\n";
+    }
     HitNum_m = TDC->size();
   }
   
-
   //print out for debug
-  cout<<"ReadGEMC:: GEMC event "<<event_v<<",  Number of hits="<<HitNum_m<<endl;
+  cout<<"\nReadGEMC:: GEMC event "<<event_v<<": "<<th_v->size()<<" tracks, "
+      <<TDC->size()<<" hits in total."<<endl;
   /*
+  cout<<"Number of entries:\n"
+      <<"ChanID "<<" \t "<<ChanID->size()<<endl
+      <<"TrackId"<<" \t "<<TrackId->size()<<endl
+      <<"ADC    "<<" \t "<<ADC->size()<<endl
+      <<"TDC    "<<" \t "<<TDC->size()<<endl
+      <<"X      "<<" \t "<<X->size()<<endl
+      <<"Y      "<<" \t "<<Y->size()<<endl
+      <<"Z      "<<" \t "<<Z->size()<<endl
+      <<"TimeShift"<<" \t "<<TimeShift->size()<<endl
+      <<"p_v      "<<" \t "<<p_v->size()<<endl
+      <<"th_v      "<<" \t "<<th_v->size()<<endl;
+  
   for(int i=0;i<HitNum_m;i++) {
-    cout<<(int)TDC->at(i)<<"  ";
-    if( !((i+1)%10) ) cout<<endl;
-  }
+    cout<<(int)(TrackId->at(i))<<"  ";
+    if( !((i+1)%20) ) cout<<endl;
+  } 
   cout<<endl;
-  */
+  */ 
 
   return HitNum_m;
 }

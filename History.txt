@@ -2,13 +2,24 @@ KalmanFilter application for RTPC12, By Jixie Zhang
 TODO:
 1) Change Bz field of each measurement layer according to field map
 2) Add Bx By into the framework
-3) Try to apply Kalman Filter twice, the first iteration is fitting from
+3) Use Bz to help to determine head or tail for a curve back track. Currently
+assumes that the field is pointing to upstream
+4) Try to apply Kalman Filter twice, the first iteration is fitting from
 outside to inside then smooth out, to achieve the state vector for the site at the 
 end of the track. Then use this state vector as the initial value for the 2nd 
 iteration, which is fitting from outside to inside. ----done by jixie, March 26 2016
-4) Optimze global helix fitter. Find out in which situation it can be not used, or has
+5) Optimze global helix fitter. Find out in which situation it can be not used, or has
 bad performance.  ---------------------------done by jixie, March 26 2016 
 
+
+2017/12/06
+1. Updated GEMC reader.This new reader assumes that GEMC tree uses vector to keep
+   thrown parameters. The Rec tree contains hits from secondary tracks. Some
+   primary tracks might not create any hits. Added variable CF_TID0[] to store the
+   TrackID for valid thrown tracks. If a thrown track id not valid (valid hits < 5),
+   its thrown information will not be stored. 
+2. Updated Tree_fill().  Since the thrown information contains multiple track, I need
+   to find the right track then store it. 
 
 2017/09/22
 1. Updated visulization for chain finder to view how a chain is found hit by hits.

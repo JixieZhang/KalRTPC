@@ -53,7 +53,7 @@ void usage()
   cerr << "\t       3: run ChainFinder but no fitting with geant4 tracks, need to couple with -c option; \n";
   cerr << "\t       4: run ChainFinder + Global Helix Fitter with geant4 tracks\n";
   cerr << "\t       5: run ChainFinder + KalmanFilter with geant4 tracks\n";
-  cerr << "\t  nevents: number of events to generate \n";
+  cerr << "\t  nevents: number of events to generate|read \n";
   cerr << "\t  pt_min_gev and pt_max_gev: specifiy the range of pt in Gev \n";
   cerr << "\t  Note that if pt is negative then anti-clockwise track will be generated \n";
   cerr << "\t  costh_min and costh_max: specifiy the range of costh, only for job==0\n";
@@ -64,6 +64,9 @@ void usage()
   cerr << "example1: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05 \n";
   cerr << "example2: exe 0 1000 ' -0.05' ' -0.07' ' -0.8' 0.8 0.05 ' -20.0' 20.0 infile.root 1\n";
   cerr << "example3: exe -j 0 -n 1000 -p -0.05 -0.07 -c 25 1.9 30.0 0.4 40.0 1.5 -z -20 20 -i \n";
+  cerr << "example4: exe -j 1 -n 1000 -f infile_G4MC.root -g 0 -i \n";
+  cerr << "example4: exe -j 3 -n 1000 -f infile_GEMC.root -g 1 -i -c 1 1.1 30 0.4 40 0.9\n";
+  cerr << "example4: exe -j 5 -n 1000 -f infile_GEMC.root -g 1 -i -c 1 \n";
   printf("\\------------------------------usage  end------------------------------------------/ \n");
   //
   printf("exe [-h] [-i] [-j <jobtype=0>] [-n <nevents=10000>]  [-e <error=0.05> ] \\\n");

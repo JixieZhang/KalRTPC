@@ -224,7 +224,7 @@ void EXKalManager::Tree_Reset_CF()
 
   for(int i=0;i<CF_ntrack_read;i++) {
     CF_X0[i]=CF_Y0[i]=CF_Z0[i]=CF_Theta0[i]=CF_Phi0[i]=CF_P0[i]=0.0;
-    CF_ShiftTime[i]=-9999;
+    CF_TID0[i]=CF_ShiftTime[i]=-9999;    
   }
 
   CF_ntrack_read=CF_ntrack_good=0;  
@@ -305,18 +305,20 @@ void EXKalManager::EndOfRun()
 }
 
 
-//read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
-//please note that the G4 root tree use unit of mm 
-int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
+//read ntracks from GEMC output tree and fill it into ChainFinder's hit pool.
+//this routine assumes that GEMC tree contains muiltiple tracks per entry
+//please note that the GEMC root tree use unit of mm 
+int EXKalManager::FillChainFinderHitPoolGEMC(int nEntries)
 {
-  int totalhits = 0;
+  int totalhits = 0; //number of hits in this call
+  int ntracks = 0;   //number of tracks in this call
 
   int id[MAX_HITS_PER_EVENT],tdc[MAX_HITS_PER_EVENT],adc[MAX_HITS_PER_EVENT];
   int throwntid[MAX_HITS_PER_EVENT];
   double xx[MAX_HITS_PER_EVENT],yy[MAX_HITS_PER_EVENT],zz[MAX_HITS_PER_EVENT];
 
   CF_ntrack_read=0;
-  for(int t=0;t<ntracks;t++) {
+  for(int t=0;t<nEntries;t++) {
     int n = fGEMCReader->LoadATrack();
     if( n == -1 ) {
       cout<<"Reach the end of input root file \n";
@@ -324,27 +326,72 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
       else break;
     }
 
-    int HitNum_m = fGEMCReader->TDC->size();
-    if(HitNum_m==0) continue;
-    CF_ntrack_read++;
-    if(HitNum_m>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
-    
-    int nhits=0;
-    for(int i=0;i<HitNum_m;i++) {
-      if(fGEMCReader->ChanID->at(i)>0) {
-        //if negative means this hit is invalid
+    int pTotalHits = fGEMCReader->TDC->size();
+    if(pTotalHits==0) continue;
+     
+    int thisTID = fGEMCReader->TrackId->at(0);
+    int ShiftTDC = (int)(fGEMCReader->TimeShift->at(0));
+    bool foundnewtrack = false;
 
-        id[nhits] = (int)(fGEMCReader->ChanID->at(i));
-        tdc[nhits]= (int)(fGEMCReader->TDC->at(i));
-        adc[nhits]= (int)(fGEMCReader->ADC->at(i));
-        xx[nhits] = fGEMCReader->X->at(i)/10.;
-        yy[nhits] = fGEMCReader->Y->at(i)/10.;
-        zz[nhits] = fGEMCReader->Z->at(i)/10.;
-        throwntid[nhits] = fGEMCReader->TrackId->at(i)*1.0E4+i;
-        nhits++;
-        totalhits++;
-        if(nhits >= MAX_HITS_PER_EVENT) break;
-      }
+    int nhits=0;       //number of valid hits in this entry
+    int HitNum_m=0;  //valid hits from GEMC tess in this track
+    
+    for(int i=0;i<pTotalHits;i++) {
+      //if ChanID is negative it means this hit is invalid
+      if(fGEMCReader->ChanID->at(i)<0) continue;
+      //also get rid of TDC==0 hits
+      if(fGEMCReader->TDC->at(i)<=0) continue;
+
+      //check if this is a new track        
+      foundnewtrack = (thisTID != fGEMCReader->TrackId->at(i)) ? true : false;
+      if(foundnewtrack) {
+        CF_ntrack_read++;
+    
+        //only if this track contains MIN_HITS_PER_TRACK hits, I will then
+        //search for its vertex and increase the ntracks
+        //otherwise I treat it as noise
+        if(HitNum_m>=MIN_HITS_PER_TRACK) {
+        //This part is used to fill the root tree
+        //During loading a G4 track, we also need to load some thrown parameters and store
+        //them into fEXEventGen. Note that G4 tree use unit of mm
+        //extract its vertex, need to loop over trackid_v
+          bool foundVX=false;
+          size_t idx=0;
+          for( idx=0; idx < fGEMCReader->trackid_v->size();idx++) {
+            if(fGEMCReader->trackid_v->at(idx) == thisTID) {foundVX=true;break;}
+          }
+          if(foundVX) {
+            CF_X0[ntracks]=0.;
+            CF_Y0[ntracks]=0.;
+            CF_Z0[ntracks]=fGEMCReader->z_v->at(idx)/10.;
+            CF_Theta0[ntracks]=fGEMCReader->th_v->at(idx);
+            CF_Phi0[ntracks]=fGEMCReader->phi_v->at(idx) ;
+            CF_P0[ntracks]=fGEMCReader->p_v->at(idx)/1000.;
+            CF_ShiftTime[ntracks]=ShiftTDC;
+            CF_TID0[ntracks]=thisTID;
+            if(CF_ShiftTime[ntracks]==0) fChainFinder->SetTrueTID(ntracks);
+            ntracks++;
+            CF_ntrack_good++;
+          }
+        }
+        //reset the counter
+        ShiftTDC=fGEMCReader->TimeShift->at(i);
+        thisTID = fGEMCReader->TrackId->at(i);
+        HitNum_m = 0;
+      }      
+
+      id[nhits] = (int)(fGEMCReader->ChanID->at(i));
+      tdc[nhits]= (int)(fGEMCReader->TDC->at(i));
+      adc[nhits]= (int)(fGEMCReader->ADC->at(i));
+      xx[nhits] = fGEMCReader->X->at(i)/10.;
+      yy[nhits] = fGEMCReader->Y->at(i)/10.;
+      zz[nhits] = fGEMCReader->Z->at(i)/10.;
+      throwntid[nhits] = fGEMCReader->TrackId->at(i)*1.0E4+HitNum_m;
+      nhits++;
+      totalhits++;
+      HitNum_m++;
+      if(nhits >= MAX_HITS_PER_EVENT) break;
+      
     }
 
     //append this track into the hit pool
@@ -354,34 +401,10 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
 #ifdef _EXKalManDebug_
     //just for debug
     if(_EXKalManDebug_>=3) {
-      cout<<"\nGEMC Ntuple Event "<<setw(5)<<fGEMCReader->event_v<<":  HitNum_m="<<setw(2)<<fGEMCReader->TDC->size()<<endl
-        <<"  P0="<<fGEMCReader->p_v<<",  Pt="<<fGEMCReader->pt_v<<", Theta0="
-        <<fGEMCReader->th_v*57.3<<", Phi0="<<fGEMCReader->phi_v*57.3<<"  Z0="<<fGEMCReader->z_v/10.<<"cm"<<endl;
+      cout<<"\nGEMC Ntuple Event "<<setw(5)<<fGEMCReader->event_v<<":  HitNum="<<setw(2)<<pTotalHits<<endl;
     }
-    if(_EXKalManDebug_>=4) {
-      for(int i=0;i<(int)fGEMCReader->TDC->size();i++) {
-        cout<<"Hit "<<setw(2)<<i<<"("<<setw(8)<<fGEMCReader->X->at(i)<<", "
-          <<setw(8)<<fGEMCReader->Y->at(i)<<", "
-          <<setw(8)<<fGEMCReader->Z->at(i)<<") ==>  S="<<setw(8)<<sqrt(pow(fGEMCReader->X->at(i),2.0)+pow(fGEMCReader->Y->at(i),2.0))
-          <<" mm  Phi="<<setw(8)<<atan2(fGEMCReader->Y->at(i),fGEMCReader->X->at(i))*57.3<<" deg"<<endl;
-      }
-    }    
 #endif
 
-    //This part is used to fill the root tree
-    //During loading a G4 track, we also need to load some thrown parameters and store
-    //them into fEXEventGen. Note that G4 tree use unit of mm
-    //Fix me:
-    //the chain finder might not put the track it found in the same order
-    //as the original G4 tree, therefore I do not know how to incert these values
-    CF_X0[t]=0.;
-    CF_Y0[t]=0.;
-    CF_Z0[t]=fGEMCReader->z_v/10.;
-    CF_Theta0[t]=3.14159/2-fGEMCReader->th_v;
-    CF_Phi0[t]=fGEMCReader->phi_v ;
-    CF_P0[t]=fGEMCReader->p_v/1000.;
-    CF_ShiftTime[t]=fGEMCReader->TimeShift->at(0);
-    if(CF_ShiftTime[t]==0) fChainFinder->SetTrueTID(t);
   }
 
   return totalhits;
@@ -389,7 +412,8 @@ int EXKalManager::FillChainFinderHitPoolGEMC(int ntracks)
 
 
 //read a track from G4MC_RTPC12 output tree, require at least 5 hits
-//please note that the G4 root tree use unit of mm 
+//this routine assume there is only one track per entry
+//please note that the G4 root tree use unit of mm
 bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
 {
   int nhits = 0;
@@ -429,8 +453,8 @@ bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
   //just for debug
   if(_EXKalManDebug_>=3) {
     cout<<"\nGEMC Ntuple Event "<<setw(5)<<fGEMCReader->event_v<<":  HitNum_m="<<setw(2)<<fGEMCReader->TDC->size()<<endl
-      <<"  P0="<<fGEMCReader->p_v<<",  Pt="<<fGEMCReader->pt_v<<", Theta0="
-      <<fGEMCReader->th_v*57.3<<", Phi0="<<fGEMCReader->phi_v*57.3<<"  Z0="<<fGEMCReader->z_v/10.<<"cm"<<endl;
+      <<"  P0="<<fGEMCReader->p_v->at(0)<<",  Pt="<<fGEMCReader->pt_v->at(0)<<", Theta0="
+      <<fGEMCReader->th_v->at(0)*57.3<<", Phi0="<<fGEMCReader->phi_v->at(0)*57.3<<"  Z0="<<fGEMCReader->z_v->at(0)/10.<<"cm"<<endl;
   }
   if(_EXKalManDebug_>=4) {
     for(int i=0;i<(int)fGEMCReader->TDC->size();i++) {
@@ -450,10 +474,10 @@ bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
 
   fEventGen->X0=0.;
   fEventGen->Y0=0.;
-  fEventGen->Z0=fGEMCReader->z_v/10.;
-  fEventGen->Theta0=3.14159/2-fGEMCReader->th_v;
-  fEventGen->Phi0=fGEMCReader->phi_v ;
-  fEventGen->P0=fGEMCReader->p_v/1000.;
+  fEventGen->Z0=fGEMCReader->z_v->at(0)/10.;
+  fEventGen->Theta0=fGEMCReader->th_v->at(0);
+  fEventGen->Phi0=fGEMCReader->phi_v->at(0) ;
+  fEventGen->P0=fGEMCReader->p_v->at(0)/1000.;
   fEventGen->ShiftTime=fGEMCReader->TimeShift->at(0);
 
   return true;
@@ -461,7 +485,8 @@ bool EXKalManager::LoadAGEMCTrack(bool bIncludeCurveBackHits)
 
 
 //read ntracks from G4MC_RTPC12 output tree and fill it into ChainFinder's hit pool.
-//please note that the G4 root tree use unit of mm 
+//this routine assumes that G4 tree contains only one track per entry
+//please note that the G4 root tree use unit of mm
 int EXKalManager::FillChainFinderHitPool(int ntracks)
 {
   int totalhits = 0;
@@ -478,12 +503,13 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
       else break;
     }
 
-    if(fNtReader->HitNum_m==0) continue;
-    CF_ntrack_read++;
-    if(fNtReader->HitNum_m>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
+    int pTotalHits = fNtReader->HitNum_m;
+    if(pTotalHits==0) continue;
     
-    int nhits=0;
-    for(int i=0;i<fNtReader->HitNum_m;i++) {
+    int nhits=0;     //number of valid hits in this entry
+    int HitNum_m=0;  //valid hits from GEMC tess in this track
+    
+    for(int i=0;i<pTotalHits;i++) {
       if(fNtReader->StepID_m[i]>0) {
         //if negative means this hit is invalid
 
@@ -493,12 +519,16 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
         xx[nhits] = fNtReader->StepX_rec_m[i]/10.;
         yy[nhits] = fNtReader->StepY_rec_m[i]/10.;
         zz[nhits] = fNtReader->StepZ_rec_m[i]/10.;
-        throwntid[nhits] = t*1.0E4+i;
+        throwntid[nhits] = t*1.0E4+HitNum_m;
         nhits++;
         totalhits++;
+        HitNum_m++;
         if(nhits >= MAX_HITS_PER_EVENT) break;
       }
     }
+    
+    CF_ntrack_read++;    
+    if(HitNum_m>=MIN_HITS_PER_TRACK) CF_ntrack_good++;
 
     //append this track into the hit pool
     int append=1;
@@ -543,6 +573,7 @@ int EXKalManager::FillChainFinderHitPool(int ntracks)
 
 
 //read a track from G4MC_RTPC12 output tree, require at least 5 hits
+//this routine assume there is only one track per entry
 //please note that the G4 root tree use unit of mm 
 bool EXKalManager::LoadAG4Track(bool bIncludeCurveBackHits)
 {
@@ -1044,14 +1075,23 @@ void EXKalManager::Tree_Fill(EXHYBTrack &kaltrack)
 
 
   //Load the thrown parameters, most of them available from fEvenGen
+  //for job 3,4,5, they are available in this class
+  //if the input file is GEMC tree, one entry contains multiple thrown tracks.
+  //we need to find the right one then store it into the output tree 
   if(_eventtype_>=3) {
-    _x0_=CF_X0[trackid];
-    _y0_=CF_Y0[trackid];
-    _z0_=CF_Z0[trackid];
-    p0=CF_P0[trackid];
-    th0=CF_Theta0[trackid];
-    ph0=CF_Phi0[trackid];
-    shifttime=CF_ShiftTime[trackid];
+    //determine the right track, its TrackID==trackid
+    for(int ii=0;ii<CF_ntrack_good;ii++) {
+      if (CF_TID0[ii]==trackid) {
+        _x0_=CF_X0[trackid];
+        _y0_=CF_Y0[trackid];
+        _z0_=CF_Z0[trackid];
+        p0=CF_P0[trackid];
+        th0=CF_Theta0[trackid];
+        ph0=CF_Phi0[trackid];
+        shifttime=CF_ShiftTime[trackid];
+        break;
+      }
+    }
   } else {
     _x0_=fEventGen->X0;
     _y0_=fEventGen->Y0;
